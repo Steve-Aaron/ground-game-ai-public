@@ -16,6 +16,8 @@ import {
   Cell,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
+import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { getFullData } from "@/data";
 
 // Party colors
 const PARTY_COLORS: Record<string, string> = {
@@ -183,6 +185,8 @@ function TrackerTooltip({
 }
 
 export default function PollingDashboard() {
+  const { slug } = useConstituency();
+  const constituencyName = getFullData(slug)?.constituency.name ?? "Constituency";
   const [data, setData] = useState<PollingData | null>(null);
   const [ecNational, setEcNational] = useState<ECNational | null>(null);
   const [ecConstituency, setEcConstituency] = useState<ECConstituency | null>(null);
@@ -195,8 +199,8 @@ export default function PollingDashboard() {
       try {
         // Fetch polling data and Electoral Calculus data in parallel
         const [pollingRes, ecRes] = await Promise.allSettled([
-          fetch("/api/polling?type=all"),
-          fetch("/api/electoral-calculus?type=both&seat=Braintree"),
+          fetch(withConstituency("/api/polling?type=all", slug)),
+          fetch(withConstituency("/api/electoral-calculus?type=both", slug)),
         ]);
 
         if (pollingRes.status === "fulfilled" && pollingRes.value.ok) {
@@ -216,12 +220,13 @@ export default function PollingDashboard() {
       }
     }
     fetchAll();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   const sections: { id: Section; label: string }[] = [
     { id: "intention", label: "Vote Intention" },
     { id: "seats", label: "Seat Projection" },
-    { id: "local", label: "Braintree" },
+    { id: "local", label: constituencyName },
     { id: "leaders", label: "Leader Ratings" },
     { id: "issues", label: "Key Issues" },
     { id: "trackers", label: "Trackers" },
@@ -410,7 +415,7 @@ export default function PollingDashboard() {
 
         {/* ══════ BRAINTREE LOCAL ══════ */}
         {section === "local" && (
-          <BraintreeLocalSection averages={data.averages} ecConstituency={ecConstituency} />
+          <BraintreeLocalSection averages={data.averages} ecConstituency={ecConstituency} constituencyName={constituencyName} />
         )}
 
         {/* ══════ LEADER RATINGS ══════ */}
@@ -824,7 +829,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
 // BRAINTREE LOCAL SECTION — EC MRP + UNS fallback
 // ═══════════════════════════════════════════════════
 
-function BraintreeLocalSection({ averages, ecConstituency }: { averages: Record<string, number>; ecConstituency: ECConstituency | null }) {
+function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: { averages: Record<string, number>; ecConstituency: ECConstituency | null; constituencyName: string }) {
   const national2024: Record<string, number> = { con: 23.7, lab: 33.7, reform: 14.3, ld: 12.2, green: 6.8 };
   const useEC = !!ecConstituency && Object.keys(ecConstituency.predicted).length > 0;
 
@@ -875,7 +880,7 @@ function BraintreeLocalSection({ averages, ecConstituency }: { averages: Record<
       {/* Source badge */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-zinc-500">
-          {useEC ? "Electoral Calculus MRP prediction for Braintree" : "UNS projection for Braintree constituency"}
+          {useEC ? `Electoral Calculus MRP prediction for ${constituencyName}` : `UNS projection for ${constituencyName} constituency`}
         </p>
         <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${useEC ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
           {useEC ? "EC MRP DATA" : "UNS ESTIMATE"}
@@ -1068,12 +1073,12 @@ function BraintreeLocalSection({ averages, ecConstituency }: { averages: Record<
       <div className="flex items-center justify-between text-[10px] text-zinc-700">
         <span>Source: {useEC ? "Electoral Calculus MRP" : "Uniform National Swing estimate"}</span>
         <a
-          href="https://www.electoralcalculus.co.uk/fcgi-bin/seatdetails.py?seat=Braintree"
+          href={`https://www.electoralcalculus.co.uk/fcgi-bin/seatdetails.py?seat=${encodeURIComponent(constituencyName)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-zinc-600 hover:text-emerald-400 flex items-center gap-1"
         >
-          EC Braintree <ExternalLink className="h-2.5 w-2.5" />
+          EC {constituencyName} <ExternalLink className="h-2.5 w-2.5" />
         </a>
       </div>
     </div>
