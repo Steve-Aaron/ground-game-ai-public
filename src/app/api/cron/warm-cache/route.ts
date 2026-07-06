@@ -216,12 +216,33 @@ export async function GET(request: Request) {
     // CSV from Fingertips (~30-45s), so we use a 55s timeout and smaller batches
     // to avoid hammering the endpoint. In steady state (post-first-run) this
     // entire block completes in a few seconds.
-    const HEALTH_BATCH_SIZE = 15;
+    const HEALTH_BATCH_SIZE = 3;
     for (let i = 0; i < ALL_SLUGS.length; i += HEALTH_BATCH_SIZE) {
       const batch = ALL_SLUGS.slice(i, i + HEALTH_BATCH_SIZE);
       const results = await Promise.allSettled(
         batch.map((slug) =>
           fetch(`${baseUrl}/api/health?constituency=${slug}`, {
+            signal: AbortSignal.timeout(55_000),
+          })
+            .then((r) => r.ok)
+            .catch(() => false)
+        )
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) totalOk++;
+        else totalFailed++;
+      }
+    }
+
+    // EPC is warmed separately — 7-day Firestore TTL so most will be cache hits.
+    // Each cold fetch downloads ~500 records from the EPC API (~10-15s), so we
+    // use small batches to avoid timeouts.
+    const EPC_BATCH_SIZE = 10;
+    for (let i = 0; i < ALL_SLUGS.length; i += EPC_BATCH_SIZE) {
+      const batch = ALL_SLUGS.slice(i, i + EPC_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((slug) =>
+          fetch(`${baseUrl}/api/epc?constituency=${slug}`, {
             signal: AbortSignal.timeout(55_000),
           })
             .then((r) => r.ok)

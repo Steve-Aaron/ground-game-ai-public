@@ -17,7 +17,7 @@ Last updated: 2026-06-21
 - ConstituencyMap — dynamic zoom, no hardcoded links
 - TrendsPanel — trends-v2 (free, no SerpAPI)
 - Times Radio / Sky News / GB News live feeds
-- Schools data — real DfE/Ofsted for all 650
+- Schools data — Ofsted data for 543 English constituencies; Wales/Scotland/NI panels link to Estyn/HMIe/ETI respectively
 
 ## Needs API keys
 
@@ -31,8 +31,8 @@ Last updated: 2026-06-21
 
 Steve also needs to set `CRON_SECRET` in Vercel for the 4am cron to fire.
 
-## Known limitations
+## Hidden until fixed
 
-- **CQCPanel** — CQC API returns 403. Blocked until CQC fix their API.
+- **CQCPanel** — removed from UI. CQC API returns 403 (blocked on their end since early 2026). Component kept in codebase — restore to page.tsx once CQC fix their API.
 - **ConstituencyMap ward overlay** — ward labels and predictions only render for Braintree. Needs ward-level data for other constituencies.
 - **WardDataHub** — removed from UI (data was estimated, not sourced). Component kept in codebase for when real data exists.

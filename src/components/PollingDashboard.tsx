@@ -16,8 +16,12 @@ import {
   Cell,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 
 // Party colors
 const PARTY_COLORS: Record<string, string> = {
@@ -181,6 +185,7 @@ function TrackerTooltip({
 
 export default function PollingDashboard() {
   const { slug } = useConstituency();
+  const region = getRegion(slug);
   const fullData = getFullData(slug);
   const constituencyName = fullData?.constituency.name ?? "Constituency";
   const results2024 = fullData?.constituency.results2024 ?? null;
@@ -252,6 +257,33 @@ export default function PollingDashboard() {
 
   return (
     <div>
+      {region === "Northern Ireland" && (
+        <div className="mx-4 mt-3 mb-1 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-400/80">
+          These polls cover Great Britain only. NI-specific polling is conducted by{" "}
+          <a href="https://www.lucidtalk.co.uk/" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">
+            LucidTalk
+          </a>
+          .
+        </div>
+      )}
+      {region === "Scotland" && (
+        <div className="mx-4 mt-3 mb-1 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-400/80">
+          These are UK-wide polls. Scottish Parliament and independence polling is tracked by the{" "}
+          <a href="https://scotlandvotes.org/" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">
+            Scottish Polling Project
+          </a>
+          .
+        </div>
+      )}
+      {region === "Wales" && (
+        <div className="mx-4 mt-3 mb-1 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-400/80">
+          These are UK-wide polls. Senedd and Welsh-specific polling is published by{" "}
+          <a href="https://www.cardiff.ac.uk/wales-governance-centre" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">
+            Wales Governance Centre
+          </a>
+          .
+        </div>
+      )}
       {/* Section tabs */}
       <div className="flex border-b border-border">
         {sections.map((s) => (

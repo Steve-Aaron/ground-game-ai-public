@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 
 interface HealthIndicator {
   id: number;
@@ -95,6 +99,7 @@ export default function HealthPanel() {
   const [data, setData] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const region = getRegion(slug);
 
   useEffect(() => {
     async function fetchHealth() {
@@ -126,6 +131,66 @@ export default function HealthPanel() {
   }
 
   if (error) {
+    if (region === "Wales") {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-200">Public Health</h3>
+          <p className="text-xs text-zinc-400">
+            Fingertips (UKHSA) public health profiles do not cover Wales. Welsh public
+            health statistics are published by{" "}
+            <a
+              href="https://phw.nhs.wales/topics/public-health-wales-observatory/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Public Health Wales
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
+    if (region === "Scotland") {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-200">Public Health</h3>
+          <p className="text-xs text-zinc-400">
+            Fingertips (UKHSA) public health profiles do not cover Scotland. Scottish
+            public health statistics are published by{" "}
+            <a
+              href="https://publichealthscotland.scot/publications/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Public Health Scotland
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
+    if (region === "Northern Ireland") {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-200">Public Health</h3>
+          <p className="text-xs text-zinc-400">
+            Fingertips (UKHSA) public health profiles do not cover Northern Ireland. NI
+            public health statistics are published by the{" "}
+            <a
+              href="https://www.publichealth.hscni.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Public Health Agency (PHA NI)
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="p-4">
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
@@ -137,6 +202,66 @@ export default function HealthPanel() {
   }
 
   if (!data || data.indicators.length === 0) {
+    if (region === "Wales") {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-200">Public Health</h3>
+          <p className="text-xs text-zinc-400">
+            Fingertips (UKHSA) public health profiles do not cover Wales. Welsh public
+            health statistics are published by{" "}
+            <a
+              href="https://phw.nhs.wales/topics/public-health-wales-observatory/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Public Health Wales
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
+    if (region === "Scotland") {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-200">Public Health</h3>
+          <p className="text-xs text-zinc-400">
+            Fingertips (UKHSA) public health profiles do not cover Scotland. Scottish
+            public health statistics are published by{" "}
+            <a
+              href="https://publichealthscotland.scot/publications/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Public Health Scotland
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
+    if (region === "Northern Ireland") {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-200">Public Health</h3>
+          <p className="text-xs text-zinc-400">
+            Fingertips (UKHSA) public health profiles do not cover Northern Ireland. NI
+            public health statistics are published by the{" "}
+            <a
+              href="https://www.publichealth.hscni.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Public Health Agency (PHA NI)
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="p-4">
         <div className="text-xs text-zinc-500">No health indicators available.</div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GraduationCap, ExternalLink, Users, School } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
 
 interface SchoolItem {
   name: string;
@@ -42,12 +42,18 @@ const TYPE_GROUPS: { key: SchoolItem["type"]; label: string; icon: string }[] = 
   { key: "Other", label: "Other Schools", icon: "border-zinc-500/50" },
 ];
 
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
+
 export default function SchoolsPanel() {
   const { slug } = useConstituency();
   const [schools, setSchools] = useState<SchoolItem[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedType, setExpandedType] = useState<string | null>("Secondary");
+
+  const region = getRegion(slug);
 
   useEffect(() => {
     fetchSchools();
@@ -84,6 +90,87 @@ export default function SchoolsPanel() {
   }
 
   if (!summary || schools.length === 0) {
+    if (region === "Wales") {
+      return (
+        <div className="px-4 py-6 space-y-3">
+          <p className="text-xs text-zinc-400">
+            Schools in Wales are inspected by{" "}
+            <a
+              href="https://www.estyn.gov.wales"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Estyn
+            </a>
+            , not Ofsted. Individual school data is available at{" "}
+            <a
+              href="https://mylocalschool.gov.wales"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              My Local School Wales
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
+    if (region === "Scotland") {
+      return (
+        <div className="px-4 py-6 space-y-3">
+          <p className="text-xs text-zinc-400">
+            Schools in Scotland are inspected by{" "}
+            <a
+              href="https://www.hmie.gov.scot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              His Majesty&apos;s Inspectorate of Education (HMIe)
+            </a>
+            . Individual school data is available via{" "}
+            <a
+              href="https://www.gov.scot/collections/school-education-statistics/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Scottish Government statistics
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
+    if (region === "Northern Ireland") {
+      return (
+        <div className="px-4 py-6 space-y-3">
+          <p className="text-xs text-zinc-400">
+            Schools in Northern Ireland are inspected by the{" "}
+            <a
+              href="https://www.etini.gov.uk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Education and Training Inspectorate (ETI)
+            </a>
+            . School information is available from the{" "}
+            <a
+              href="https://www.education-ni.gov.uk/topics/statistics-and-research/schools"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              Department of Education Northern Ireland
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="px-4 py-6 text-center text-xs text-zinc-600">
         No school data available
@@ -211,7 +298,7 @@ export default function SchoolsPanel() {
                     return (
                       <a
                         key={school.urn}
-                        href={`https://www.google.com/search?q=${encodeURIComponent(school.name + " " + school.address + " Ofsted")}`}
+                        href={`https://www.google.com/search?q=${encodeURIComponent(school.name + " " + school.address + (region === "Wales" ? " Estyn" : " Ofsted"))}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block px-3 py-1.5 hover:bg-muted/20 transition-colors group mx-1"
@@ -237,7 +324,9 @@ export default function SchoolsPanel() {
                               <span className={`px-1.5 py-0 rounded ${badge.bg} ${badge.text} font-medium`}>
                                 {school.ofstedRating}
                               </span>
-                              <span className="text-zinc-500">Ages {school.ageRange}</span>
+                              {school.ageRange && (
+                                <span className="text-zinc-500">Ages {school.ageRange}</span>
+                              )}
                               {school.pupils > 0 && (
                                 <span className="text-zinc-600">{school.pupils.toLocaleString()} pupils</span>
                               )}
@@ -258,7 +347,8 @@ export default function SchoolsPanel() {
       {/* Footer */}
       <div className="px-3 py-2 border-t border-border/50 text-center">
         <span className="text-[10px] text-zinc-600">
-          {summary.total} schools in constituency · DfE GIAS
+          {summary.total} schools in constituency ·{" "}
+          {region === "Wales" ? "OSM / Estyn" : "DfE GIAS"}
         </span>
       </div>
     </div>

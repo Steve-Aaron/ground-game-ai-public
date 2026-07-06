@@ -36,7 +36,12 @@ import EmploymentPanel from "@/components/EmploymentPanel";
 import HousePricesPanel from "@/components/HousePricesPanel";
 import UniversalCreditPanel from "@/components/UniversalCreditPanel";
 import EPCPanel from "@/components/EPCPanel";
-import CQCPanel from "@/components/CQCPanel";
+import CrimePanel from "@/components/CrimePanel";
+import WardTable from "@/components/WardTable";
+import FloodsPanel from "@/components/FloodsPanel";
+import PlanningPanel from "@/components/PlanningPanel";
+import AirQualityPanel from "@/components/AirQualityPanel";
+import FuelPovertyPanel from "@/components/FuelPovertyPanel";
 import PetitionsPanel from "@/components/PetitionsPanel";
 import CommonsLibraryPanel from "@/components/CommonsLibraryPanel";
 import {
@@ -62,7 +67,11 @@ import {
   Home,
   CreditCard,
   Zap,
-  Stethoscope,
+  ShieldAlert,
+  Droplets,
+  Building2,
+  Wind,
+  Flame,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -408,11 +417,47 @@ function Dashboard() {
                 <EPCPanel />
               </Panel>
 
+              {/* Fuel Poverty */}
+              <Panel
+                title="Fuel Poverty"
+                icon={<Flame className="h-3.5 w-3.5" />}
+                className="lg:col-span-4 max-h-[600px]"
+                headerAction={
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">DESNZ</span>
+                }
+              >
+                <FuelPovertyPanel />
+              </Panel>
+
+              {/* Air Quality */}
+              <Panel
+                title="Air Quality"
+                icon={<Wind className="h-3.5 w-3.5" />}
+                className="lg:col-span-4 max-h-[600px]"
+                headerAction={
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">OpenAQ</span>
+                }
+              >
+                <AirQualityPanel />
+              </Panel>
+
+              {/* Ward Deprivation */}
+              <Panel
+                title="Ward Deprivation"
+                icon={<AlertTriangle className="h-3.5 w-3.5" />}
+                className="lg:col-span-4 max-h-[500px]"
+                headerAction={
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">IMD 2019</span>
+                }
+              >
+                <WardTable />
+              </Panel>
+
               {/* Constituency Profile */}
               <Panel
                 title="Constituency Profile"
                 icon={<BookOpen className="h-3.5 w-3.5" />}
-                className="lg:col-span-12"
+                className="lg:col-span-8"
                 headerAction={
                   <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Census · NOMIS · ONS</span>
                 }
@@ -432,17 +477,6 @@ function Dashboard() {
                 <PetitionsPanel />
               </Panel>
 
-              {/* Care Quality */}
-              <Panel
-                title="Care Quality"
-                icon={<Stethoscope className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
-                headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">CQC</span>
-                }
-              >
-                <CQCPanel />
-              </Panel>
             </div>
           )}
 
@@ -459,6 +493,42 @@ function Dashboard() {
                 }
               >
                 <FixMyStreet />
+              </Panel>
+
+              {/* Crime */}
+              <Panel
+                title="Crime"
+                icon={<ShieldAlert className="h-3.5 w-3.5" />}
+                className="lg:col-span-4 max-h-[500px]"
+                headerAction={
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">data.police.uk</span>
+                }
+              >
+                <CrimePanel />
+              </Panel>
+
+              {/* Flood Monitoring */}
+              <Panel
+                title="Flood Monitoring"
+                icon={<Droplets className="h-3.5 w-3.5" />}
+                className="lg:col-span-4 max-h-[500px]"
+                headerAction={
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Environment Agency</span>
+                }
+              >
+                <FloodsPanel />
+              </Panel>
+
+              {/* Planning Applications */}
+              <Panel
+                title="Planning Applications"
+                icon={<Building2 className="h-3.5 w-3.5" />}
+                className="lg:col-span-4 max-h-[500px]"
+                headerAction={
+                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">PlanIt</span>
+                }
+              >
+                <PlanningPanel />
               </Panel>
 
               {/* Local News */}

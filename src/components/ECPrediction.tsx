@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 
 const partyColors: Record<string, string> = {
   CON: "#0087DC",
@@ -9,6 +13,13 @@ const partyColors: Record<string, string> = {
   Reform: "#12B6CF",
   LIB: "#FAA61A",
   Green: "#6AB023",
+  Nat: "#FDF38E",
+  DUP: "#D46A4C",
+  SF: "#326760",
+  APNI: "#F6CB2F",
+  SDLP: "#2AA82C",
+  UUP: "#48A5EE",
+  TUV: "#0C3A6A",
   OTH: "#999999",
 };
 
@@ -53,6 +64,8 @@ function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { el
 
 export default function ECPrediction() {
   const { slug } = useConstituency();
+  const region = getRegion(slug);
+  const effectivePartyColors: Record<string, string> = { ...partyColors, Nat: region === "Wales" ? "#005B54" : "#FDF38E" };
   const [pred, setPred] = useState<{
     prediction: string;
     predicted: Record<string, number>;
@@ -105,6 +118,24 @@ export default function ECPrediction() {
   }
 
   if (!pred) {
+    if (region === "Northern Ireland") {
+      return (
+        <div className="p-4 space-y-2 text-center">
+          <p className="text-xs text-zinc-500">
+            Electoral Calculus does not model Northern Ireland constituencies. NI polling is conducted by{" "}
+            <a
+              href="https://www.lucidtalk.co.uk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              LucidTalk
+            </a>
+            .
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="p-4 text-xs text-zinc-500">
         Electoral Calculus prediction not available for this constituency.
@@ -135,7 +166,7 @@ export default function ECPrediction() {
             .sort((a, b) => b[1] - a[1])
             .map(([party, chance]) => (
               <div key={party} className="text-center">
-                <div className="text-xl font-bold" style={{ color: partyColors[party] || "#999" }}>
+                <div className="text-xl font-bold" style={{ color: effectivePartyColors[party] || "#999" }}>
                   {chance}%
                 </div>
                 <div className="text-[10px] text-zinc-500">{party}</div>
@@ -159,7 +190,7 @@ export default function ECPrediction() {
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${share * 2}%`,
-                      backgroundColor: partyColors[party] || "#999",
+                      backgroundColor: effectivePartyColors[party] || "#999",
                       opacity: 0.8,
                     }}
                   />
@@ -180,7 +211,7 @@ export default function ECPrediction() {
             .sort((a, b) => b[1] - a[1])
             .map(([party, count]) => (
               <div key={party} className="bg-muted/30 rounded-lg p-2 text-center">
-                <div className="text-lg font-bold" style={{ color: partyColors[party] || "#999" }}>
+                <div className="text-lg font-bold" style={{ color: effectivePartyColors[party] || "#999" }}>
                   {count}
                 </div>
                 <div className="text-[10px] text-zinc-500">{party} wards</div>
@@ -212,7 +243,7 @@ export default function ECPrediction() {
                   <td className="text-center">
                     <span
                       className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      style={{ color: partyColors[data.winner2024] || "#999" }}
+                      style={{ color: effectivePartyColors[data.winner2024] || "#999" }}
                     >
                       {data.winner2024}
                     </span>
@@ -220,7 +251,7 @@ export default function ECPrediction() {
                   <td className="text-center">
                     <span
                       className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      style={{ color: partyColors[data.predictedWinner] || "#999" }}
+                      style={{ color: effectivePartyColors[data.predictedWinner] || "#999" }}
                     >
                       {data.predictedWinner}
                     </span>

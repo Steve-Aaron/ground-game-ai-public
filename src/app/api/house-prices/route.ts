@@ -50,15 +50,27 @@ interface HousePricesData {
   sourceUrl: string;
 }
 
+// UKHPI region slug overrides for Scottish council areas whose slug doesn't
+// follow the standard lowercase-hyphenate convention.
+const UKHPI_SLUG_OVERRIDES: Record<string, string> = {
+  "Aberdeen City": "city-of-aberdeen",
+  "Dundee City": "city-of-dundee",
+  "Glasgow City": "city-of-glasgow",
+  "Armagh City, Banbridge and Craigavon": "armagh-banbridge-and-craigavon",
+  "Derry City and Strabane": "derry-and-strabane",
+};
+
 // false = region has no UKHPI data (clean 400); null = network/unexpected error (500)
 async function generateFreshData(
   ladName: string
 ): Promise<HousePricesData | null | false> {
   try {
-    const slug = ladName
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+    const slug =
+      UKHPI_SLUG_OVERRIDES[ladName] ??
+      ladName
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
     const ppiDistrict = encodeURIComponent(ladName.toUpperCase());
 
     // Step 1: Fetch region URI list and PPI recent sales in parallel
@@ -215,6 +227,25 @@ export async function GET(request: Request) {
       { error: "Invalid constituency slug" },
       { status: 400 }
     );
+  }
+
+  // HM Land Registry covers England and Wales only.
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
+  if (ladCode?.startsWith("S12")) {
+    return NextResponse.json({
+      source: "not-applicable",
+      scotland: true,
+      sourceUrl: "https://www.ros.gov.uk/property-data/property-statistics",
+      note: "House price data for Scotland is published by Registers of Scotland.",
+    });
+  }
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      source: "not-applicable",
+      northernIreland: true,
+      sourceUrl: "https://www.finance-ni.gov.uk/topics/property/land-and-property-services",
+      note: "House price data for Northern Ireland is published by Land and Property Services NI.",
+    });
   }
 
   // Try data-layer LAD name (first LAD for multi-LAD constituencies), else

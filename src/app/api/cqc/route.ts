@@ -187,6 +187,34 @@ export async function GET(request: Request) {
     );
   }
 
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
+
+  if (ladCode?.startsWith("S12")) {
+    return NextResponse.json({
+      locations: [],
+      summary: { outstanding: 0, good: 0, requiresImprovement: 0, inadequate: 0 },
+      totalFound: 0,
+      detailsFetched: 0,
+      source: "not-applicable",
+      sourceUrl: "https://www.careinspectorate.com/",
+      scotland: true,
+      note: "Care services in Scotland are regulated by Care Inspectorate Scotland, not the CQC.",
+    });
+  }
+
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      locations: [],
+      summary: { outstanding: 0, good: 0, requiresImprovement: 0, inadequate: 0 },
+      totalFound: 0,
+      detailsFetched: 0,
+      source: "not-applicable",
+      sourceUrl: "https://www.rqia.org.uk/find-a-service/",
+      northernIreland: true,
+      note: "Care services in Northern Ireland are regulated by RQIA (Regulation and Quality Improvement Authority), not the CQC.",
+    });
+  }
+
   // Determine postcodes: Braintree fallback, else try the (forward-compatible)
   const postcodes = constituencyData.areas?.postcodes ?? (constituencySlug === "braintree" ? BRAINTREE_POSTCODES : null);
 

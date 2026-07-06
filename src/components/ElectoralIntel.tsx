@@ -5,13 +5,19 @@ import {
   ecPrediction as fallbackEcPrediction,
   wardElectoralCalc as fallbackWardElectoralCalc,
 } from "@/data/braintree";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 import { getFullData } from "@/data";
 
 type View = "results" | "prediction" | "wards";
 
 const partyColors: Record<string, string> = {
-  CON: "#0087DC", LAB: "#DC241f", Reform: "#12B6CF", LIB: "#FAA61A", Green: "#6AB023", OTH: "#999",
+  CON: "#0087DC", LAB: "#DC241f", Reform: "#12B6CF", LIB: "#FAA61A", Green: "#6AB023", Nat: "#FDF38E",
+  DUP: "#D46A4C", SF: "#326760", APNI: "#F6CB2F", SDLP: "#2AA82C", UUP: "#48A5EE", TUV: "#0C3A6A",
+  OTH: "#999",
 };
 
 // The data-layer candidate `party` field uses long form (e.g. "Conservative
@@ -27,6 +33,12 @@ function partyMeta(longName: string): PartyMeta {
   if (n.includes("green")) return { label: "Green", color: "#6AB023" };
   if (n.includes("plaid")) return { label: "Plaid Cymru", color: "#005B54" };
   if (n.includes("snp") || n.includes("scottish national")) return { label: "SNP", color: "#FDF38E" };
+  if (n.includes("democratic unionist")) return { label: "DUP", color: "#D46A4C" };
+  if (n.includes("sinn f")) return { label: "Sinn Féin", color: "#326760" };
+  if (n.includes("alliance party")) return { label: "Alliance", color: "#F6CB2F" };
+  if (n.includes("social democratic and labour") || n.includes("social democratic & labour") || n.startsWith("sdlp")) return { label: "SDLP", color: "#2AA82C" };
+  if (n.includes("ulster unionist")) return { label: "UUP", color: "#48A5EE" };
+  if (n.includes("traditional unionist")) return { label: "TUV", color: "#0C3A6A" };
   return { label: longName, color: "#999999" };
 }
 
@@ -145,6 +157,8 @@ function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { el
 
 export default function ElectoralIntel() {
   const { slug } = useConstituency();
+  const region = getRegion(slug);
+  const effectivePartyColors: Record<string, string> = { ...partyColors, Nat: region === "Wales" ? "#005B54" : "#FDF38E" };
   const results2024 = deriveResults(slug);
   const [view, setView] = useState<View>("results");
   const [ecPrediction, setEcPrediction] = useState<{
@@ -271,7 +285,7 @@ export default function ElectoralIntel() {
               .sort((a, b) => b[1] - a[1])
               .map(([party, chance]) => (
                 <div key={party} className="text-center">
-                  <div className="text-xl font-bold" style={{ color: partyColors[party] || "#999" }}>
+                  <div className="text-xl font-bold" style={{ color: effectivePartyColors[party] || "#999" }}>
                     {chance}%
                   </div>
                   <div className="text-[10px] text-zinc-500">{party}</div>
@@ -289,7 +303,7 @@ export default function ElectoralIntel() {
                 <div key={party} className="flex items-center gap-2">
                   <span className="text-[11px] text-zinc-400 w-14">{party}</span>
                   <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${share * 2}%`, backgroundColor: partyColors[party] || "#999", opacity: 0.8 }} />
+                    <div className="h-full rounded-full" style={{ width: `${share * 2}%`, backgroundColor: effectivePartyColors[party] || "#999", opacity: 0.8 }} />
                   </div>
                   <span className="text-[11px] text-zinc-300 font-medium w-10 text-right">{share}%</span>
                 </div>
@@ -312,7 +326,7 @@ export default function ElectoralIntel() {
               .sort((a, b) => b[1] - a[1])
               .map(([party, count]) => (
                 <div key={party} className="flex-1 bg-muted/30 rounded-lg p-2 text-center">
-                  <div className="text-lg font-bold" style={{ color: partyColors[party] || "#999" }}>{count}</div>
+                  <div className="text-lg font-bold" style={{ color: effectivePartyColors[party] || "#999" }}>{count}</div>
                   <div className="text-[10px] text-zinc-500">{party}</div>
                 </div>
               ))}
@@ -337,10 +351,10 @@ export default function ElectoralIntel() {
                     <tr key={name} className={`border-b border-border/30 ${changed ? "bg-red-500/5" : ""}`}>
                       <td className="py-1 text-zinc-300">{name}</td>
                       <td className="text-center">
-                        <span style={{ color: partyColors[data.winner2024] || "#999" }}>{data.winner2024}</span>
+                        <span style={{ color: effectivePartyColors[data.winner2024] || "#999" }}>{data.winner2024}</span>
                       </td>
                       <td className="text-center">
-                        <span style={{ color: partyColors[data.predictedWinner] || "#999" }}>
+                        <span style={{ color: effectivePartyColors[data.predictedWinner] || "#999" }}>
                           {data.predictedWinner}
                           {changed && " \u26A1"}
                         </span>

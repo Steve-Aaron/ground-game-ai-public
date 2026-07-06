@@ -14,6 +14,8 @@ interface EPCData {
   sourceUrl?: string;
   note?: string;
   error?: string;
+  scotland?: boolean;
+  northernIreland?: boolean;
 }
 
 interface BandDisplay {
@@ -74,6 +76,42 @@ export default function EPCPanel() {
 
   if (!data || data.error) {
     return <p className="text-zinc-500 text-xs">EPC data unavailable</p>;
+  }
+
+  if (data.scotland) {
+    return (
+      <div className="p-4 space-y-2 text-center">
+        <p className="text-xs text-zinc-500">
+          Energy Performance Certificates in Scotland are held on the Scottish EPC Register, separate from the England &amp; Wales register.
+        </p>
+        <a
+          href="https://www.scottishepcregister.org.uk/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+        >
+          Search on Scottish EPC Register ↗
+        </a>
+      </div>
+    );
+  }
+
+  if (data.northernIreland) {
+    return (
+      <div className="p-4 space-y-2 text-center">
+        <p className="text-xs text-zinc-500">
+          Energy Performance Certificates in Northern Ireland are held on the NI EPC Register, not the England &amp; Wales register.
+        </p>
+        <a
+          href="https://www.epcni.info/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+        >
+          Search on NI EPC Register ↗
+        </a>
+      </div>
+    );
   }
 
   // Convert ratings Record to array of bands

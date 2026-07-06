@@ -24,6 +24,9 @@ interface HousePriceData {
   recentSales: Sale[];
   source: string;
   sourceUrl: string;
+  scotland?: boolean;
+  northernIreland?: boolean;
+  note?: string;
   error?: string;
 }
 
@@ -79,6 +82,42 @@ export default function HousePricesPanel() {
             <div key={i} className="h-10 bg-muted rounded-xl" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (data?.scotland) {
+    return (
+      <div className="p-4 space-y-2 text-center">
+        <p className="text-xs text-zinc-500">
+          House price data for Scotland is published by Registers of Scotland.
+        </p>
+        <a
+          href={data.sourceUrl ?? "https://www.ros.gov.uk/property-data/property-statistics"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+        >
+          Registers of Scotland property statistics ↗
+        </a>
+      </div>
+    );
+  }
+
+  if (data?.northernIreland) {
+    return (
+      <div className="p-4 space-y-2 text-center">
+        <p className="text-xs text-zinc-500">
+          House price data for Northern Ireland is published by Land and Property Services NI.
+        </p>
+        <a
+          href={data.sourceUrl ?? "https://www.finance-ni.gov.uk/topics/property/land-and-property-services"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+        >
+          Land and Property Services NI ↗
+        </a>
       </div>
     );
   }

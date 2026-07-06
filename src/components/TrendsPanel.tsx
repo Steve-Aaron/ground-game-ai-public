@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { TrendingUp, Search, BarChart3 } from "lucide-react";
+
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 
 // ── Types — match /api/trends-v2 response shape ─────────────────────────────
@@ -322,16 +323,6 @@ function ComparisonChart({ series, dates }: { series: ComparisonSeries[]; dates:
   );
 }
 
-// ── Inline empty-state placeholder ──────────────────────────────────────────
-
-function UnavailableSection({ height = "py-4" }: { height?: string }) {
-  return (
-    <div className={`bg-muted/40 rounded-lg border border-border/50 px-3 ${height}`}>
-      <p className="text-xs text-zinc-500 text-center">Currently unavailable</p>
-    </div>
-  );
-}
-
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function TrendsPanel() {
@@ -465,21 +456,18 @@ export default function TrendsPanel() {
               Party comparison data currently unavailable.
             </p>
           </>
-        ) : (
-          <UnavailableSection />
-        )}
+        ) : null}
       </div>
 
-      {/* Section: Regional vs national */}
-      <div className="px-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Search className="h-3 w-3 text-zinc-500" />
-          <span className="text-xs font-medium text-zinc-500">
-            {data?.constituencyName ? `${data.constituencyName} region vs UK average` : "Region vs UK average"}
-          </span>
-        </div>
-
-        {regionalOk && data?.regionalVsNational ? (
+      {/* Section: Regional vs national — shown only when data available */}
+      {regionalOk && data?.regionalVsNational && (
+        <div className="px-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Search className="h-3 w-3 text-zinc-500" />
+            <span className="text-xs font-medium text-zinc-500">
+              {data?.constituencyName ? `${data.constituencyName} region vs UK average` : "Region vs UK average"}
+            </span>
+          </div>
           <div className="bg-muted/40 rounded-lg border border-border/50 divide-y divide-zinc-800/40">
             {data.regionalVsNational.map((r) => {
               const regionVal = r.regionValue ?? r.eastOfEnglandValue ?? null;
@@ -500,21 +488,18 @@ export default function TrendsPanel() {
               );
             })}
           </div>
-        ) : (
-          <UnavailableSection />
-        )}
-      </div>
-
-      {/* Section: Trending in the UK */}
-      <div>
-        <div className="flex items-center gap-2 mb-2 px-3">
-          <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-            Trending in the UK
-          </span>
         </div>
+      )}
 
-        {trendingOk && data?.trendingSearches ? (
+      {/* Section: Trending in the UK — shown only when data available */}
+      {trendingOk && data?.trendingSearches && (
+        <div>
+          <div className="flex items-center gap-2 mb-2 px-3">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Trending in the UK
+            </span>
+          </div>
           <div className="bg-muted/30 rounded-lg mx-2 border border-border/40 divide-y divide-zinc-800/40">
             {data.trendingSearches.slice(0, 6).map((t) => (
               <div
@@ -530,12 +515,8 @@ export default function TrendsPanel() {
               </div>
             ))}
           </div>
-        ) : (
-          <div className="mx-2">
-            <UnavailableSection />
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="px-3 text-[10px] text-zinc-700 text-center pb-1">

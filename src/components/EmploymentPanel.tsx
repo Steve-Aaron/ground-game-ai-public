@@ -23,6 +23,7 @@ interface EmploymentData {
   claimantCount: ClaimantCount | null;
   source: string;
   sourceUrl: string;
+  northernIreland?: boolean;
   error?: string;
 }
 
@@ -116,6 +117,24 @@ export default function EmploymentPanel() {
     return (
       <div className="bg-background border border-border rounded-2xl p-4">
         <p className="text-zinc-500 text-xs">Employment data unavailable</p>
+      </div>
+    );
+  }
+
+  if (data.northernIreland) {
+    return (
+      <div className="bg-background border border-border rounded-2xl p-4 space-y-2 text-center">
+        <p className="text-xs text-zinc-500">
+          Labour market statistics for Northern Ireland are published by NISRA, separate from ONS/NOMIS.
+        </p>
+        <a
+          href="https://www.nisra.gov.uk/statistics/labour-market-and-social-welfare/labour-force-survey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+        >
+          View NI labour market stats on nisra.gov.uk ↗
+        </a>
       </div>
     );
   }

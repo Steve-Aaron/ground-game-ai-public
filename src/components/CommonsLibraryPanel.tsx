@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 
 interface SectionData {
   heading: string;
@@ -140,6 +144,7 @@ function Delta({ local, national, invert = false }: { local: string; national: s
 
 export default function CommonsLibraryPanel() {
   const { slug } = useConstituency();
+  const region = getRegion(slug);
   const [data, setData] = useState<CommonsLibraryData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -181,6 +186,44 @@ export default function CommonsLibraryPanel() {
     data.sections.housing?.[0]?.rows?.length
   );
   if (!hasDemographicProfile) {
+    if (region === "Northern Ireland") {
+      return (
+        <div className="bg-muted/50 border border-border rounded-xl p-6 text-center space-y-2">
+          <p className="text-zinc-400 text-sm font-medium">Northern Ireland Census 2021</p>
+          <p className="text-zinc-500 text-[11px]">
+            Census data for Northern Ireland is held by{" "}
+            <a
+              href="https://www.nisra.gov.uk/statistics/census/2021-census"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              NISRA
+            </a>
+            , separate from the ONS register used for England and Wales.
+          </p>
+        </div>
+      );
+    }
+    if (region === "Scotland") {
+      return (
+        <div className="bg-muted/50 border border-border rounded-xl p-6 text-center space-y-2">
+          <p className="text-zinc-400 text-sm font-medium">Scotland Census 2022</p>
+          <p className="text-zinc-500 text-[11px]">
+            Census data for Scotland is held by{" "}
+            <a
+              href="https://www.scotlandscensus.gov.uk/2022-results/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              National Records of Scotland
+            </a>
+            , separate from the ONS register used for England and Wales.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="bg-muted/50 border border-border rounded-xl p-6 text-center">
         <p className="text-zinc-400 text-sm font-medium mb-1">

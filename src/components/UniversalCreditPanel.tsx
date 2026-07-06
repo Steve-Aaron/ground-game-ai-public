@@ -14,6 +14,7 @@ interface UCData {
   byAge: { label: string; count: number; percentage: number }[];
   source: string;
   sourceUrl: string;
+  northernIreland?: boolean;
   error?: string;
 }
 
@@ -54,6 +55,24 @@ export default function UniversalCreditPanel() {
 
   if (!data || data.error) {
     return <p className="text-zinc-500 text-xs">Universal Credit data unavailable</p>;
+  }
+
+  if (data.northernIreland) {
+    return (
+      <div className="p-4 space-y-2 text-center">
+        <p className="text-xs text-zinc-500">
+          Universal Credit in Northern Ireland is administered by the Department for Communities (DfC), not DWP.
+        </p>
+        <a
+          href="https://www.communities-ni.gov.uk/articles/universal-credit-statistics"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+        >
+          View NI UC statistics on communities-ni.gov.uk ↗
+        </a>
+      </div>
+    );
   }
 
   const trend = data.trend ?? [];

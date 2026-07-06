@@ -217,6 +217,20 @@ export async function GET(request: Request) {
     );
   }
 
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
+
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      current: { count: null, rate: null, date: null },
+      trend: [],
+      byAge: [],
+      source: "not-applicable",
+      sourceUrl: "https://www.communities-ni.gov.uk/articles/universal-credit-statistics",
+      northernIreland: true,
+      note: "Universal Credit in Northern Ireland is administered by the Department for Communities (DfC), not DWP.",
+    });
+  }
+
   // Try data-layer wpca24Code (forward-compatible — not yet declared on the
   // Constituency type), fall back to Braintree's hardcoded code. The cast
   // becomes a no-op once wpca24Code is added to the Constituency interface.

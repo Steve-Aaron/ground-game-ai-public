@@ -9,6 +9,14 @@ const PARTY_COLORS: Record<string, string> = {
   ld: "#f97316",
   reform: "#22d3ee",
   green: "#16a34a",
+  snp: "#FFF95D",
+  plaid: "#3F8B3C",
+  sf: "#169B62",
+  dup: "#D43B40",
+  apni: "#F6CB2F",
+  sdlp: "#2AA82C",
+  uup: "#48A5EE",
+  tuv: "#7B1D1D",
   other: "#6b7280",
 };
 
@@ -18,6 +26,14 @@ const PARTY_NAMES: Record<string, string> = {
   ld: "Liberal Democrats",
   reform: "Reform UK",
   green: "Green",
+  snp: "SNP",
+  plaid: "Plaid Cymru",
+  sf: "Sinn Féin",
+  dup: "DUP",
+  apni: "Alliance",
+  sdlp: "SDLP",
+  uup: "UUP",
+  tuv: "TUV",
   other: "Other",
 };
 
@@ -34,19 +50,21 @@ export default function ElectionResults() {
     );
   }
 
-  const knownVotes = r.con + r.lab + r.ld + r.reform + r.green;
-  const otherVotes = Math.max(0, r.totalVotes - knownVotes);
-  const otherShare = otherVotes > 0
-    ? Math.round((otherVotes / r.totalVotes) * 1000) / 10
-    : 0;
-
   const parties = [
-    { key: "con", votes: r.con, share: r.conShare },
-    { key: "lab", votes: r.lab, share: r.labShare },
-    { key: "reform", votes: r.reform, share: r.reformShare },
-    { key: "ld", votes: r.ld, share: r.ldShare },
-    { key: "green", votes: r.green, share: r.greenShare },
-    ...(otherVotes > 0 ? [{ key: "other", votes: otherVotes, share: otherShare }] : []),
+    { key: "con",   votes: r.con,           share: r.conShare },
+    { key: "lab",   votes: r.lab,           share: r.labShare },
+    { key: "reform",votes: r.reform,        share: r.reformShare },
+    { key: "ld",    votes: r.ld,            share: r.ldShare },
+    { key: "green", votes: r.green,         share: r.greenShare },
+    ...(r.snp   ? [{ key: "snp",   votes: r.snp,   share: r.snpShare   ?? 0 }] : []),
+    ...(r.plaid ? [{ key: "plaid", votes: r.plaid, share: r.plaidShare ?? 0 }] : []),
+    ...(r.sf    ? [{ key: "sf",    votes: r.sf,    share: r.sfShare    ?? 0 }] : []),
+    ...(r.dup   ? [{ key: "dup",   votes: r.dup,   share: r.dupShare   ?? 0 }] : []),
+    ...(r.apni  ? [{ key: "apni",  votes: r.apni,  share: r.apniShare  ?? 0 }] : []),
+    ...(r.sdlp  ? [{ key: "sdlp",  votes: r.sdlp,  share: r.sdlpShare  ?? 0 }] : []),
+    ...(r.uup   ? [{ key: "uup",   votes: r.uup,   share: r.uupShare   ?? 0 }] : []),
+    ...(r.tuv   ? [{ key: "tuv",   votes: r.tuv,   share: r.tuvShare   ?? 0 }] : []),
+    ...(r.other ? [{ key: "other", votes: r.other, share: r.otherShare ?? 0 }] : []),
   ]
     .filter((p) => p.votes > 0)
     .sort((a, b) => b.share - a.share);

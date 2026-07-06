@@ -18,6 +18,7 @@ const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const FINGERTIPS_CSV = "https://fingertips.phe.org.uk/api/all_data/csv/by_indicator_id";
 const ENGLAND = "E92000001";
+const WALES  = "W92000004";
 
 // Each spec selects one row from the CSV by indicator ID + Sex + Age.
 // Significance comes directly from the "Compared to England" text column.
@@ -79,7 +80,15 @@ function sigFromText(text: string, invert: boolean): "better" | "similar" | "wor
 }
 
 async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
-  const url = `${FINGERTIPS_CSV}?indicator_ids=${INDICATOR_IDS}&child_area_type_id=501&parent_area_type_id=15&parent_area_code=${ENGLAND}`;
+  // Welsh UAs (W06...) sit under Wales in Fingertips with a different child
+  // area type (8 = County & UA) and parent. English LAs use child type 501.
+  const isWelsh = districtCode.startsWith("W");
+  const url = isWelsh
+    ? `${FINGERTIPS_CSV}?indicator_ids=${INDICATOR_IDS}&child_area_type_id=8&parent_area_type_id=15&parent_area_code=${WALES}`
+    : `${FINGERTIPS_CSV}?indicator_ids=${INDICATOR_IDS}&child_area_type_id=501&parent_area_type_id=15&parent_area_code=${ENGLAND}`;
+
+  const nationalCode = isWelsh ? WALES : ENGLAND;
+
   const res = await fetch(url, {
     headers: { Accept: "text/csv" },
     signal: AbortSignal.timeout(45000),
@@ -93,7 +102,7 @@ async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
   // 9=CategoryType 11=TimePeriod 12=Value 21=ComparedToEngland 23=TimePeriodSortable
   type BestRow = { value: number; sig: string; period: string; sortable: number; englandAvg: number | null };
   const localBest = new Map<string, BestRow>(); // key = "id|sex|age"
-  const englandBest = new Map<string, BestRow>();
+  const nationalBest = new Map<string, BestRow>();
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -104,7 +113,7 @@ async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
     const areaCode    = cols[4].trim();
     const categoryType = cols[9].trim();
     if (categoryType !== "") continue; // skip breakdowns
-    if (areaCode !== districtCode && areaCode !== ENGLAND) continue;
+    if (areaCode !== districtCode && areaCode !== nationalCode) continue;
 
     const indicatorId = parseInt(cols[0], 10);
     const sex         = cols[7].trim();
@@ -117,7 +126,7 @@ async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
     if (isNaN(value)) continue;
 
     const key = `${indicatorId}|${sex}|${age}`;
-    const map = areaCode === ENGLAND ? englandBest : localBest;
+    const map = areaCode === nationalCode ? nationalBest : localBest;
     const existing = map.get(key);
     if (!existing || sortable > existing.sortable) {
       map.set(key, { value, sig, period, sortable, englandAvg: null });
@@ -127,15 +136,15 @@ async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
   const indicators: HealthIndicator[] = [];
   for (const spec of INDICATOR_SPECS) {
     const key = `${spec.id}|${spec.sex}|${spec.age}`;
-    const local   = localBest.get(key);
-    const england = englandBest.get(key);
+    const local    = localBest.get(key);
+    const national = nationalBest.get(key);
     if (!local) continue;
     indicators.push({
       id: spec.id,
       name: spec.name,
       value: local.value,
       unit: spec.unit,
-      englandAvg: england?.value ?? null,
+      englandAvg: national?.value ?? null,
       significance: sigFromText(local.sig, spec.invertSig),
       period: local.period,
     });
@@ -146,7 +155,6 @@ async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
 async function generateFreshData(
   districtCode: string,
   districtName: string,
-  constituencySlug: string
 ): Promise<HealthData> {
   try {
     const indicators = await fetchFromCSV(districtCode);
@@ -210,6 +218,17 @@ export async function GET(request: Request) {
     );
   }
   const districtCode = primaryLad.code;
+
+  if (districtCode.startsWith("N09")) {
+    return NextResponse.json({
+      indicators: [],
+      areaName: primaryLad.name,
+      source: "not-applicable",
+      sourceUrl: "https://www.publichealth.hscni.net/",
+      northernIreland: true,
+      note: "Fingertips (UKHSA) public health profiles do not cover Northern Ireland. NI public health statistics are published by the Public Health Agency (PHA NI).",
+    });
+  }
   const districtName = primaryLad.name;
 
   const cacheDocRef = adminDb.collection("health_cache").doc(constituencySlug);
@@ -225,12 +244,15 @@ export async function GET(request: Request) {
     console.warn("Health cache read failed (continuing without cache):", err);
   }
 
-  if (cached && !force) {
+  const cachedIndicators = cached?.data?.indicators as unknown[] | undefined;
+  const cacheIsEmpty = !cachedIndicators || cachedIndicators.length === 0;
+
+  if (cached && !force && !cacheIsEmpty) {
     const cacheAge = Date.now() - new Date(cached.updated_at).getTime();
     if (cacheAge > TTL_MS) {
       (async () => {
         try {
-          const fresh = await generateFreshData(districtCode, districtName, constituencySlug);
+          const fresh = await generateFreshData(districtCode, districtName);
           await cacheDocRef.set({ data: fresh, updated_at: new Date().toISOString() });
         } catch (err) {
           console.warn("Health background refresh failed:", err);
@@ -241,7 +263,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const fresh = await generateFreshData(districtCode, districtName, constituencySlug);
+    const fresh = await generateFreshData(districtCode, districtName);
 
     const cachedAt = Date.now();
     try {

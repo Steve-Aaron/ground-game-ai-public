@@ -145,6 +145,25 @@ export async function GET(request: Request) {
     );
   }
 
+  // EA Flood Monitoring API covers England and Wales only.
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      warnings: [], stations: [], activeWarnings: 0,
+      source: "not-applicable",
+      sourceUrl: "https://www.infrastructure-ni.gov.uk/topics/rivers",
+      northernIreland: true,
+    });
+  }
+  if (ladCode?.startsWith("S12")) {
+    return NextResponse.json({
+      warnings: [], stations: [], activeWarnings: 0,
+      source: "not-applicable",
+      sourceUrl: "https://www.sepa.org.uk/environment/water/flooding/",
+      scotland: true,
+    });
+  }
+
   const CENTER_LAT = constituencyData.geo?.lat;
   const CENTER_LNG = constituencyData.geo?.lng;
 

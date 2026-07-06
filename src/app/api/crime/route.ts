@@ -269,6 +269,28 @@ export async function GET(request: Request) {
     );
   }
 
+  // data.police.uk covers England and Wales only. Police Scotland and PSNI
+  // do not publish to the API.
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      crimes: [], summary: [], total: 0, month: null,
+      source: "not-applicable",
+      sourceUrl: "https://www.psni.police.uk/statistics-crime-data-information/",
+      northernIreland: true,
+      note: "Crime statistics for Northern Ireland are published by the PSNI, not data.police.uk.",
+    });
+  }
+  if (ladCode?.startsWith("S12")) {
+    return NextResponse.json({
+      crimes: [], summary: [], total: 0, month: null,
+      source: "not-applicable",
+      sourceUrl: "https://www.scotland.police.uk/about-us/how-we-do-it/our-statistics/",
+      scotland: true,
+      note: "Crime statistics for Scotland are published by Police Scotland, not data.police.uk.",
+    });
+  }
+
   // Determine sample points: curated Braintree fallback, else bbox-derived
   // grid. ~107 non-English constituencies have no geo data populated — return
   // a clean 400 for those (matches the census/EPC pattern).

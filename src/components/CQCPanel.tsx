@@ -28,6 +28,8 @@ interface CQCData {
   detailsFetched?: number;
   source: string;
   sourceUrl: string;
+  scotland?: boolean;
+  northernIreland?: boolean;
   error?: string;
 }
 
@@ -132,8 +134,41 @@ export default function CQCPanel() {
   const locations = data.locations ?? [];
   const total = data.totalFound ?? locations.length;
 
-  // API returns 403 — show a clean empty state rather than four zeros
   if (total === 0) {
+    if (data.scotland) {
+      return (
+        <div className="p-4 space-y-2 text-center">
+          <p className="text-xs text-zinc-500">
+            Care services in Scotland are regulated by Care Inspectorate Scotland, not the CQC.
+          </p>
+          <a
+            href="https://www.careinspectorate.com/index.php/find-a-care-service"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            Find care services on careinspectorate.com ↗
+          </a>
+        </div>
+      );
+    }
+    if (data.northernIreland) {
+      return (
+        <div className="p-4 space-y-2 text-center">
+          <p className="text-xs text-zinc-500">
+            Care services in Northern Ireland are regulated by RQIA, not the CQC.
+          </p>
+          <a
+            href="https://www.rqia.org.uk/find-a-service/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            Find care services on rqia.org.uk ↗
+          </a>
+        </div>
+      );
+    }
     return (
       <div className="p-4 space-y-2 text-center">
         <p className="text-xs text-zinc-500">

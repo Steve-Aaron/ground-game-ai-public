@@ -7,22 +7,19 @@ export const dynamic = "force-dynamic";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // EPC aggregate stats change quarterly — weekly refresh is enough
 
 // Energy Performance Certificate (EPC) Open Data
-// Requires free API key from https://epc.opendatacommunities.org/
-// Auth: Basic base64(email:apiKey)
+// Requires free API key from get-energy-performance-data.communities.gov.uk
+// Auth: Bearer token
 // Falls back to national average data if no key is configured
 
-const EPC_BASE = "https://epc.opendatacommunities.org/api/v1/domestic/search";
-
-const BRAINTREE_POSTCODES = ["CM7", "CM77", "CO9"];
+const EPC_BASE = "https://api.get-energy-performance-data.communities.gov.uk/api/domestic/search";
 
 interface EPCRecord {
-  address: string;
+  certificateNumber?: string;
+  addressLine1?: string;
+  addressLine2?: string;
   postcode: string;
-  "current-energy-rating": string;
-  "current-energy-efficiency": string;
-  "lodgement-date": string;
-  "property-type": string;
-  "total-floor-area": string;
+  currentEnergyEfficiencyBand: string;
+  registrationDate: string;
 }
 
 type BandCounts = Record<string, number>;
@@ -40,56 +37,43 @@ const NATIONAL_FALLBACK: BandCounts = {
 };
 
 async function generateFreshEPCData(
-  postcodes: string[],
-  apiKey: string,
-  email: string
+  constituencyName: string,
+  apiKey: string
 ): Promise<{ ratings: BandCounts; totalAssessed: number; poorlyRated: number; recentAssessments: object[]; sourceUrl: string } | null> {
   try {
-    const results = await Promise.allSettled(postcodes.map((pc) => fetchEPCPage(pc, apiKey, email)));
-    const allRecords: EPCRecord[] = [];
-    for (const result of results) {
-      if (result.status === "fulfilled") allRecords.push(...result.value);
-    }
+    const allRecords = await fetchEPCPage(constituencyName, apiKey);
     const ratings: BandCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0 };
     for (const record of allRecords) {
-      const band = record["current-energy-rating"]?.toUpperCase();
+      const band = record.currentEnergyEfficiencyBand?.toUpperCase();
       if (band && band in ratings) ratings[band]++;
     }
     const totalAssessed = Object.values(ratings).reduce((a, b) => a + b, 0);
     const poorlyRatedCount = ratings.D + ratings.E + ratings.F + ratings.G;
     const poorlyRated = totalAssessed > 0 ? Math.round((poorlyRatedCount / totalAssessed) * 1000) / 10 : 0;
     const recentAssessments = allRecords
-      .filter((r) => r["lodgement-date"])
-      .sort((a, b) => b["lodgement-date"].localeCompare(a["lodgement-date"]))
+      .filter((r) => r.registrationDate)
+      .sort((a, b) => b.registrationDate.localeCompare(a.registrationDate))
       .slice(0, 10)
       .map((r) => ({
-        address: r.address,
+        address: [r.addressLine1, r.addressLine2].filter(Boolean).join(", "),
         postcode: r.postcode,
-        rating: r["current-energy-rating"],
-        efficiency: r["current-energy-efficiency"],
-        date: r["lodgement-date"],
-        propertyType: r["property-type"],
-        floorArea: r["total-floor-area"],
+        rating: r.currentEnergyEfficiencyBand,
+        date: r.registrationDate,
       }));
-    return { ratings, totalAssessed, poorlyRated, recentAssessments, sourceUrl: "https://epc.opendatacommunities.org/" };
+    return { ratings, totalAssessed, poorlyRated, recentAssessments, sourceUrl: "https://get-energy-performance-data.communities.gov.uk/" };
   } catch {
     return null;
   }
 }
 
-async function fetchEPCPage(
-  postcode: string,
-  apiKey: string,
-  email: string
-): Promise<EPCRecord[]> {
-  const auth = Buffer.from(`${email}:${apiKey}`).toString("base64");
-  const url = `${EPC_BASE}?postcode=${postcode}&size=100`;
+async function fetchEPCPage(constituencyName: string, apiKey: string): Promise<EPCRecord[]> {
+  const url = `${EPC_BASE}?constituency[]=${encodeURIComponent(constituencyName)}&page=500&current_page=1`;
 
   try {
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        Authorization: `Basic ${auth}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       next: { revalidate: 86400 },
     });
@@ -97,7 +81,7 @@ async function fetchEPCPage(
     if (!res.ok) return [];
 
     const data = await res.json();
-    return data?.rows ?? [];
+    return data?.data ?? [];
   } catch {
     return [];
   }
@@ -116,19 +100,35 @@ export async function GET(request: Request) {
     );
   }
 
-  const POSTCODES = constituencyData.areas?.postcodes ?? (constituencySlug === "braintree" ? BRAINTREE_POSTCODES : null);
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
 
-  if (!POSTCODES) {
-    return Response.json(
-      {
-        error: "EPC data not available",
-        message: "Postcode data not yet sourced for this constituency",
-        constituency: constituencySlug,
-      },
-      { status: 400 }
-    );
+  if (ladCode?.startsWith("S12")) {
+    return NextResponse.json({
+      ratings: { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0 },
+      totalAssessed: 0,
+      poorlyRated: 0,
+      recentAssessments: [],
+      source: "not-applicable",
+      sourceUrl: "https://www.scottishepcregister.org.uk/",
+      scotland: true,
+      note: "Energy Performance Certificates in Scotland are held on the Scottish EPC Register, not the England & Wales register.",
+    });
   }
 
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      ratings: { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0 },
+      totalAssessed: 0,
+      poorlyRated: 0,
+      recentAssessments: [],
+      source: "not-applicable",
+      sourceUrl: "https://www.epcni.info/",
+      northernIreland: true,
+      note: "Energy Performance Certificates in Northern Ireland are held on the NI EPC Register, not the England & Wales register.",
+    });
+  }
+
+  const constituencyName = constituencyData.constituency.name;
   const cacheDocRef = adminDb.collection("epc_cache").doc(constituencySlug);
 
   type CacheDoc = { data: Record<string, unknown>; updated_at: string };
@@ -141,14 +141,16 @@ export async function GET(request: Request) {
   }
 
   const apiKey = process.env.EPC_API_KEY;
-  const email = process.env.EPC_EMAIL ?? "";
 
-  if (cached && !force) {
+  const cachedTotalAssessed = cached?.data?.totalAssessed as number | undefined;
+  const cacheIsEmpty = cachedTotalAssessed === 0 || cachedTotalAssessed === undefined;
+
+  if (cached && !force && !cacheIsEmpty) {
     const cacheAge = Date.now() - new Date(cached.updated_at).getTime();
     if (cacheAge > TTL_MS && apiKey) {
       (async () => {
         try {
-          const fresh = await generateFreshEPCData(POSTCODES, apiKey, email);
+          const fresh = await generateFreshEPCData(constituencyName, apiKey);
           if (fresh) await cacheDocRef.set({ data: fresh, updated_at: new Date().toISOString() });
         } catch (err) {
           console.warn("EPC background refresh failed:", err);
@@ -172,12 +174,12 @@ export async function GET(request: Request) {
       poorlyRated: Math.round(poorlyRated * 10) / 10,
       recentAssessments: [],
       source: "fallback",
-      note: "No EPC API key configured. Showing national average distribution. Set EPC_API_KEY and EPC_EMAIL env vars to fetch live data.",
+      note: "No EPC API key configured. Showing national average distribution. Set EPC_API_KEY env var to fetch live data.",
     });
   }
 
   try {
-    const fresh = await generateFreshEPCData(POSTCODES, apiKey, email);
+    const fresh = await generateFreshEPCData(constituencyName, apiKey);
     if (!fresh) throw new Error("EPC fetch returned null");
 
     const cachedAt = Date.now();

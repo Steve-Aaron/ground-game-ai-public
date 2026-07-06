@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { WARD_DEPRIVATION } from "@/data/ward-deprivation";
-import { useConstituency } from "@/hooks/useConstituency";
+import { useConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
 import { ChevronDown, ChevronUp } from "lucide-react";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 
 type SortField = "name" | "imdScore";
 
@@ -18,14 +22,66 @@ const DEPRIVATION_COLORS: Record<string, string> = {
 export default function WardTable() {
   const { slug } = useConstituency();
   const wards = WARD_DEPRIVATION[slug] ?? null;
+  const region = getRegion(slug);
 
   const [sortField, setSortField] = useState<SortField>("imdScore");
   const [sortAsc, setSortAsc] = useState(false);
 
   if (!wards) {
+    if (region === "Scotland") {
+      return (
+        <div className="p-4 space-y-2 text-center">
+          <p className="text-xs text-zinc-500">
+            Ward-level deprivation in Scotland uses the Scottish Index of Multiple Deprivation (SIMD).
+          </p>
+          <a
+            href="https://www.gov.scot/collections/scottish-index-of-multiple-deprivation-2020/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            SIMD 2020 data ↗
+          </a>
+        </div>
+      );
+    }
+    if (region === "Northern Ireland") {
+      return (
+        <div className="p-4 space-y-2 text-center">
+          <p className="text-xs text-zinc-500">
+            Area-level deprivation in Northern Ireland uses the NI Multiple Deprivation Measure (NIMDM). Council-level figures are shown in the Demographics tab.
+          </p>
+          <a
+            href="https://www.nisra.gov.uk/statistics/deprivation/northern-ireland-multiple-deprivation-measure-2017-nimdm2017"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            NIMDM 2017 data ↗
+          </a>
+        </div>
+      );
+    }
+    if (region === "Wales") {
+      return (
+        <div className="p-4 space-y-2 text-center">
+          <p className="text-xs text-zinc-500">
+            Ward-level deprivation in Wales uses the Welsh Index of Multiple Deprivation (WIMD).
+          </p>
+          <a
+            href="https://www.gov.wales/welsh-index-multiple-deprivation"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            WIMD data ↗
+          </a>
+        </div>
+      );
+    }
     return (
       <div className="p-4">
-        <div className="text-xs text-zinc-500">Ward data not available for this constituency.</div>
+        <div className="text-xs text-zinc-500">Ward deprivation data not available for this constituency.</div>
       </div>
     );
   }

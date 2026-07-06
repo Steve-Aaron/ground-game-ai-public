@@ -40,13 +40,18 @@ export async function GET(request: Request) {
   const CENTER_LAT = constituencyData.geo.lat;
   const CENTER_LNG = constituencyData.geo.lng;
 
+  const apiKey = process.env.OPENAQ_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(getFallbackData());
+  }
+
   try {
     const res = await fetch(
       `${OPENAQ_API}?coordinates=${CENTER_LAT},${CENTER_LNG}&radius=${RADIUS_M}&limit=10`,
       {
         next: { revalidate: 1800 }, // 30 min cache
         signal: AbortSignal.timeout(8000),
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "X-API-Key": apiKey },
       }
     );
 

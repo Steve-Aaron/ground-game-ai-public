@@ -9,7 +9,11 @@ import {
   Heart,
   AlertTriangle,
 } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituency, withConstituency, SELECTABLE_CONSTITUENCIES } from "@/hooks/useConstituency";
+
+function getRegion(slug: string): string {
+  return SELECTABLE_CONSTITUENCIES.find((c) => c.slug === slug)?.region ?? "England";
+}
 
 interface SectionRow {
   Measure: string;
@@ -193,6 +197,7 @@ function CategoryCard({
 
 export default function Demographics() {
   const { slug } = useConstituency();
+  const region = getRegion(slug);
   const [data, setData] = useState<CLData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -229,6 +234,42 @@ export default function Demographics() {
     sections !== null && DEMO_KEYS.some((k) => (sections[k]?.length ?? 0) > 0);
 
   if (error || !hasSections) {
+    if (region === "Scotland") {
+      return (
+        <div className="p-4 space-y-2">
+          <p className="text-xs text-zinc-400">
+            Scotland&apos;s Census 2022 is published by{" "}
+            <a
+              href="https://www.scotlandscensus.gov.uk/2022-results/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              National Records of Scotland
+            </a>{" "}
+            and is not available through the ONS Census API used for England and Wales.
+          </p>
+        </div>
+      );
+    }
+    if (region === "Northern Ireland") {
+      return (
+        <div className="p-4 space-y-2">
+          <p className="text-xs text-zinc-400">
+            Northern Ireland&apos;s Census 2021 is published by{" "}
+            <a
+              href="https://www.nisra.gov.uk/statistics/census/2021-census"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline"
+            >
+              NISRA (Northern Ireland Statistics and Research Agency)
+            </a>{" "}
+            and is not available through the ONS Census API used for England and Wales.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="p-4">
         <div className="text-xs text-zinc-500">
@@ -248,7 +289,11 @@ export default function Demographics() {
         })}
       </div>
       <div className="text-[10px] text-zinc-600 text-center pt-1">
-        Census 2021 via ONS · Commons Library
+        {region === "Northern Ireland"
+          ? "NISRA Census 2021 · NIMDM 2017"
+          : region === "Scotland"
+          ? "NRS Census 2022 · SIMD 2020"
+          : "Census 2021 via ONS · Commons Library"}
       </div>
     </div>
   );

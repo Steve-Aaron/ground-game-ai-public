@@ -8,9 +8,10 @@ export const maxDuration = 60;
 
 // NOMIS (ONS) Labour Market Statistics — free, no auth required
 // Docs: https://www.nomisweb.co.uk/api/v01/
-// NM_127_1: Model-based unemployment estimates (available at district level)
-// NM_162_1: Claimant count (JSA + UC) (available at district level)
-// NM_17_5: Annual Population Survey (country-level only — NOT available at district level)
+// NM_127_1: Model-based unemployment estimates (England only)
+// NM_162_1: Claimant count (JSA + UC) (all UK)
+// NM_17_5: Annual Population Survey — used as fallback for Scotland/Wales
+//   variable=45: Employment rate 16-64; variable=111: Economic inactivity rate 16-64
 //
 // Geography: NOMIS accepts multiple geography-type codes for the same district
 // (e.g. TYPE434 "1820328091" and the older-type "1778384987" both resolve to
@@ -187,6 +188,50 @@ async function generateFreshData(ladNomis: string): Promise<EmploymentData | nul
       // Non-critical
     }
 
+    // NM_127_1 is England-only. For Scotland/Wales, fall back to APS (NM_17_5)
+    // at council area level — variable 45 (employment rate) and 111 (inactivity).
+    if (indicators.length === 0) {
+      try {
+        const NOMIS_BASE = "https://www.nomisweb.co.uk/api/v01";
+        const [apsEmpRes, apsInactRes, gbEmpRes, gbInactRes] = await Promise.all([
+          fetch(`${NOMIS_BASE}/dataset/NM_17_5.data.json?geography=${ladNomis}&variable=45&measures=20599&time=latest`, { next: { revalidate: 86400 } }),
+          fetch(`${NOMIS_BASE}/dataset/NM_17_5.data.json?geography=${ladNomis}&variable=111&measures=20599&time=latest`, { next: { revalidate: 86400 } }),
+          fetch(`${NOMIS_BASE}/dataset/NM_17_5.data.json?geography=${GB_GEO}&variable=45&measures=20599&time=latest`, { next: { revalidate: 86400 } }),
+          fetch(`${NOMIS_BASE}/dataset/NM_17_5.data.json?geography=${GB_GEO}&variable=111&measures=20599&time=latest`, { next: { revalidate: 86400 } }),
+        ]);
+
+        const parseAps = async (res: Response): Promise<{ value: number; period: string } | null> => {
+          if (!res.ok) return null;
+          const d = await res.json();
+          const obs = d?.obs?.[0];
+          if (!obs) return null;
+          const value = typeof obs.obs_value?.value === "number" ? obs.obs_value.value : parseFloat(String(obs.obs_value?.value));
+          return isNaN(value) ? null : { value, period: obs.time?.description || "latest" };
+        };
+
+        const [apsEmp, apsInact, gbEmp, gbInact] = await Promise.all([
+          parseAps(apsEmpRes), parseAps(apsInactRes), parseAps(gbEmpRes), parseAps(gbInactRes),
+        ]);
+
+        if (apsEmp) indicators.push({
+          name: "Employment rate - aged 16-64",
+          value: apsEmp.value, unit: "%",
+          gbAvg: gbEmp?.value ?? null,
+          period: apsEmp.period,
+        });
+        if (apsInact) indicators.push({
+          name: "Economic inactivity rate - aged 16-64",
+          value: apsInact.value, unit: "%",
+          gbAvg: gbInact?.value ?? null,
+          period: apsInact.period,
+        });
+
+        if (indicators.length > 0) {
+          return { indicators, claimantCount, source: "NOMIS/ONS (Annual Population Survey)", sourceUrl: "https://www.nomisweb.co.uk/" };
+        }
+      } catch { /* fall through */ }
+    }
+
     return {
       indicators,
       claimantCount,
@@ -234,6 +279,19 @@ export async function GET(request: Request) {
       { error: "Invalid constituency slug" },
       { status: 400 }
     );
+  }
+
+  const ladCode = constituencyData.areas?.lads?.[0]?.code ?? null;
+
+  if (ladCode?.startsWith("N09")) {
+    return NextResponse.json({
+      indicators: [],
+      claimantCount: null,
+      source: "not-applicable",
+      sourceUrl: "https://www.nisra.gov.uk/statistics/labour-market-and-social-welfare/labour-force-survey",
+      northernIreland: true,
+      note: "Labour market statistics for Northern Ireland are published by NISRA, not ONS/NOMIS.",
+    });
   }
 
   // Try data-layer LAD NOMIS code (first LAD for multi-LAD constituencies),

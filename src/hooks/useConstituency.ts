@@ -6,6 +6,7 @@ import { CONSTITUENCIES } from "@/data/constituencies";
 export const SELECTABLE_CONSTITUENCIES = CONSTITUENCIES.map((c) => ({
   slug: c.slug,
   name: c.name,
+  region: c.region ?? "England",
 }));
 
 export type ConstituencySlug = string;
