@@ -647,6 +647,7 @@ export const NEWS_FEEDS: Record<string, NewsFeedConfig> = {
   "N05000001": { bbcRegional: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", googleConstituency: "https://news.google.com/rss/search?q=Belfast%20East%20constituency", googleMp: "https://news.google.com/rss/search?q=Gavin%20Robinson" },
   "N05000002": { bbcRegional: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", googleConstituency: "https://news.google.com/rss/search?q=Belfast%20North%20constituency", googleMp: "https://news.google.com/rss/search?q=John%20Finucane" },
   "N05000003": { bbcRegional: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", googleConstituency: "https://news.google.com/rss/search?q=Belfast%20South%20and%20Mid%20Down%20constituency", googleMp: "https://news.google.com/rss/search?q=Claire%20Hanna" },
+  // Northern Ireland
   "N05000004": { bbcRegional: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", googleConstituency: "https://news.google.com/rss/search?q=Belfast%20West%20constituency", googleMp: "https://news.google.com/rss/search?q=Paul%20Maskey" },
   "N05000013": { bbcRegional: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", googleConstituency: "https://news.google.com/rss/search?q=North%20Down%20constituency", googleMp: "https://news.google.com/rss/search?q=Alex%20Easton" },
   "N05000015": { bbcRegional: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", googleConstituency: "https://news.google.com/rss/search?q=South%20Down%20constituency", googleMp: "https://news.google.com/rss/search?q=Chris%20Hazzard" },
