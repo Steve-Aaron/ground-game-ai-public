@@ -14,6 +14,11 @@
   --primary-foreground: #ffffff;
   --accent: #065f46;
   --accent-bright: #10b981;
+  /* Map popup text tokens — light mode */
+  --map-popup-text: #09090b;
+  --map-popup-strong: #18181b;
+  --map-popup-muted: #52525b;
+  --map-popup-card: rgba(0,0,0,0.04);
 }
 
 .dark {
@@ -28,6 +33,11 @@
   --primary-foreground: #ffffff;
   --accent: #0f5040;
   --accent-bright: #10b981;
+  /* Map popup text tokens — dark mode */
+  --map-popup-text: #f1f5f9;
+  --map-popup-strong: #e4e4e7;
+  --map-popup-muted: #94a3b8;
+  --map-popup-card: rgba(255,255,255,0.07);
 }
 
 body {
@@ -39,13 +49,14 @@ body {
 /* MapLibre overrides */
 .maplibregl-popup-content {
   background: var(--card) !important;
-  color: var(--foreground) !important;
+  color: var(--map-popup-text) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 2px !important;
-  padding: 8px 12px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 10px !important;
+  padding: 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
   font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Fira Code', ui-monospace, monospace !important;
   font-size: 11px !important;
+  overflow: hidden;
 }
 
 .maplibregl-popup-tip {
@@ -53,8 +64,12 @@ body {
 }
 
 .maplibregl-popup-close-button {
-  color: var(--muted-foreground) !important;
+  color: var(--map-popup-muted) !important;
   font-size: 16px !important;
+}
+.maplibregl-popup-close-button:hover {
+  color: var(--map-popup-text) !important;
+  background: transparent !important;
 }
 
 .maplibregl-ctrl-group {

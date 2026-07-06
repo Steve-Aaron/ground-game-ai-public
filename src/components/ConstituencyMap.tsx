@@ -384,34 +384,34 @@ export default function ConstituencyMap() {
           const predColor = partyColor[props.predictedWinner] ?? "#666";
           const prevColor = partyColor[props.winner2024] ?? "#666";
           const popupHtml = `
-            <div style="font-family: system-ui; padding: 8px; min-width: 250px;">
-              <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #f1f5f9;">${props.name || props.WD24NM || 'Unknown ward'}</div>
-              <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px; display: flex; gap: 12px;">
+            <div style="font-family: system-ui; padding: 10px; min-width: 250px;">
+              <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: var(--map-popup-strong);">${props.name || props.WD24NM || 'Unknown ward'}</div>
+              <div style="font-size: 11px; color: var(--map-popup-muted); margin-bottom: 8px; display: flex; gap: 12px;">
                 ${props.population ? `<span>Pop: ${Number(props.population).toLocaleString()}</span>` : ""}
                 ${props.electorate ? `<span>Electorate: ${Number(props.electorate).toLocaleString()}</span>` : ""}
                 ${props.deprivation ? `<span>Deprivation: ${props.deprivation}</span>` : ""}
               </div>
               ${props.predictedWinner ? `
               <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <div style="flex:1; padding: 6px; border-radius: 6px; background: rgba(255,255,255,0.05); text-align: center;">
-                  <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">2024 Result</div>
+                <div style="flex:1; padding: 6px; border-radius: 6px; background: var(--map-popup-card); text-align: center;">
+                  <div style="font-size: 9px; color: var(--map-popup-muted); text-transform: uppercase; letter-spacing: 0.5px;">2024 Result</div>
                   <div style="font-size: 14px; font-weight: 700; color: ${prevColor}; margin-top: 2px;">${props.winner2024}</div>
                 </div>
-                <div style="display: flex; align-items: center; color: ${changed ? "#ef4444" : "#94a3b8"}; font-size: 16px;">→</div>
-                <div style="flex:1; padding: 6px; border-radius: 6px; background: ${changed ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)"}; text-align: center; border: 1px solid ${changed ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.2)"};">
-                  <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">MRP Prediction</div>
+                <div style="display: flex; align-items: center; color: ${changed ? "#ef4444" : "var(--map-popup-muted)"}; font-size: 16px;">→</div>
+                <div style="flex:1; padding: 6px; border-radius: 6px; background: ${changed ? "rgba(239,68,68,0.12)" : "rgba(16,185,129,0.1)"}; text-align: center; border: 1px solid ${changed ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.2)"};">
+                  <div style="font-size: 9px; color: var(--map-popup-muted); text-transform: uppercase; letter-spacing: 0.5px;">MRP Prediction</div>
                   <div style="font-size: 14px; font-weight: 700; color: ${predColor}; margin-top: 2px;">${props.predictedWinner}</div>
                   ${changed ? '<div style="font-size: 9px; color: #ef4444; margin-top: 2px;">SWING</div>' : ""}
                 </div>
               </div>` : ""}
               ${props.conVote ? `
-              <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">2024 Vote Share</div>
+              <div style="font-size: 10px; color: var(--map-popup-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">2024 Vote Share</div>
               <div style="display: flex; flex-direction: column; gap: 3px; font-size: 12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#0087DC;">■ CON</span><strong style="color:#e2e8f0;">${props.conVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#12B6CF;">■ REF</span><strong style="color:#e2e8f0;">${props.refVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#DC241f;">■ LAB</span><strong style="color:#e2e8f0;">${props.labVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#FAA61A;">■ LD</span><strong style="color:#e2e8f0;">${props.ldVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#6AB023;">■ GRN</span><strong style="color:#e2e8f0;">${props.grnVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#0087DC;">■ CON</span><strong style="color:var(--map-popup-strong);">${props.conVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#12B6CF;">■ REF</span><strong style="color:var(--map-popup-strong);">${props.refVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#DC241f;">■ LAB</span><strong style="color:var(--map-popup-strong);">${props.labVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#FAA61A;">■ LD</span><strong style="color:var(--map-popup-strong);">${props.ldVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#6AB023;">■ GRN</span><strong style="color:var(--map-popup-strong);">${props.grnVote}%</strong></div>
               </div>` : ""}
             </div>
           `;
