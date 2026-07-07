@@ -2,13 +2,30 @@ import { NextResponse } from "next/server";
 import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
-const TTL_MS = 30 * 60 * 1000;
+// Retry policy for transient Gemini 503s ('model currently overloaded').
+const MAX_ATTEMPTS = 5;
+// Exponential backoff with jitter — 1s, 2s, 4s, 8s nominal. Cap at 10s.
+function backoffDelayMs(attempt: number): number {
+  const base = Math.min(10_000, 1000 * 2 ** (attempt - 1));
+  const jitter = Math.random() * 400;
+  return base + jitter;
+}
 
-// Date helper — same format used in all placeholder/error briefs.
+// Brief cache TTL. Without this the cache row never expires, so a brief
+// generated when source data was unavailable would be served forever.
+const BRIEF_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+// Gemini model — Flash chosen for cost/latency parity with the previous Haiku
+// pick. Override at deploy time via GEMINI_MODEL if you want Pro etc.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_ENDPOINT = (model: string, apiKey: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
 function briefDate(): string {
   return new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -18,13 +35,8 @@ function briefDate(): string {
   });
 }
 
-// Shown when ANTHROPIC_API_KEY is not set on the server.
-function buildNoKeyBrief(
-  constituencyName: string,
-  mpName: string,
-  mpParty: string
-): string {
-  return `# Constituency Intelligence Brief — ${constituencyName}
+function buildNoKeyBrief(name: string, mpName: string, mpParty: string): string {
+  return `# Constituency Intelligence Brief — ${name}
 
 **Generated:** ${briefDate()}
 
@@ -32,31 +44,12 @@ function buildNoKeyBrief(
 
 ---
 
-> **AI Brief unavailable.** The Anthropic API key is not configured. Set the \`ANTHROPIC_API_KEY\` environment variable to enable AI-powered intelligence synthesis.
-
-## Data Sources Active
-
-- Local News Headlines — collecting
-- Crime Summary — collecting
-- Parliamentary Votes — collecting
-- Community Issues (FixMyStreet) — collecting
-
----
-
-*Configure your API key to unlock daily AI-synthesised intelligence briefs.*
+> **AI Brief unavailable.** The Gemini API key is not configured. Set the \`GEMINI_API_KEY\` environment variable to enable AI-powered intelligence synthesis.
 `;
 }
 
-// Shown when the Anthropic call (or the upstream data fetch) fails despite
-// the key being set. The reason is also surfaced in the response's `error`
-// field so the UI can show diagnostic detail.
-function buildErrorBrief(
-  constituencyName: string,
-  mpName: string,
-  mpParty: string,
-  reason: string
-): string {
-  return `# Constituency Intelligence Brief — ${constituencyName}
+function buildErrorBrief(name: string, mpName: string, mpParty: string, reason: string): string {
+  return `# Constituency Intelligence Brief — ${name}
 
 **Generated:** ${briefDate()}
 
@@ -65,8 +58,6 @@ function buildErrorBrief(
 ---
 
 > **AI Brief generation failed.** ${reason}
-
-Check the dev server console for the full upstream error.
 `;
 }
 
@@ -84,12 +75,11 @@ interface BriefData {
   usage?: unknown;
 }
 
-// NOTE: AI brief content accuracy depends on upstream routes being multi-
-// constituency. Currently only /api/parliament honours the ?constituency
-// parameter. /api/news, /api/crime, and /api/fixmystreet will return Braintree
-// data regardless of the param until they're refactored — at which point this
-// route's accuracy improves automatically with no further changes here.
-async function fetchLocalData(baseUrl: string, slug: string): Promise<DataSources> {
+async function fetchLocalData(
+  baseUrl: string,
+  slug: string,
+  cookieHeader: string
+): Promise<DataSources> {
   const c = encodeURIComponent(slug);
   const endpoints = [
     { key: "news", path: `/api/news?constituency=${c}` },
@@ -98,67 +88,83 @@ async function fetchLocalData(baseUrl: string, slug: string): Promise<DataSource
     { key: "fixmystreet", path: `/api/fixmystreet?constituency=${c}` },
   ];
 
+  // Forward the user's session cookie. Without this the middleware in
+  // src/middleware.ts redirects each sub-fetch to /login (no session present
+  // on a server-to-server call), the redirect is followed, the response body
+  // is the /login HTML, and `await res.json()` throws — every source comes
+  // back as null and Gemini gets "No data available" for every section.
+  const headers: Record<string, string> = { "User-Agent": "GroundGameAI/1.0" };
+  if (cookieHeader) headers.cookie = cookieHeader;
+
   const results = await Promise.allSettled(
     endpoints.map(async (ep) => {
       const res = await fetch(`${baseUrl}${ep.path}`, {
         cache: "no-store",
-        headers: { "User-Agent": "GroundGameAI/1.0" },
+        headers,
+        redirect: "manual", // Don't silently follow a middleware redirect to /login.
       });
       if (!res.ok) return { key: ep.key, data: null };
-      return { key: ep.key, data: await res.json() };
+      try {
+        return { key: ep.key, data: await res.json() };
+      } catch {
+        return { key: ep.key, data: null };
+      }
     })
   );
 
-  const sources: DataSources = {
-    news: null,
-    crime: null,
-    parliament: null,
-    fixmystreet: null,
-  };
-
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value) {
-      const key = result.value.key as keyof DataSources;
-      sources[key] = result.value.data;
+  const sources: DataSources = { news: null, crime: null, parliament: null, fixmystreet: null };
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value) {
+      const k = r.value.key as keyof DataSources;
+      sources[k] = r.value.data;
     }
   }
-
   return sources;
 }
 
-// Trim data to avoid huge prompts that waste tokens
 function summariseData(data: unknown, type: string): string {
   if (!data) return "No data available";
   try {
     const d = data as Record<string, unknown>;
     if (type === "news") {
-      const items = (d.items || d.articles || []) as Array<{ title?: string; source?: string; date?: string }>;
-      return items.slice(0, 10).map(i => `- ${i.title || "Untitled"} (${i.source || "unknown"})`).join("\n") || "No headlines";
+      const items = (d.items || d.articles || []) as Array<{ title?: string; source?: string }>;
+      return items.slice(0, 10).map((i) => `- ${i.title || "Untitled"} (${i.source || "unknown"})`).join("\n") || "No headlines";
     }
     if (type === "crime") {
-      // /api/crime returns summary as Array<{category, count}>, not a
-      // Record<string, number>. Interpolating the object directly produced
-      // `- 0: [object Object]` rows, which the AI flagged as corrupted data.
       const summary = d.summary as Array<{ category?: string; count?: number }> | undefined;
+      const months = d.months as string[] | undefined;
+      const monthlyTotals = d.monthlyTotals as Array<{ month?: string; count?: number }> | undefined;
+
+      // Header line: which months the figures actually cover, so Gemini can
+      // describe the window correctly rather than claiming "this month".
+      const windowLine =
+        Array.isArray(months) && months.length > 0
+          ? `Window: ${months[0]} → ${months[months.length - 1]} (${months.length} months)`
+          : "Window: unknown";
+
+      // Per-month totals → lets the model spot trend (rising / falling).
+      const trendBlock =
+        Array.isArray(monthlyTotals) && monthlyTotals.length > 0
+          ? "Per-month totals:\n" +
+            monthlyTotals.map((m) => `- ${m.month ?? "?"}: ${m.count ?? 0}`).join("\n")
+          : "";
+
       if (Array.isArray(summary) && summary.length > 0) {
-        const lines = summary
-          .map(s => `- ${s.category ?? "Unknown"}: ${s.count ?? 0}`)
-          .join("\n");
-        const total = typeof d.total === "number" ? `\n(Total: ${d.total})` : "";
-        return lines + total;
+        const lines = summary.map((s) => `- ${s.category ?? "Unknown"}: ${s.count ?? 0}`).join("\n");
+        const total = typeof d.total === "number" ? `\nTotal across window: ${d.total}` : "";
+        return [windowLine, "", "Category breakdown:", lines, total, trendBlock].filter(Boolean).join("\n");
       }
-      const crimes = (d.crimes || []) as Array<{ category?: string }>;
-      return `${crimes.length} total crimes reported`;
+      const crimes = (d.crimes || []) as unknown[];
+      return `${windowLine}\n${crimes.length} total crimes reported`;
     }
     if (type === "parliament") {
       const votes = (d.votes || []) as Array<{ title?: string; votedAye?: boolean; date?: string }>;
-      return votes.slice(0, 10).map(v => `- ${v.votedAye ? "Aye" : "No"}: ${v.title} (${v.date?.substring(0, 10) || ""})`).join("\n") || "No votes";
+      return votes.slice(0, 10).map((v) => `- ${v.votedAye ? "Aye" : "No"}: ${v.title} (${v.date?.substring(0, 10) || ""})`).join("\n") || "No votes";
     }
     if (type === "fixmystreet") {
       const reports = (d.reports || []) as Array<{ title?: string; category?: string }>;
-      return reports.slice(0, 10).map(r => `- [${r.category || "other"}] ${r.title || "Untitled"}`).join("\n") || "No reports";
+      return reports.slice(0, 10).map((r) => `- [${r.category || "other"}] ${r.title || "Untitled"}`).join("\n") || "No reports";
     }
-    // Fallback: truncated JSON
     const str = JSON.stringify(data);
     return str.length > 2000 ? str.substring(0, 2000) + "..." : str;
   } catch {
@@ -166,23 +172,17 @@ function summariseData(data: unknown, type: string): string {
   }
 }
 
-function buildPrompt(
-  data: DataSources,
-  constituencyName: string,
-  mpName: string,
-  mpParty: string
-): string {
+function buildPrompt(data: DataSources, name: string, mpName: string, mpParty: string): string {
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-
   return `You are a senior political intelligence analyst producing a daily constituency brief.
 
 Today's date: ${today}
-Constituency: ${constituencyName}
+Constituency: ${name}
 MP: ${mpName} (${mpParty})
 
 Below is raw data collected from multiple sources. Synthesise it into a structured, actionable constituency intelligence brief in clean markdown format.
@@ -194,7 +194,7 @@ Below is raw data collected from multiple sources. Synthesise it into a structur
 ### Local News Headlines
 ${summariseData(data.news, "news")}
 
-### Crime Summary
+### Crime Summary (rolling 3-month window from data.police.uk)
 ${summariseData(data.crime, "crime")}
 
 ### Recent Parliamentary Votes
@@ -209,203 +209,349 @@ ${summariseData(data.fixmystreet, "fixmystreet")}
 
 Produce the brief with these sections in markdown:
 
-# Daily Constituency Intelligence Brief — ${constituencyName}
+# Daily Constituency Intelligence Brief — ${name}
 Include today's date and MP name.
 
 ## Top Local Stories
-List the top 5 most relevant local news stories. For each, include:
-- Headline and source
-- A one-line relevance assessment (High / Medium / Low) explaining why it matters to the constituency or MP
+List the top 5 most relevant local news stories with relevance assessment.
 
 ## Community Issues Trending
-Summarise the key themes from FixMyStreet reports. Identify any clusters or patterns (e.g. repeated potholes in one area, fly-tipping hotspots). Note anything that could become a political issue.
+Summarise FixMyStreet themes and clusters.
 
 ## Crime & Safety Summary
-Provide a concise summary of the crime data. Highlight any notable patterns, trends, or areas of concern. Compare to what a constituent might expect — flag anything unusual.
+Summarise the crime data **across the 3-month window provided**. State the
+exact months covered, the total, and the top categories. Use the per-month
+totals to call out a clear rising or falling trend if one exists; otherwise
+say activity is broadly steady. Flag anything unusual.
 
 ## Parliamentary Activity
-Summarise recent voting activity for the MP. Note any votes that could be locally controversial or noteworthy. Mention any upcoming bills or debates relevant to the constituency.
+Summarise recent voting activity for the MP.
 
 ## Key Talking Points
-Provide 3-5 bullet points the MP's team should be prepared to discuss today, drawing from all the above data. These should be conversation-ready.
+Provide 3-5 conversation-ready bullet points.
 
 ## Risk Flags
-Note any emerging issues that could escalate — things to watch in the next 24-48 hours.
+Note emerging issues to watch in 24-48 hours.
 
-Keep the tone professional and analytical. Be specific — reference actual data points. Do not invent or hallucinate information not present in the source data.`;
+Be specific. Do not invent or hallucinate information not present in the source data.`;
 }
 
-async function generateFreshBrief(
-  baseUrl: string,
-  apiKey: string,
-  slug: string,
-  constituencyName: string,
-  mpName: string,
-  mpParty: string
-): Promise<BriefData | { error: string }> {
-  try {
-    const data = await fetchLocalData(baseUrl, slug);
-    const prompt = buildPrompt(data, constituencyName, mpName, mpParty);
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }>; role?: string };
+    finishReason?: string;
+  }>;
+  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+  modelVersion?: string;
+}
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+/**
+ * Single call to Gemini. Returns either the parsed brief, or a discriminated
+ * failure: {retryable: true} for 503/overloaded, {retryable: false} for
+ * permanent errors (auth, bad request, etc).
+ */
+async function callGeminiOnce(
+  apiKey: string,
+  prompt: string
+): Promise<
+  | { ok: true; data: BriefData }
+  | { ok: false; retryable: boolean; status: number; message: string }
+> {
+  let res: Response;
+  try {
+    res = await fetch(GEMINI_ENDPOINT(GEMINI_MODEL, apiKey), {
       method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 3000,
-        messages: [{ role: "user", content: prompt }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        // 3000 was tight: seven sections × 3-month detail occasionally ran the
+        // model out mid-bullet (Crime & Safety surfaced as a `- **` orphan).
+        // 8000 leaves headroom; Gemini Flash bills per output token so the
+        // marginal cost is still negligible.
+        generationConfig: { temperature: 0.4, maxOutputTokens: 8000 },
       }),
       cache: "no-store",
     });
-
-    if (!anthropicRes.ok) {
-      const errorBody = await anthropicRes.text();
-      console.error("Anthropic API error:", anthropicRes.status, errorBody);
-      // Surface a short, safe summary in the response so the UI can show it
-      // (truncate to avoid dumping multi-KB error pages in the API result).
-      return { error: `Anthropic API ${anthropicRes.status}: ${errorBody.slice(0, 240)}` };
-    }
-
-    const anthropicData = await anthropicRes.json();
-    const brief = anthropicData.content
-      ?.filter((block: { type: string }) => block.type === "text")
-      .map((block: { text: string }) => block.text)
-      .join("\n");
-    if (!brief) {
-      return { error: "Anthropic returned an empty response (no text blocks)" };
-    }
-
+  } catch (e) {
+    // Network-level failures: treat as retryable.
     return {
+      ok: false,
+      retryable: true,
+      status: 0,
+      message: e instanceof Error ? e.message : "Network error contacting Gemini",
+    };
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const retryable = res.status === 503 || res.status === 429 || (res.status >= 500 && res.status < 600);
+    return { ok: false, retryable, status: res.status, message: body.slice(0, 400) };
+  }
+
+  let geminiData: GeminiResponse;
+  try {
+    geminiData = (await res.json()) as GeminiResponse;
+  } catch {
+    return { ok: false, retryable: false, status: res.status, message: "Gemini returned non-JSON" };
+  }
+
+  const brief = geminiData.candidates
+    ?.flatMap((c) => c.content?.parts ?? [])
+    .map((p) => p.text ?? "")
+    .filter((t) => t.length > 0)
+    .join("\n");
+
+  if (!brief) {
+    return { ok: false, retryable: false, status: res.status, message: "Gemini returned empty response (no text parts)" };
+  }
+
+  return {
+    ok: true,
+    data: {
       brief,
       generated: new Date().toISOString(),
-      model: anthropicData.model,
-      usage: anthropicData.usage,
-    };
-  } catch (error) {
-    console.error("AI Brief generation failed:", error);
-    return { error: `Brief generation threw: ${error instanceof Error ? error.message : String(error)}` };
-  }
+      model: geminiData.modelVersion || GEMINI_MODEL,
+      usage: geminiData.usageMetadata,
+    },
+  };
 }
 
-async function fetchAndUpdateCache(
+// ── Streaming protocol ───────────────────────────────────────────────────
+// Newline-delimited JSON events sent to the client:
+//   {type:"attempt", n:1, of:5}                — about to call Gemini
+//   {type:"retry",  n:1, of:5, status:503,
+//                   message:"...", waitMs:1234}  — after a 503, before sleep
+//   {type:"result", brief:"...", generated:...} — success
+//   {type:"error",  message:"..."}              — terminal failure
+
+type Event =
+  | { type: "attempt"; n: number; of: number }
+  | { type: "retry"; n: number; of: number; status: number; message: string; waitMs: number }
+  | { type: "result"; brief: string; generated: string; model?: string; usage?: unknown; source?: string }
+  | { type: "error"; message: string };
+
+function ev(e: Event): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(e) + "\n");
+}
+
+async function generateWithRetries(
+  controller: ReadableStreamDefaultController<Uint8Array>,
   baseUrl: string,
   apiKey: string,
-  cacheDocRef: DocumentReference,
   slug: string,
-  constituencyName: string,
+  name: string,
   mpName: string,
-  mpParty: string
-) {
-  try {
-    const fresh = await generateFreshBrief(baseUrl, apiKey, slug, constituencyName, mpName, mpParty);
-    // Don't cache error responses — only successful BriefData.
-    if ("error" in fresh) return;
+  mpParty: string,
+  cookieHeader: string
+): Promise<BriefData | null> {
+  const data = await fetchLocalData(baseUrl, slug, cookieHeader);
+  const prompt = buildPrompt(data, name, mpName, mpParty);
 
-    const existing = await getDoc(cacheDocRef);
-    const existingData = existing.exists() ? existing.data().data : null;
+  let lastError = "Unknown error";
+  for (let n = 1; n <= MAX_ATTEMPTS; n++) {
+    controller.enqueue(ev({ type: "attempt", n, of: MAX_ATTEMPTS }));
 
-    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) {
-      return;
+    const result = await callGeminiOnce(apiKey, prompt);
+    if (result.ok) {
+      return result.data;
     }
 
-    await setDoc(cacheDocRef, {
-      data: fresh,
-      updated_at: new Date().toISOString(),
-    });
+    lastError = `Gemini ${result.status || "network"}: ${result.message}`;
+
+    if (!result.retryable || n === MAX_ATTEMPTS) {
+      controller.enqueue(ev({ type: "error", message: lastError }));
+      return null;
+    }
+
+    const waitMs = backoffDelayMs(n);
+    controller.enqueue(
+      ev({
+        type: "retry",
+        n,
+        of: MAX_ATTEMPTS,
+        status: result.status,
+        message: result.message.slice(0, 200),
+        waitMs,
+      })
+    );
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  controller.enqueue(ev({ type: "error", message: lastError }));
+  return null;
+}
+
+async function tryWriteCache(cacheDocRef: DocumentReference, fresh: BriefData) {
+  try {
+    const existing = await getDoc(cacheDocRef);
+    const existingData = existing.exists() ? existing.data().data : null;
+    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) return;
+    await setDoc(cacheDocRef, { data: fresh, updated_at: new Date().toISOString() });
   } catch (err) {
-    console.error("Background AI brief cache update failed:", err);
+    console.warn("AI brief cache write failed (returning fresh anyway):", err);
   }
 }
 
 export async function GET(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
+
+  const apiKey = process.env.GEMINI_API_KEY;
   const url = new URL(request.url);
   const baseUrl = `${url.protocol}//${url.host}`;
   const { searchParams } = url;
+  // Clients pass `?stream=1` to opt into the SSE-style progress feed.
+  // Plain JSON callers (server-side aggregations etc) still get the legacy
+  // shape with no progress events.
+  const wantsStream = searchParams.get("stream") === "1";
+  // `?refresh=1` forces a fresh Gemini call, ignoring any cached brief.
+  // Surfaced via the refresh button in AIBrief.tsx.
+  const forceRefresh = searchParams.get("refresh") === "1";
+  // Forwarded to sub-fetches so the auth guard on /api/crime etc lets them
+  // through. Server-to-server fetch() does NOT auto-attach incoming cookies.
+  const cookieHeader = request.headers.get("cookie") ?? "";
 
   const constituencySlug = searchParams.get("constituency") || "braintree";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {
-    return Response.json(
-      { error: "Invalid constituency slug" },
-      { status: 400 }
-    );
+    return Response.json({ error: "Invalid constituency slug" }, { status: 400 });
   }
-
   if (!constituencyData.mp) {
-    return Response.json(
-      { error: "MP data not available for this constituency" },
-      { status: 400 }
-    );
+    return Response.json({ error: "MP data not available for this constituency" }, { status: 400 });
   }
 
-  const CONSTITUENCY_NAME = constituencyData.constituency.name;
+  const NAME = constituencyData.constituency.name;
   const MP_NAME = constituencyData.mp.name;
   const MP_PARTY = constituencyData.constituency.party;
 
   const cacheDocRef = doc(db, "ai_brief_cache", constituencySlug);
 
-  // Cache read is best-effort. If Firestore is unreachable or the security
-  // rules deny the read, we don't surface that to the user — we just skip the
-  // cache and generate fresh.
+  // Cache read is best-effort.
   let cached: { data: BriefData; updated_at: string } | null = null;
-  try {
-    const snap = await getDoc(cacheDocRef);
-    if (snap.exists()) {
-      cached = snap.data() as { data: BriefData; updated_at: string };
+  if (!forceRefresh) {
+    try {
+      const snap = await getDoc(cacheDocRef);
+      if (snap.exists()) {
+        const candidate = snap.data() as { data: BriefData; updated_at: string };
+        const ageMs = Date.now() - new Date(candidate.updated_at).getTime();
+        if (ageMs <= BRIEF_CACHE_TTL_MS) {
+          cached = candidate;
+        }
+      }
+    } catch (err) {
+      console.warn("AI brief cache read failed:", err);
     }
-  } catch (err) {
-    console.warn("AI brief cache read failed (continuing without cache):", err);
   }
 
+  // Cache hit path: return immediately. No retries needed, no streaming
+  // benefit (we already have the answer).
   if (cached) {
-    if (apiKey) {
-      const ageMs = Date.now() - new Date(cached.updated_at).getTime();
-      if (ageMs > TTL_MS) {
-        fetchAndUpdateCache(baseUrl, apiKey, cacheDocRef, constituencySlug, CONSTITUENCY_NAME, MP_NAME, MP_PARTY);
-      }
+    if (wantsStream) {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(ev({ type: "result", ...cached!.data, source: "cache" }));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
+      });
     }
     return NextResponse.json({ ...cached.data, source: "cache" });
   }
 
+  // No key configured: serve the placeholder brief, no retries possible.
   if (!apiKey) {
-    return NextResponse.json(
-      {
-        brief: buildNoKeyBrief(CONSTITUENCY_NAME, MP_NAME, MP_PARTY),
-        generated: new Date().toISOString(),
-        cached: false,
-      },
-      { status: 200 }
-    );
+    const payload: BriefData = {
+      brief: buildNoKeyBrief(NAME, MP_NAME, MP_PARTY),
+      generated: new Date().toISOString(),
+    };
+    if (wantsStream) {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(ev({ type: "result", ...payload }));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
+      });
+    }
+    return NextResponse.json(payload);
   }
 
-  const fresh = await generateFreshBrief(baseUrl, apiKey, constituencySlug, CONSTITUENCY_NAME, MP_NAME, MP_PARTY);
-  if ("error" in fresh) {
-    return NextResponse.json(
-      {
-        brief: buildErrorBrief(CONSTITUENCY_NAME, MP_NAME, MP_PARTY, fresh.error),
-        generated: new Date().toISOString(),
-        error: fresh.error,
+  // Streaming generation with retries.
+  if (wantsStream) {
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          const fresh = await generateWithRetries(
+            controller,
+            baseUrl,
+            apiKey,
+            constituencySlug,
+            NAME,
+            MP_NAME,
+            MP_PARTY,
+            cookieHeader
+          );
+          if (fresh) {
+            await tryWriteCache(cacheDocRef, fresh);
+            controller.enqueue(ev({ type: "result", ...fresh }));
+          }
+          controller.close();
+        } catch (e) {
+          controller.enqueue(
+            ev({
+              type: "error",
+              message: e instanceof Error ? e.message : "Unknown error",
+            })
+          );
+          controller.close();
+        }
       },
-      { status: 200 }
-    );
-  }
-
-  // Cache write is also best-effort — don't fail the request if Firestore
-  // rules block it. The generated brief is still returned to the caller.
-  try {
-    await setDoc(cacheDocRef, {
-      data: fresh,
-      updated_at: new Date().toISOString(),
     });
-  } catch (err) {
-    console.warn("AI brief cache write failed (returning fresh anyway):", err);
+    return new Response(stream, {
+      headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
+    });
   }
 
+  // Non-streaming legacy path — still retries, just doesn't surface progress.
+  // We collect events from a sink controller and discard them.
+  const sink = new ReadableStream<Uint8Array>({ start() {} });
+  const reader = sink.getReader();
+  reader.releaseLock();
+  // Use an in-process controller wrapper that ignores enqueues.
+  const noop: ReadableStreamDefaultController<Uint8Array> = {
+    desiredSize: null,
+    close: () => {},
+    enqueue: () => {},
+    error: () => {},
+  } as unknown as ReadableStreamDefaultController<Uint8Array>;
+
+  const fresh = await generateWithRetries(
+    noop,
+    baseUrl,
+    apiKey,
+    constituencySlug,
+    NAME,
+    MP_NAME,
+    MP_PARTY,
+    cookieHeader
+  );
+
+  if (!fresh) {
+    return NextResponse.json(
+      {
+        brief: buildErrorBrief(NAME, MP_NAME, MP_PARTY, "Gemini repeatedly overloaded (503). Try again in a moment."),
+        generated: new Date().toISOString(),
+        error: "Gemini overloaded after retries",
+      },
+      { status: 200 }
+    );
+  }
+
+  await tryWriteCache(cacheDocRef, fresh);
   return NextResponse.json(fresh, { status: 200 });
 }

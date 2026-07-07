@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ALL sizes in this codebase MUST be in rem. The root font-size below is the
+   single source of truth: 1rem = 18px. Tailwind's default utilities (text-xs,
+   p-4 etc) already emit rem values, so they scale automatically. When using
+   arbitrary values, write them as rem, not px (e.g. `text-[0.611rem]` not
+   `text-[11px]`). The conversion table:
+     0.5rem  =  9px       1rem      = 18px
+     0.556rem = 10px      1.111rem  = 20px
+     0.611rem = 11px      1.222rem  = 22px
+     0.667rem = 12px      1.333rem  = 24px
+     0.778rem = 14px      1.444rem  = 26px
+     0.889rem = 16px      2.222rem  = 40px
+*/
+html {
+  font-size: 18px;
+}
+
 :root {
   --background: #0a0a0a;
   --foreground: #e4e4e7;
@@ -88,4 +104,40 @@ body {
   background: linear-gradient(90deg, #141414 25%, #1a1a1a 50%, #141414 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Padlock shackle states for the login screen.
+   - .shackle-locked: closed (default)
+   - .shackle-unlocking: rotates around the right pivot, then settles
+   - .shackle-open: held open while the success screen exits */
+.padlock-shackle {
+  transform-origin: 50% 100%;
+  transition: transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.padlock-shackle-unlocking {
+  transform: translateX(0) rotate(-22deg) translateY(-4px);
+}
+
+@keyframes padlock-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.02); }
+}
+.animate-padlock-pulse {
+  animation: padlock-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes login-success-fade {
+  0%   { opacity: 1; transform: scale(1); }
+  60%  { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(0.97); }
+}
+.animate-login-success-fade {
+  animation: login-success-fade 900ms ease-in forwards;
+}
+
+@keyframes login-spinner-spin {
+  to { transform: rotate(360deg); }
+}
+.animate-login-spinner {
+  animation: login-spinner-spin 0.8s linear infinite;
 }

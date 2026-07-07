@@ -4,14 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clacton": "(sleep 3 && open 'http://localhost:3000/?constituency=clacton') & next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
+    "seed-police-areas": "tsx scripts/seed-police-areas.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "@turf/turf": "^7.2.0",
+    "dotenv": "^16.4.5",
     "firebase": "^12.12.1",
+    "firebase-admin": "^12.7.0",
     "google-trends-api": "^4.9.2",
     "lucide-react": "^0.577.0",
     "maplibre-gl": "^5.21.0",
@@ -30,6 +36,7 @@
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }

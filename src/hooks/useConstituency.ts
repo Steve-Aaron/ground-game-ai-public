@@ -1,37 +1,75 @@
 "use client";
 
+import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { CONSTITUENCIES } from "@/data/constituencies";
+import { useMe } from "./useMe";
 
-// Constituencies currently exposed in the dashboard switcher. Adding more
-// requires only appending to this list — every component reads from here.
-export const SELECTABLE_CONSTITUENCIES = [
-  { slug: "braintree", name: "Braintree" },
-  { slug: "clacton", name: "Clacton" },
-  { slug: "walthamstow", name: "Walthamstow" },
-  { slug: "sheffield-central", name: "Sheffield Central" },
-  { slug: "leeds-central-and-headingley", name: "Leeds Central and Headingley" },
-  { slug: "south-basildon-and-east-thurrock", name: "South Basildon and East Thurrock" },
-  { slug: "great-yarmouth", name: "Great Yarmouth" },
-  { slug: "streatham-and-croydon-north", name: "Streatham and Croydon North" },
-  { slug: "lewisham-east", name: "Lewisham East" },
-] as const;
+// Slug type is now a plain string — the set of valid slugs is the full 650
+// constituencies, filtered at runtime by the signed-in user's allowed list.
+export type ConstituencySlug = string;
 
-export type ConstituencySlug = typeof SELECTABLE_CONSTITUENCIES[number]["slug"];
-
-const DEFAULT_SLUG: ConstituencySlug = "braintree";
-
-export function useConstituency(): { slug: ConstituencySlug; name: string } {
-  const params = useSearchParams();
-  const raw = params.get("constituency");
-  const match = SELECTABLE_CONSTITUENCIES.find((c) => c.slug === raw);
-  if (match) return { slug: match.slug, name: match.name };
-  return { slug: DEFAULT_SLUG, name: "Braintree" };
+export interface ConstituencyOption {
+  slug: string;
+  name: string;
 }
 
-// Append `?constituency=<slug>` (or `&constituency=…` if the path already has
-// a query) to a relative API path. Use this rather than hand-building the URL
-// so the dedup of `?` vs `&` is consistent.
+// Index `name` by `slug` once at module load — used to attach friendly names
+// to the user's allowed slugs.
+const NAME_BY_SLUG = new Map<string, string>(
+  CONSTITUENCIES.map((c) => [c.slug, c.name])
+);
+
+/**
+ * Returns the current constituency selection AND the list of options the
+ * signed-in user is allowed to choose from. Selection logic:
+ *
+ * 1. Read `?constituency=<slug>` from the URL
+ * 2. If that slug is in the user's allowed list, use it
+ * 3. Otherwise default to the first allowed slug
+ * 4. While the user is loading, return empty values — the UI should treat
+ *    that as a 'loading' state
+ */
+export function useConstituency(): {
+  slug: ConstituencySlug;
+  name: string;
+  options: ConstituencyOption[];
+  loading: boolean;
+} {
+  const params = useSearchParams();
+  const raw = params.get("constituency");
+  const { me, loading } = useMe();
+
+  const options = useMemo<ConstituencyOption[]>(() => {
+    if (!me) return [];
+    return me.allowedConstituencies
+      .map((slug) => {
+        const name = NAME_BY_SLUG.get(slug);
+        return name ? { slug, name } : null;
+      })
+      .filter((x): x is ConstituencyOption => x !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [me]);
+
+  const resolved = useMemo<ConstituencyOption>(() => {
+    if (options.length === 0) return { slug: "", name: "" };
+    if (raw) {
+      const match = options.find((o) => o.slug === raw);
+      if (match) return match;
+    }
+    return options[0];
+  }, [options, raw]);
+
+  return { slug: resolved.slug, name: resolved.name, options, loading };
+}
+
+/**
+ * Append `?constituency=<slug>` (or `&constituency=…` if the path already has
+ * a query) to a relative API path. Returns the path unchanged if slug is
+ * empty (so callers can avoid firing requests before the user is loaded).
+ */
 export function withConstituency(path: string, slug: string): string {
+  if (!slug) return path;
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}constituency=${encodeURIComponent(slug)}`;
 }

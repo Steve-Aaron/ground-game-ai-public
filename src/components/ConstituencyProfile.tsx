@@ -11,7 +11,7 @@ export default function ConstituencyProfile() {
 
   if (!data) {
     return (
-      <div className="p-4 text-[11px] text-zinc-500">
+      <div className="p-4 text-[0.611rem] text-zinc-500">
         Constituency data not available.
       </div>
     );
@@ -46,7 +46,7 @@ export default function ConstituencyProfile() {
           <div key={s.label} className="bg-zinc-800/40 rounded-lg p-3">
             <div className="flex items-center gap-1.5 text-zinc-500 mb-1">
               {s.icon}
-              <span className="text-[11px] uppercase tracking-wide">{s.label}</span>
+              <span className="text-[0.611rem] uppercase tracking-wide">{s.label}</span>
             </div>
             <div className="text-sm font-medium text-zinc-200">{s.value}</div>
           </div>
@@ -56,18 +56,18 @@ export default function ConstituencyProfile() {
         {localAuthorities.map((la) => (
           <span
             key={la}
-            className="text-[11px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full"
+            className="text-[0.611rem] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full"
           >
             {la}
           </span>
         ))}
         {region && (
-          <span className="text-[11px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+          <span className="text-[0.611rem] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
             {region}
           </span>
         )}
         {county && (
-          <span className="text-[11px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+          <span className="text-[0.611rem] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
             {county}
           </span>
         )}

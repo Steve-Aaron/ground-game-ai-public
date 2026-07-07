@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import SectionLabel from "./ui/SectionLabel";
 
 interface Indicator {
   name: string;
@@ -65,7 +66,7 @@ function ComparisonBar({
   return (
     <div className="mt-1.5 space-y-1">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-zinc-500 w-14 shrink-0">Local</span>
+        <span className="text-[0.556rem] text-zinc-500 w-14 shrink-0">Local</span>
         <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full ${barColor}`}
@@ -74,7 +75,7 @@ function ComparisonBar({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-zinc-500 w-14 shrink-0">GB Avg</span>
+        <span className="text-[0.556rem] text-zinc-500 w-14 shrink-0">GB Avg</span>
         <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full bg-zinc-500"
@@ -87,30 +88,9 @@ function ComparisonBar({
 }
 
 export default function EmploymentPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<EmploymentData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useConstituencyResource<EmploymentData>("/api/employment");
 
-  useEffect(() => {
-    fetch(withConstituency("/api/employment", slug))
-      .then((res) => res.json())
-      .then((d: EmploymentData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-40 mb-4" />
-        <div className="grid grid-cols-2 gap-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 bg-zinc-900 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={4} />;
 
   if (!data || data.error) {
     return (
@@ -129,7 +109,7 @@ export default function EmploymentPanel() {
           href={data.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+          className="text-[0.556rem] text-zinc-600 hover:text-zinc-400 transition-colors"
         >
           {data.source}
         </a>
@@ -139,22 +119,20 @@ export default function EmploymentPanel() {
       {data.claimantCount && data.claimantCount.rate != null && (
         <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-              Claimant Count
-            </div>
+            <SectionLabel>Claimant Count</SectionLabel>
             <div className="text-xl font-bold text-zinc-100 mt-0.5">
               {Number(data.claimantCount.rate).toFixed(1)}%
               <TrendArrow trend={data.claimantCount.trend} />
             </div>
             {data.claimantCount.count != null && (
-              <div className="text-[10px] text-zinc-500">
+              <div className="text-[0.556rem] text-zinc-500">
                 {Number(data.claimantCount.count).toLocaleString()} claimants
               </div>
             )}
           </div>
           <div className="text-right">
-            <div className="text-[10px] text-zinc-600">{data.claimantCount.period}</div>
-            <div className="text-[10px] text-zinc-600 mt-0.5">
+            <div className="text-[0.556rem] text-zinc-600">{data.claimantCount.period}</div>
+            <div className="text-[0.556rem] text-zinc-600 mt-0.5">
               Trend: {data.claimantCount.trend}
             </div>
           </div>
@@ -194,12 +172,10 @@ export default function EmploymentPanel() {
 
           return (
             <div key={ind.name} className="bg-zinc-900 rounded-xl p-3">
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider leading-tight">
-                {displayName}
-              </div>
+              <SectionLabel className="leading-tight">{displayName}</SectionLabel>
               <div className={`text-lg font-bold mt-1 ${valueColor}`}>{formatted}</div>
               {gbFormatted && (
-                <div className="text-[10px] text-zinc-500 mt-0.5">
+                <div className="text-[0.556rem] text-zinc-500 mt-0.5">
                   GB avg: {gbFormatted}
                 </div>
               )}
@@ -210,7 +186,7 @@ export default function EmploymentPanel() {
                   higherIsWorse={higherIsWorse}
                 />
               )}
-              <div className="text-[10px] text-zinc-600 mt-1">{ind.period}</div>
+              <div className="text-[0.556rem] text-zinc-600 mt-1">{ind.period}</div>
             </div>
           );
         })}

@@ -65,7 +65,7 @@ export default function Demographics() {
       </select>
 
       {!isBraintree && (
-        <div className="text-[10px] text-zinc-500 -mt-2">
+        <div className="text-[0.556rem] text-zinc-500 -mt-2">
           Per-ward demographic breakdowns not yet sourced for {constituencyName} — the chart below shows Braintree constituency averages as a placeholder.
         </div>
       )}
@@ -107,7 +107,7 @@ export default function Demographics() {
                     : 0;
 
                   return (
-                    <div key={label} className="flex items-center gap-1.5 text-[11px]">
+                    <div key={label} className="flex items-center gap-1.5 text-[0.611rem]">
                       <div
                         className="w-2 h-2 rounded-sm flex-shrink-0"
                         style={{ backgroundColor: colors[i % colors.length] }}
@@ -115,7 +115,7 @@ export default function Demographics() {
                       <span className="text-zinc-400 flex-1 truncate">{label}</span>
                       <span className="text-zinc-300 font-medium tabular-nums">{item.percentage}%</span>
                       {diff !== 0 && (
-                        <span className={`text-[9px] tabular-nums ${diff > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        <span className={`text-[0.5rem] tabular-nums ${diff > 0 ? "text-emerald-400" : "text-red-400"}`}>
                           {diff > 0 ? "+" : ""}{diff.toFixed(1)}
                         </span>
                       )}
@@ -129,7 +129,7 @@ export default function Demographics() {
       </div>
 
       {selectedWard !== "all" && (
-        <div className="text-[10px] text-zinc-600 text-center">
+        <div className="text-[0.556rem] text-zinc-600 text-center">
           +/- shows difference from constituency average
         </div>
       )}

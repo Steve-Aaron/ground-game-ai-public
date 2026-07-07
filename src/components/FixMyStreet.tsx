@@ -73,7 +73,7 @@ export default function FixMyStreet() {
           <button
             key={cat}
             onClick={() => setFilter(cat)}
-            className={`px-2 py-0.5 text-[11px] rounded-full whitespace-nowrap transition-colors ${
+            className={`px-2 py-0.5 text-[0.611rem] rounded-full whitespace-nowrap transition-colors ${
               filter === cat
                 ? "bg-emerald-500/20 text-emerald-400"
                 : "text-zinc-500 hover:text-zinc-300"
@@ -96,7 +96,7 @@ export default function FixMyStreet() {
               {statusIcon(issue.state)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-zinc-300 leading-snug">{issue.title}</p>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-600">
+                <div className="flex items-center gap-2 mt-1 text-[0.611rem] text-zinc-600">
                   <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">
                     {issue.category}
                   </span>

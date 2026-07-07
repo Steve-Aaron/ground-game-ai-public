@@ -7,27 +7,16 @@ import {
 } from "@/data/braintree";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
+import { partyColor, partyLabel } from "@/lib/palette";
 
 type View = "results" | "prediction" | "wards";
 
-const partyColors: Record<string, string> = {
-  CON: "#0087DC", LAB: "#DC241f", Reform: "#12B6CF", LIB: "#FAA61A", Green: "#6AB023", OTH: "#999",
-};
-
-// The data-layer candidate `party` field uses long form (e.g. "Conservative
-// and Unionist Party"). Map to the short display labels + colours the UI uses.
-// Anything unmapped falls into "Other".
+// Wrapper for the data layer's long-form party names (e.g. "Conservative and
+// Unionist Party"). Returns the short label + canonical colour from the
+// shared palette.
 interface PartyMeta { label: string; color: string; }
 function partyMeta(longName: string): PartyMeta {
-  const n = longName.toLowerCase();
-  if (n.includes("conservative")) return { label: "Conservative", color: "#0087DC" };
-  if (n.includes("labour")) return { label: "Labour", color: "#DC241f" };
-  if (n.includes("reform")) return { label: "Reform UK", color: "#12B6CF" };
-  if (n.includes("liberal democrat")) return { label: "Liberal Democrats", color: "#FAA61A" };
-  if (n.includes("green")) return { label: "Green", color: "#6AB023" };
-  if (n.includes("plaid")) return { label: "Plaid Cymru", color: "#005B54" };
-  if (n.includes("snp") || n.includes("scottish national")) return { label: "SNP", color: "#FDF38E" };
-  return { label: longName, color: "#999999" };
+  return { label: partyLabel(longName), color: partyColor(longName) };
 }
 
 interface ResultRow {
@@ -201,7 +190,7 @@ export default function ElectoralIntel() {
           <button
             key={t.key}
             onClick={() => setView(t.key)}
-            className={`flex-1 px-2 py-1.5 text-[11px] font-medium transition-colors ${
+            className={`flex-1 px-2 py-1.5 text-[0.611rem] font-medium transition-colors ${
               view === t.key ? "text-emerald-400 border-b-2 border-emerald-400" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
@@ -214,7 +203,7 @@ export default function ElectoralIntel() {
       {view === "results" && (
         <div className="p-4 space-y-3">
           {!results2024 ? (
-            <div className="text-[11px] text-zinc-500 text-center py-8">
+            <div className="text-[0.611rem] text-zinc-500 text-center py-8">
               2024 results not available for this constituency.
             </div>
           ) : (
@@ -224,7 +213,7 @@ export default function ElectoralIntel() {
                 <span>Turnout: {results2024.turnout}%</span>
               </div>
               {results2024.results.length === 0 ? (
-                <div className="text-[11px] text-zinc-500 text-center py-4">
+                <div className="text-[0.611rem] text-zinc-500 text-center py-4">
                   Candidate data not yet sourced for this constituency.
                 </div>
               ) : (
@@ -234,21 +223,21 @@ export default function ElectoralIntel() {
                       <div className="flex items-center justify-between mb-0.5">
                         <div className="flex items-center gap-2">
                           <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                          <span className="text-[12px] text-zinc-300">{r.party}</span>
+                          <span className="text-[0.667rem] text-zinc-300">{r.party}</span>
                         </div>
-                        <span className="text-[12px] font-medium text-zinc-200">{r.percentage}%</span>
+                        <span className="text-[0.667rem] font-medium text-zinc-200">{r.percentage}%</span>
                       </div>
                       <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${r.percentage}%`, backgroundColor: r.color }} />
                       </div>
-                      <div className="text-[10px] text-zinc-600 mt-0.5">
+                      <div className="text-[0.556rem] text-zinc-600 mt-0.5">
                         {r.candidate} · {r.votes.toLocaleString()} votes
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-              <div className="text-[10px] text-zinc-600 text-center">
+              <div className="text-[0.556rem] text-zinc-600 text-center">
                 Majority: {results2024.majority}% · Electorate: {results2024.electorate.toLocaleString()}
               </div>
             </>
@@ -260,7 +249,7 @@ export default function ElectoralIntel() {
       {view === "prediction" && (
         <div className="p-4 space-y-3">
           <div className="bg-zinc-800/30 rounded-lg p-3 text-center">
-            <div className="text-[11px] text-zinc-500 mb-1">Constituency Prediction</div>
+            <div className="text-[0.611rem] text-zinc-500 mb-1">Constituency Prediction</div>
             <div className="text-base font-bold text-cyan-400">{ecPrediction.prediction}</div>
           </div>
 
@@ -271,32 +260,32 @@ export default function ElectoralIntel() {
               .sort((a, b) => b[1] - a[1])
               .map(([party, chance]) => (
                 <div key={party} className="text-center">
-                  <div className="text-xl font-bold" style={{ color: partyColors[party] || "#999" }}>
+                  <div className="text-xl font-bold" style={{ color: partyColor(party) }}>
                     {chance}%
                   </div>
-                  <div className="text-[10px] text-zinc-500">{party}</div>
+                  <div className="text-[0.556rem] text-zinc-500">{party}</div>
                 </div>
               ))}
           </div>
 
           {/* Predicted shares */}
           <div className="space-y-1.5">
-            <div className="text-[11px] text-zinc-500 font-medium">Predicted Vote Share</div>
+            <div className="text-[0.611rem] text-zinc-500 font-medium">Predicted Vote Share</div>
             {Object.entries(ecPrediction.predicted)
               .filter(([k]) => k !== "OTH")
               .sort((a, b) => b[1] - a[1])
               .map(([party, share]) => (
                 <div key={party} className="flex items-center gap-2">
-                  <span className="text-[11px] text-zinc-400 w-14">{party}</span>
+                  <span className="text-[0.611rem] text-zinc-400 w-14">{party}</span>
                   <div className="flex-1 bg-zinc-800 rounded-full h-3 overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${share * 2}%`, backgroundColor: partyColors[party] || "#999", opacity: 0.8 }} />
+                    <div className="h-full rounded-full" style={{ width: `${share * 2}%`, backgroundColor: partyColor(party), opacity: 0.8 }} />
                   </div>
-                  <span className="text-[11px] text-zinc-300 font-medium w-10 text-right">{share}%</span>
+                  <span className="text-[0.611rem] text-zinc-300 font-medium w-10 text-right">{share}%</span>
                 </div>
               ))}
           </div>
 
-          <div className="text-[10px] text-zinc-700 text-center">
+          <div className="text-[0.556rem] text-zinc-700 text-center">
             Source: Electoral Calculus MRP
             {dataSource === "live" && <span className="text-emerald-600 ml-1">(live)</span>}
           </div>
@@ -312,16 +301,16 @@ export default function ElectoralIntel() {
               .sort((a, b) => b[1] - a[1])
               .map(([party, count]) => (
                 <div key={party} className="flex-1 bg-zinc-800/30 rounded-lg p-2 text-center">
-                  <div className="text-lg font-bold" style={{ color: partyColors[party] || "#999" }}>{count}</div>
-                  <div className="text-[10px] text-zinc-500">{party}</div>
+                  <div className="text-lg font-bold" style={{ color: partyColor(party) }}>{count}</div>
+                  <div className="text-[0.556rem] text-zinc-500">{party}</div>
                 </div>
               ))}
           </div>
-          <div className="text-[10px] text-zinc-600 text-center">{swings.length} wards predicted to change hands</div>
+          <div className="text-[0.556rem] text-zinc-600 text-center">{swings.length} wards predicted to change hands</div>
 
           {/* Ward table */}
-          <div className="overflow-auto max-h-[250px]">
-            <table className="w-full text-[11px]">
+          <div className="overflow-auto max-h-[13.889rem]">
+            <table className="w-full text-[0.611rem]">
               <thead className="sticky top-0 bg-zinc-900">
                 <tr className="text-zinc-500 border-b border-zinc-800">
                   <th className="text-left py-1 font-medium">Ward</th>
@@ -337,10 +326,10 @@ export default function ElectoralIntel() {
                     <tr key={name} className={`border-b border-zinc-800/30 ${changed ? "bg-red-500/5" : ""}`}>
                       <td className="py-1 text-zinc-300">{name}</td>
                       <td className="text-center">
-                        <span style={{ color: partyColors[data.winner2024] || "#999" }}>{data.winner2024}</span>
+                        <span style={{ color: partyColor(data.winner2024) }}>{data.winner2024}</span>
                       </td>
                       <td className="text-center">
-                        <span style={{ color: partyColors[data.predictedWinner] || "#999" }}>
+                        <span style={{ color: partyColor(data.predictedWinner) }}>
                           {data.predictedWinner}
                           {changed && " \u26A1"}
                         </span>
@@ -353,7 +342,7 @@ export default function ElectoralIntel() {
             </table>
           </div>
 
-          <div className="text-[10px] text-zinc-700 text-center">
+          <div className="text-[0.556rem] text-zinc-700 text-center">
             Source: Electoral Calculus MRP
             {dataSource === "live" && <span className="text-emerald-600 ml-1">(live)</span>}
           </div>

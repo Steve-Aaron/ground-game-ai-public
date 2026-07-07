@@ -6,15 +6,8 @@ import {
   wardElectoralCalc as fallbackWardElectoralCalc,
 } from "@/data/braintree";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
-
-const partyColors: Record<string, string> = {
-  CON: "#0087DC",
-  LAB: "#DC241f",
-  Reform: "#12B6CF",
-  LIB: "#FAA61A",
-  Green: "#6AB023",
-  OTH: "#999999",
-};
+import { partyColor } from "@/lib/palette";
+import DataTable, { type DataTableColumn } from "./ui/DataTable";
 
 interface ECConstituencyData {
   prediction: string;
@@ -115,7 +108,7 @@ export default function ECPrediction() {
             .sort((a, b) => b[1] - a[1])
             .map(([party, chance]) => (
               <div key={party} className="text-center">
-                <div className="text-xl font-bold" style={{ color: partyColors[party] || "#999" }}>
+                <div className="text-xl font-bold" style={{ color: partyColor(party) }}>
                   {chance}%
                 </div>
                 <div className="text-[10px] text-zinc-500">{party}</div>
@@ -139,7 +132,7 @@ export default function ECPrediction() {
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${share * 2}%`,
-                      backgroundColor: partyColors[party] || "#999",
+                      backgroundColor: partyColor(party),
                       opacity: 0.8,
                     }}
                   />
@@ -160,7 +153,7 @@ export default function ECPrediction() {
             .sort((a, b) => b[1] - a[1])
             .map(([party, count]) => (
               <div key={party} className="bg-zinc-800/30 rounded-lg p-2 text-center">
-                <div className="text-lg font-bold" style={{ color: partyColors[party] || "#999" }}>
+                <div className="text-lg font-bold" style={{ color: partyColor(party) }}>
                   {count}
                 </div>
                 <div className="text-[10px] text-zinc-500">{party} wards</div>
@@ -173,50 +166,70 @@ export default function ECPrediction() {
       </div>
 
       {/* Ward detail table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
-          <thead>
-            <tr className="text-zinc-500 border-b border-zinc-800">
-              <th className="text-left py-1 font-medium">Ward</th>
-              <th className="text-center py-1 font-medium">2024</th>
-              <th className="text-center py-1 font-medium">Pred</th>
-              <th className="text-right py-1 font-medium">Elect.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {wards.map(([name, data]) => {
-              const changed = data.winner2024 !== data.predictedWinner;
-              return (
-                <tr key={name} className={`border-b border-zinc-800/30 ${changed ? "bg-zinc-800/20" : ""}`}>
-                  <td className="py-1 text-zinc-300">{name}</td>
-                  <td className="text-center">
-                    <span
-                      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      style={{ color: partyColors[data.winner2024] || "#999" }}
-                    >
-                      {data.winner2024}
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <span
-                      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      style={{ color: partyColors[data.predictedWinner] || "#999" }}
-                    >
-                      {data.predictedWinner}
-                    </span>
-                  </td>
-                  <td className="text-right text-zinc-500">{data.electorate.toLocaleString()}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <WardPredictionTable wards={wards} />
 
       <div className="text-[10px] text-zinc-700 text-center">
         Source: Electoral Calculus MRP &middot; Updated {pred.lastUpdated}
         {dataSource === "live" && <span className="text-emerald-600 ml-1">(live)</span>}
       </div>
     </div>
+  );
+}
+
+// ── Ward prediction table ────────────────────────────────────────────────
+// Extracted to keep the main component focused on data-fetching + summary
+// blocks. Uses the shared DataTable primitive so sorting + a11y are free.
+
+interface WardRow {
+  name: string;
+  winner2024: string;
+  predictedWinner: string;
+  electorate: number;
+}
+
+function WardPredictionTable({
+  wards,
+}: {
+  wards: Array<[string, { electorate: number; winner2024: string; predictedWinner: string }]>;
+}) {
+  const rows: WardRow[] = wards.map(([name, data]) => ({ name, ...data }));
+
+  const columns: DataTableColumn<WardRow>[] = [
+    { key: "name", label: "Ward", sort: "string" },
+    {
+      key: "winner2024",
+      label: "2024",
+      align: "center",
+      sort: "string",
+      render: (row) => <PartyPill party={row.winner2024} />,
+    },
+    {
+      key: "predictedWinner",
+      label: "Pred",
+      align: "center",
+      sort: "string",
+      render: (row) => <PartyPill party={row.predictedWinner} />,
+    },
+    {
+      key: "electorate",
+      label: "Elect.",
+      align: "right",
+      sort: "number",
+      className: "text-zinc-500",
+      render: (row) => row.electorate.toLocaleString(),
+    },
+  ];
+
+  return <DataTable rows={rows} columns={columns} getRowId={(r) => r.name} />;
+}
+
+function PartyPill({ party }: { party: string }) {
+  return (
+    <span
+      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
+      style={{ color: partyColor(party) }}
+    >
+      {party}
+    </span>
   );
 }

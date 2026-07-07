@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import SectionLabel from "./ui/SectionLabel";
+import Sparkline from "./ui/Sparkline";
 
 // Match the actual API response shape from /api/universal-credit
 interface UCData {
@@ -29,28 +31,9 @@ const AGE_COLORS = [
 ];
 
 export default function UniversalCreditPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<UCData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useConstituencyResource<UCData>("/api/universal-credit");
 
-  useEffect(() => {
-    fetch(withConstituency("/api/universal-credit", slug))
-      .then((res) => res.json())
-      .then((d: UCData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-40 mb-4" />
-        <div className="h-16 bg-zinc-900 rounded-xl mb-3" />
-        <div className="h-24 bg-zinc-900 rounded-xl mb-3" />
-        <div className="h-20 bg-zinc-900 rounded-xl" />
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={3} />;
 
   if (!data || data.error) {
     return <p className="text-zinc-500 text-xs">Universal Credit data unavailable</p>;
@@ -72,20 +55,15 @@ export default function UniversalCreditPanel() {
   }
   const ageBreakdown = data.byAge ?? [];
 
-  // Sparkline helpers — guard against empty arrays
+  // Sparkline gating — only render when we have at least 2 non-zero points.
   const trendValues = trend.map((t) => t.count).filter((v) => v > 0);
-  const trendMin = trendValues.length > 0 ? Math.min(...trendValues) : 0;
-  const trendMax = trendValues.length > 0 ? Math.max(...trendValues) : 1;
-  const trendRange = trendMax - trendMin || 1;
 
   return (
     <div className="space-y-4">
       {/* Headline figures */}
       <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
         <div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            Claimant Count
-          </div>
+          <SectionLabel>Claimant Count</SectionLabel>
           <div className="text-xl font-bold text-zinc-100 mt-0.5">
             {claimantCount != null && claimantCount > 0
               ? Number(claimantCount).toLocaleString()
@@ -95,16 +73,14 @@ export default function UniversalCreditPanel() {
         <div className="text-right">
           {claimantRate != null && claimantRate > 0 && (
             <div>
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-                Rate
-              </div>
+              <SectionLabel>Rate</SectionLabel>
               <div className="text-lg font-bold text-zinc-100 mt-0.5">
                 {Number(claimantRate).toFixed(1)}%
               </div>
             </div>
           )}
           {period && (
-            <div className="text-[10px] text-zinc-600 mt-1">{period}</div>
+            <div className="text-[0.556rem] text-zinc-600 mt-1">{period}</div>
           )}
         </div>
       </div>
@@ -112,32 +88,16 @@ export default function UniversalCreditPanel() {
       {/* 12-month trend sparkline */}
       {trendValues.length > 1 && (
         <div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-            12-Month Trend
-          </div>
+          <SectionLabel className="mb-2">12-Month Trend</SectionLabel>
           <div className="bg-zinc-900 rounded-xl p-3">
-            <svg
-              viewBox={`0 0 ${trend.length * 10} 40`}
-              className="w-full h-10"
-              preserveAspectRatio="none"
-            >
-              <polyline
-                fill="none"
-                stroke="#34d399"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={trend
-                  .filter((t) => t.count > 0)
-                  .map((t, i) => {
-                    const x = i * 10;
-                    const y = 38 - ((t.count - trendMin) / trendRange) * 36;
-                    return `${x},${y}`;
-                  })
-                  .join(" ")}
-              />
-            </svg>
-            <div className="flex justify-between text-[9px] text-zinc-600 mt-1">
+            <Sparkline
+              id="uc-trend"
+              data={trend.filter((t) => t.count > 0).map((t) => t.count)}
+              color="#34d399"
+              height={40}
+              showEndpoint={false}
+            />
+            <div className="flex justify-between text-[0.5rem] text-zinc-600 mt-1">
               <span>{trend[0]?.date}</span>
               <span>{trend[trend.length - 1]?.date}</span>
             </div>
@@ -148,9 +108,7 @@ export default function UniversalCreditPanel() {
       {/* Age breakdown stacked bar */}
       {ageBreakdown.length > 0 && (
         <div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-            Age Breakdown
-          </div>
+          <SectionLabel className="mb-2">Age Breakdown</SectionLabel>
           <div className="bg-zinc-900 rounded-xl p-3">
             <div className="flex h-4 rounded-full overflow-hidden">
               {ageBreakdown.map((seg, i) => (
@@ -168,7 +126,7 @@ export default function UniversalCreditPanel() {
                   <div
                     className={`h-2 w-2 rounded-full ${AGE_COLORS[i % AGE_COLORS.length]}`}
                   />
-                  <span className="text-[9px] text-zinc-400">
+                  <span className="text-[0.5rem] text-zinc-400">
                     {seg.label} ({seg.percentage.toFixed(0)}%)
                   </span>
                 </div>

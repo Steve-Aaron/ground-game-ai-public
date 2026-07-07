@@ -163,7 +163,7 @@ export default function ActivityCharts() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 px-3 py-1.5 text-[11px] font-medium transition-colors ${
+            className={`flex-1 px-3 py-1.5 text-[0.611rem] font-medium transition-colors ${
               tab === t.id
                 ? "text-emerald-400 border-b-2 border-emerald-400"
                 : "text-zinc-500 hover:text-zinc-300"
@@ -186,12 +186,12 @@ export default function ActivityCharts() {
         {tab === "mentions" && mentionData.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] text-zinc-500">Daily mention volume</p>
+              <p className="text-[0.611rem] text-zinc-500">Daily mention volume</p>
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" /> Total
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-red-400" /> Negative
                 </span>
               </div>
@@ -264,15 +264,15 @@ export default function ActivityCharts() {
         {tab === "parliament" && parliamentData.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] text-zinc-500">Monthly parliamentary engagement</p>
+              <p className="text-[0.611rem] text-zinc-500">Monthly parliamentary engagement</p>
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-blue-500" /> Votes
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-amber-500" /> Questions
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-purple-500" /> Debates
                 </span>
               </div>
@@ -318,12 +318,12 @@ export default function ActivityCharts() {
         {tab === "votes" && voteData.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] text-zinc-500">Monthly votes cast (Aye vs No)</p>
+              <p className="text-[0.611rem] text-zinc-500">Monthly votes cast (Aye vs No)</p>
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" /> Aye
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                   <span className="h-2 w-2 rounded-full bg-rose-500" /> No
                 </span>
               </div>
@@ -370,7 +370,7 @@ function StatBox({ label, value, negative }: { label: string; value: number | st
       <p className={`text-base font-bold ${negative ? "text-red-400" : "text-zinc-100"}`}>
         {value}
       </p>
-      <p className="text-[10px] text-zinc-600 uppercase tracking-wider mt-0.5">{label}</p>
+      <p className="text-[0.556rem] text-zinc-600 uppercase tracking-wider mt-0.5">{label}</p>
     </div>
   );
 }

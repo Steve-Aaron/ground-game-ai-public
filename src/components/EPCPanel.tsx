@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import SectionLabel from "./ui/SectionLabel";
+import StatGrid from "./ui/StatGrid";
+import Bar from "./ui/Bar";
 
 // Match the actual API response shape from /api/epc
 // ratings is a Record<string, number> like { A: 12, B: 34, C: 56, ... }
@@ -46,31 +49,9 @@ const BAND_TEXT_COLORS: Record<string, string> = {
 const BAND_ORDER = ["A", "B", "C", "D", "E", "F", "G"];
 
 export default function EPCPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<EPCData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useConstituencyResource<EPCData>("/api/epc");
 
-  useEffect(() => {
-    fetch(withConstituency("/api/epc", slug))
-      .then((res) => res.json())
-      .then((d: EPCData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-40 mb-4" />
-        <div className="h-16 bg-zinc-900 rounded-xl mb-3" />
-        <div className="space-y-2">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="h-6 bg-zinc-900 rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={4} />;
 
   if (!data || data.error) {
     return <p className="text-zinc-500 text-xs">EPC data unavailable</p>;
@@ -91,31 +72,22 @@ export default function EPCPanel() {
   return (
     <div className="space-y-4">
       {/* Headline stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-zinc-900 rounded-xl p-3">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            Homes Assessed
-          </div>
-          <div className="text-xl font-bold text-zinc-100 mt-0.5">
-            {total.toLocaleString()}
-          </div>
-        </div>
-        <div className="bg-zinc-900 rounded-xl p-3">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            Fuel Poverty Risk
-          </div>
-          <div className="text-xl font-bold text-red-400 mt-0.5">
-            {fuelPovertyRiskPct.toFixed(1)}%
-          </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5">Rated D or below</div>
-        </div>
-      </div>
+      <StatGrid
+        cols={2}
+        items={[
+          { label: "Homes Assessed", value: total.toLocaleString() },
+          {
+            label: "Fuel Poverty Risk",
+            value: `${fuelPovertyRiskPct.toFixed(1)}%`,
+            color: "#f87171",
+            subtitle: "Rated D or below",
+          },
+        ]}
+      />
 
       {/* Band distribution — horizontal bars */}
       <div>
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-          Band Distribution
-        </div>
+        <SectionLabel className="mb-2">Band Distribution</SectionLabel>
         <div className="space-y-1.5">
           {bands.map((b) => (
             <div key={b.band} className="flex items-center gap-2">
@@ -126,20 +98,19 @@ export default function EPCPanel() {
               >
                 {b.band}
               </span>
-              <div className="flex-1 h-4 bg-zinc-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${
-                    BAND_COLORS[b.band] ?? "bg-zinc-500"
-                  }`}
-                  style={{
-                    width: `${(b.percentage / maxPct) * 100}%`,
-                  }}
-                />
-              </div>
-              <span className="text-[10px] text-zinc-400 w-12 text-right">
-                {b.percentage.toFixed(1)}%
-              </span>
-              <span className="text-[10px] text-zinc-600 w-14 text-right">
+              <Bar
+                variant="progress"
+                value={b.percentage}
+                max={maxPct}
+                color={BAND_COLORS[b.band] ?? "bg-zinc-500"}
+                height="h-4"
+                valueText={
+                  <span className="text-[0.556rem] text-zinc-400">
+                    {b.percentage.toFixed(1)}%
+                  </span>
+                }
+              />
+              <span className="text-[0.556rem] text-zinc-600 w-14 text-right">
                 {b.count.toLocaleString()}
               </span>
             </div>
@@ -163,7 +134,7 @@ export default function EPCPanel() {
 
       {/* Source note */}
       {data.note && (
-        <p className="text-[10px] text-zinc-600 italic">{data.note}</p>
+        <p className="text-[0.556rem] text-zinc-600 italic">{data.note}</p>
       )}
     </div>
   );

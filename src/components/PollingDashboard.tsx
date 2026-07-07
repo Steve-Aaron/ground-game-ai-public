@@ -18,14 +18,17 @@ import {
 import { TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
+import { partyColor } from "@/lib/palette";
+import SectionLabel from "./ui/SectionLabel";
 
-// Party colors
+// Polling dashboard uses lower-case party keys; map them through the shared
+// palette so colours stay in sync with the rest of the platform.
 const PARTY_COLORS: Record<string, string> = {
-  con: "#0087DC",
-  lab: "#DC241f",
-  reform: "#12B6CF",
-  ld: "#FAA61A",
-  green: "#6AB023",
+  con: partyColor("CON"),
+  lab: partyColor("LAB"),
+  reform: partyColor("Reform"),
+  ld: partyColor("LIB"),
+  green: partyColor("Green"),
 };
 
 const PARTY_NAMES: Record<string, string> = {
@@ -260,7 +263,7 @@ export default function PollingDashboard() {
           <button
             key={s.id}
             onClick={() => setSection(s.id)}
-            className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
+            className={`flex-1 px-3 py-2 text-[0.611rem] font-medium transition-colors ${
               section === s.id
                 ? "text-emerald-400 border-b-2 border-emerald-400"
                 : "text-zinc-500 hover:text-zinc-300"
@@ -297,7 +300,7 @@ export default function PollingDashboard() {
                     />
                     <div className="relative">
                       {rank === 1 && (
-                        <span className="absolute -top-1 -right-1 text-[9px] text-emerald-400 font-bold">
+                        <span className="absolute -top-1 -right-1 text-[0.5rem] text-emerald-400 font-bold">
                           #1
                         </span>
                       )}
@@ -307,9 +310,7 @@ export default function PollingDashboard() {
                       >
                         {val}%
                       </p>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-1">
-                        {PARTY_NAMES[party]}
-                      </p>
+                      <SectionLabel className="mt-1">{PARTY_NAMES[party]}</SectionLabel>
                     </div>
                   </div>
                 );
@@ -318,7 +319,7 @@ export default function PollingDashboard() {
 
             {/* Trend line chart */}
             <div>
-              <p className="text-[11px] text-zinc-500 mb-2">Polling trend (last 30 polls)</p>
+              <p className="text-[0.611rem] text-zinc-500 mb-2">Polling trend (last 30 polls)</p>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={data.timeSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
@@ -338,17 +339,17 @@ export default function PollingDashboard() {
                     tickFormatter={(v: number) => `${v}%`}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="reform" stroke="#12B6CF" strokeWidth={2.5} dot={false} />
-                  <Line type="monotone" dataKey="con" stroke="#0087DC" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="lab" stroke="#DC241f" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="ld" stroke="#FAA61A" strokeWidth={1.5} dot={false} />
-                  <Line type="monotone" dataKey="green" stroke="#6AB023" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="reform" stroke={PARTY_COLORS.reform} strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="con" stroke={PARTY_COLORS.con} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="lab" stroke={PARTY_COLORS.lab} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="ld" stroke={PARTY_COLORS.ld} strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="green" stroke={PARTY_COLORS.green} strokeWidth={1.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
               {/* Legend */}
               <div className="flex items-center justify-center gap-4 mt-2">
                 {Object.entries(PARTY_COLORS).map(([key, color]) => (
-                  <span key={key} className="flex items-center gap-1 text-[10px] text-zinc-500">
+                  <span key={key} className="flex items-center gap-1 text-[0.556rem] text-zinc-500">
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
                     {PARTY_NAMES[key]}
                   </span>
@@ -358,9 +359,9 @@ export default function PollingDashboard() {
 
             {/* Recent polls table */}
             <div>
-              <p className="text-[11px] text-zinc-500 mb-2">Recent polls</p>
+              <p className="text-[0.611rem] text-zinc-500 mb-2">Recent polls</p>
               <div className="overflow-x-auto">
-                <table className="w-full text-[11px]">
+                <table className="w-full text-[0.611rem]">
                   <thead>
                     <tr className="border-b border-zinc-800">
                       <th className="text-left py-1.5 px-2 text-zinc-500 font-medium">Date</th>
@@ -394,7 +395,7 @@ export default function PollingDashboard() {
               </div>
             </div>
 
-            <div className="text-[10px] text-zinc-700 flex items-center justify-between">
+            <div className="text-[0.556rem] text-zinc-700 flex items-center justify-between">
               <span>Source: Wikipedia / Electoral Calculus / BPC pollsters</span>
               <a
                 href="https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election"
@@ -421,7 +422,7 @@ export default function PollingDashboard() {
         {/* ══════ LEADER RATINGS ══════ */}
         {section === "leaders" && (
           <div className="space-y-4">
-            <p className="text-[11px] text-zinc-500">Net approval ratings (approve minus disapprove)</p>
+            <p className="text-[0.611rem] text-zinc-500">Net approval ratings (approve minus disapprove)</p>
 
             <div className="space-y-3">
               {data.leaderRatings.map((leader) => {
@@ -433,7 +434,7 @@ export default function PollingDashboard() {
                       <div>
                         <span className="text-sm text-zinc-200 font-medium">{leader.name}</span>
                         <span
-                          className="ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                          className="ml-2 text-[0.556rem] px-1.5 py-0.5 rounded font-semibold"
                           style={{ backgroundColor: leader.color + "30", color: leader.color }}
                         >
                           {leader.party}
@@ -443,7 +444,7 @@ export default function PollingDashboard() {
                         <span className={`text-lg font-black ${isNegative ? "text-red-400" : "text-emerald-400"}`}>
                           {leader.rating > 0 ? "+" : ""}{leader.rating}
                         </span>
-                        <span className="flex items-center gap-0.5 text-[10px]">
+                        <span className="flex items-center gap-0.5 text-[0.556rem]">
                           {leader.change > 0 ? (
                             <TrendingUp className="h-3 w-3 text-emerald-500" />
                           ) : leader.change < 0 ? (
@@ -468,7 +469,7 @@ export default function PollingDashboard() {
                         }}
                       />
                     </div>
-                    <div className="flex justify-between mt-1 text-[9px] text-zinc-600">
+                    <div className="flex justify-between mt-1 text-[0.5rem] text-zinc-600">
                       <span>-100</span>
                       <span>0</span>
                       <span>+100</span>
@@ -479,32 +480,32 @@ export default function PollingDashboard() {
             </div>
 
             <div className="bg-zinc-900/30 border border-zinc-800/50 px-4 py-3">
-              <p className="text-[11px] text-zinc-400 mb-2 font-medium">Best Prime Minister</p>
+              <p className="text-[0.611rem] text-zinc-400 mb-2 font-medium">Best Prime Minister</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center">
                   <p className="text-xl font-black" style={{ color: PARTY_COLORS.reform }}>28%</p>
-                  <p className="text-[10px] text-zinc-500">Farage</p>
+                  <p className="text-[0.556rem] text-zinc-500">Farage</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-black" style={{ color: PARTY_COLORS.lab }}>20%</p>
-                  <p className="text-[10px] text-zinc-500">Starmer</p>
+                  <p className="text-[0.556rem] text-zinc-500">Starmer</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-black" style={{ color: PARTY_COLORS.con }}>18%</p>
-                  <p className="text-[10px] text-zinc-500">Badenoch</p>
+                  <p className="text-[0.556rem] text-zinc-500">Badenoch</p>
                 </div>
               </div>
-              <p className="text-[9px] text-zinc-600 text-center mt-2">34% Don&apos;t know</p>
+              <p className="text-[0.5rem] text-zinc-600 text-center mt-2">34% Don&apos;t know</p>
             </div>
 
-            <p className="text-[10px] text-zinc-700">Source: Aggregated YouGov/Savanta/Opinium tracker data</p>
+            <p className="text-[0.556rem] text-zinc-700">Source: Aggregated YouGov/Savanta/Opinium tracker data</p>
           </div>
         )}
 
         {/* ══════ KEY ISSUES ══════ */}
         {section === "issues" && (
           <div className="space-y-4">
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[0.611rem] text-zinc-500">
               Most Important Issues facing the country (% of respondents mentioning)
             </p>
 
@@ -555,8 +556,8 @@ export default function PollingDashboard() {
                   key={issue.issue}
                   className="flex items-center justify-between bg-zinc-900/30 border border-zinc-800/50 px-3 py-2"
                 >
-                  <span className="text-[11px] text-zinc-300">{issue.issue}</span>
-                  <span className="flex items-center gap-1 text-[10px]">
+                  <span className="text-[0.611rem] text-zinc-300">{issue.issue}</span>
+                  <span className="flex items-center gap-1 text-[0.556rem]">
                     <span className="font-bold text-zinc-200">{issue.pct}%</span>
                     {issue.change && issue.change !== 0 && (
                       <span className={issue.change > 0 ? "text-emerald-500" : "text-red-400"}>
@@ -573,7 +574,7 @@ export default function PollingDashboard() {
               ))}
             </div>
 
-            <p className="text-[10px] text-zinc-700">
+            <p className="text-[0.556rem] text-zinc-700">
               Source: Ipsos Issues Index / YouGov MII tracker patterns. Multiple responses allowed.
             </p>
           </div>
@@ -610,7 +611,7 @@ export default function PollingDashboard() {
               allowNegative
             />
 
-            <p className="text-[10px] text-zinc-700">
+            <p className="text-[0.556rem] text-zinc-700">
               Source: Aggregated tracker data from YouGov, Ipsos, Savanta. Updated monthly.
             </p>
           </div>
@@ -697,17 +698,17 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
     <div className="space-y-4">
       {/* Source badge */}
       <div className="flex items-center justify-between">
-        <p className="text-[11px] text-zinc-500">
+        <p className="text-[0.611rem] text-zinc-500">
           {useEC ? "MRP constituency-level model" : "Estimated from Uniform National Swing"}
         </p>
-        <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${useEC ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+        <span className={`text-[0.5rem] px-2 py-0.5 rounded-full font-medium ${useEC ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
           {useEC ? "ELECTORAL CALCULUS MRP" : "UNS ESTIMATE"}
         </span>
       </div>
 
       {/* Majority indicator */}
       <div className="bg-zinc-900/50 border border-zinc-800/50 px-4 py-3 text-center">
-        <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Projected Outcome</p>
+        <p className="text-[0.556rem] text-zinc-600 uppercase tracking-wider mb-1">Projected Outcome</p>
         <p className="text-lg font-black" style={{ color: largestParty.color }}>
           {useEC && ecNational?.outcome
             ? ecNational.outcome
@@ -715,7 +716,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
               ? `${largestParty.party} Majority (${largestParty.seats - majorityLine + 1})`
               : `Hung Parliament — ${largestParty.party} Largest (${largestParty.seats} seats)`}
         </p>
-        <p className="text-[10px] text-zinc-500 mt-1">{majorityLine} seats needed for majority</p>
+        <p className="text-[0.556rem] text-zinc-500 mt-1">{majorityLine} seats needed for majority</p>
       </div>
 
       {/* Parliament bar visualization */}
@@ -734,9 +735,9 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
             >
               {p.seats >= 20 && (
                 <div className="text-center">
-                  <span className="text-[11px] font-black text-white/90 block leading-tight">{p.seats}</span>
+                  <span className="text-[0.611rem] font-black text-white/90 block leading-tight">{p.seats}</span>
                   {p.seats >= 40 && (
-                    <span className="text-[8px] text-white/60 block leading-tight">{p.party}</span>
+                    <span className="text-[0.444rem] text-white/60 block leading-tight">{p.party}</span>
                   )}
                 </div>
               )}
@@ -750,7 +751,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
             style={{ left: `${(majorityLine / totalSeats) * 100}%` }}
           />
           <span
-            className="absolute top-3 text-[9px] text-zinc-400 -translate-x-1/2 font-medium"
+            className="absolute top-3 text-[0.5rem] text-zinc-400 -translate-x-1/2 font-medium"
             style={{ left: `${(majorityLine / totalSeats) * 100}%` }}
           >
             326 majority
@@ -763,8 +764,8 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
         {sorted.filter(p => p.seats > 0).map((p) => (
           <div key={p.party} className="bg-zinc-900/30 border border-zinc-800/50 px-3 py-2 text-center">
             <p className="text-xl font-black" style={{ color: p.color }}>{p.seats}</p>
-            <p className="text-[10px] text-zinc-500">{p.party}</p>
-            <p className={`text-[10px] ${p.change > 0 ? "text-emerald-500" : p.change < 0 ? "text-red-400" : "text-zinc-600"}`}>
+            <p className="text-[0.556rem] text-zinc-500">{p.party}</p>
+            <p className={`text-[0.556rem] ${p.change > 0 ? "text-emerald-500" : p.change < 0 ? "text-red-400" : "text-zinc-600"}`}>
               {p.change > 0 ? "+" : ""}{p.change} vs 2024
             </p>
           </div>
@@ -774,7 +775,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
       {/* EC vote share if available */}
       {ecVote && Object.keys(ecVote).length > 0 && (
         <div>
-          <p className="text-[11px] text-zinc-500 mb-2">Projected vote share (MRP)</p>
+          <p className="text-[0.611rem] text-zinc-500 mb-2">Projected vote share (MRP)</p>
           <div className="grid grid-cols-5 gap-2">
             {(["reform", "con", "lab", "ld", "green"] as const).map((party) => {
               const pct = ecVote[party] || 0;
@@ -783,7 +784,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
                   <p className="text-sm font-bold" style={{ color: PARTY_COLORS[party] }}>
                     {pct}%
                   </p>
-                  <p className="text-[9px] text-zinc-600 uppercase">{PARTY_NAMES[party]}</p>
+                  <p className="text-[0.5rem] text-zinc-600 uppercase">{PARTY_NAMES[party]}</p>
                 </div>
               );
             })}
@@ -793,7 +794,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
 
       {/* National swing from polling */}
       <div>
-        <p className="text-[11px] text-zinc-500 mb-2">National swing since 2024 election (polling)</p>
+        <p className="text-[0.611rem] text-zinc-500 mb-2">National swing since 2024 election (polling)</p>
         <div className="grid grid-cols-5 gap-2">
           {(["reform", "con", "lab", "ld", "green"] as const).map((party) => {
             const swing = swings[party];
@@ -802,7 +803,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
                 <p className={`text-sm font-bold ${swing > 0 ? "text-emerald-400" : swing < 0 ? "text-red-400" : "text-zinc-400"}`}>
                   {swing > 0 ? "+" : ""}{swing.toFixed(1)}%
                 </p>
-                <p className="text-[9px] text-zinc-600 uppercase">{PARTY_NAMES[party]}</p>
+                <p className="text-[0.5rem] text-zinc-600 uppercase">{PARTY_NAMES[party]}</p>
               </div>
             );
           })}
@@ -810,7 +811,7 @@ function SeatProjectionSection({ averages, ecNational }: { averages: Record<stri
       </div>
 
       {/* Source info */}
-      <div className="flex items-center justify-between text-[10px] text-zinc-700">
+      <div className="flex items-center justify-between text-[0.556rem] text-zinc-700">
         <span>Source: {sourceName}</span>
         <a
           href="https://www.electoralcalculus.co.uk/prediction_main.html"
@@ -879,23 +880,23 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
     <div className="space-y-4">
       {/* Source badge */}
       <div className="flex items-center justify-between">
-        <p className="text-[11px] text-zinc-500">
+        <p className="text-[0.611rem] text-zinc-500">
           {useEC ? `Electoral Calculus MRP prediction for ${constituencyName}` : `UNS projection for ${constituencyName} constituency`}
         </p>
-        <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${useEC ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+        <span className={`text-[0.5rem] px-2 py-0.5 rounded-full font-medium ${useEC ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
           {useEC ? "EC MRP DATA" : "UNS ESTIMATE"}
         </span>
       </div>
 
       {/* Seat status banner */}
       <div className={`border px-4 py-3 text-center ${wouldChange ? "bg-red-500/10 border-red-500/30" : "bg-emerald-500/10 border-emerald-500/30"}`}>
-        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: wouldChange ? "#f87171" : "#10b981" }}>
+        <p className="text-[0.556rem] uppercase tracking-wider mb-1" style={{ color: wouldChange ? "#f87171" : "#10b981" }}>
           {wouldChange ? "SEAT CHANGES HANDS" : "SEAT HOLDS"}
         </p>
         <p className="text-lg font-black" style={{ color: PARTY_COLORS[projectedWinner[0]] }}>
           {PARTY_NAMES[projectedWinner[0]]} Win
         </p>
-        <p className="text-[11px] text-zinc-400">
+        <p className="text-[0.611rem] text-zinc-400">
           {ecPrediction || `Projected lead: ${projectedMajority}% over ${PARTY_NAMES[projectedSecond[0]]}`}
         </p>
       </div>
@@ -903,7 +904,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
       {/* Winning Probabilities (EC MRP only) */}
       {hasChances && (
         <div>
-          <p className="text-[11px] text-zinc-500 mb-2">Winning Probability (MRP model)</p>
+          <p className="text-[0.611rem] text-zinc-500 mb-2">Winning Probability (MRP model)</p>
           <div className="flex gap-1 h-8 rounded overflow-hidden">
             {Object.entries(ecConstituency!.winningChances)
               .sort((a, b) => b[1] - a[1])
@@ -919,7 +920,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
                     title={`${party}: ${pct}%`}
                   >
                     {pct >= 10 && (
-                      <span className="text-[10px] font-bold text-white/90">{pct}%</span>
+                      <span className="text-[0.556rem] font-bold text-white/90">{pct}%</span>
                     )}
                   </div>
                 );
@@ -933,7 +934,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
                 const key = party.toLowerCase().replace("lib", "ld");
                 const color = PARTY_COLORS[key] || "#6b7280";
                 return (
-                  <span key={party} className="flex items-center gap-1 text-[10px]">
+                  <span key={party} className="flex items-center gap-1 text-[0.556rem]">
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
                     <span className="text-zinc-400">{party}</span>
                     <span className="font-bold" style={{ color }}>{pct}%</span>
@@ -946,7 +947,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
 
       {/* 2024 Result vs Projected comparison */}
       <div>
-        <p className="text-[11px] text-zinc-500 mb-2">2024 Result vs Current Projection</p>
+        <p className="text-[0.611rem] text-zinc-500 mb-2">2024 Result vs Current Projection</p>
         <div className="space-y-2">
           {(["con", "reform", "lab", "ld", "green"] as const).map((party) => {
             const actual = BRAINTREE_2024[party];
@@ -954,7 +955,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
             const change = projected - actual;
             return (
               <div key={party} className="flex items-center gap-3">
-                <span className="text-[10px] text-zinc-500 w-20 text-right uppercase">{PARTY_NAMES[party]}</span>
+                <span className="text-[0.556rem] text-zinc-500 w-20 text-right uppercase">{PARTY_NAMES[party]}</span>
                 <div className="flex-1 flex items-center gap-2">
                   <div className="flex-1 h-4 bg-zinc-800 rounded-sm overflow-hidden relative">
                     <div
@@ -966,10 +967,10 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
                       style={{ width: `${projected * 2}%`, backgroundColor: PARTY_COLORS[party] }}
                     />
                   </div>
-                  <span className="text-[11px] font-bold w-12 text-right" style={{ color: PARTY_COLORS[party] }}>
+                  <span className="text-[0.611rem] font-bold w-12 text-right" style={{ color: PARTY_COLORS[party] }}>
                     {projected}%
                   </span>
-                  <span className={`text-[10px] w-12 text-right ${change > 0 ? "text-emerald-500" : change < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                  <span className={`text-[0.556rem] w-12 text-right ${change > 0 ? "text-emerald-500" : change < 0 ? "text-red-400" : "text-zinc-500"}`}>
                     {change > 0 ? "+" : ""}{change.toFixed(1)}
                   </span>
                 </div>
@@ -977,7 +978,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
             );
           })}
         </div>
-        <div className="flex items-center gap-3 mt-1 text-[9px] text-zinc-600">
+        <div className="flex items-center gap-3 mt-1 text-[0.5rem] text-zinc-600">
           <span className="w-20" />
           <span className="flex items-center gap-2">
             <span className="h-2 w-4 bg-zinc-600 opacity-40 rounded-sm" /> 2024 actual
@@ -994,24 +995,24 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
           <p className="text-base font-bold text-zinc-100">
             {(useEC && ecConstituency!.electorate > 0 ? ecConstituency!.electorate : BRAINTREE_2024.electorate).toLocaleString()}
           </p>
-          <p className="text-[9px] text-zinc-600 uppercase tracking-wider">Electorate</p>
+          <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Electorate</p>
         </div>
         <div className="bg-zinc-900/30 border border-zinc-800/50 px-3 py-2 text-center">
           <p className="text-base font-bold text-zinc-100">
             {(useEC && ecConstituency!.turnout > 0 ? ecConstituency!.turnout : BRAINTREE_2024.turnout)}%
           </p>
-          <p className="text-[9px] text-zinc-600 uppercase tracking-wider">2024 Turnout</p>
+          <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">2024 Turnout</p>
         </div>
         <div className="bg-zinc-900/30 border border-zinc-800/50 px-3 py-2 text-center">
           <p className="text-base font-bold text-zinc-100">{BRAINTREE_2024.majority.toLocaleString()}</p>
-          <p className="text-[9px] text-zinc-600 uppercase tracking-wider">2024 Majority</p>
+          <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">2024 Majority</p>
         </div>
       </div>
 
       {/* Ward-level breakdown (EC MRP only) */}
       {hasWards && (
         <div className="bg-zinc-900/30 border border-zinc-800/50 px-4 py-3">
-          <p className="text-[11px] text-zinc-400 font-medium mb-2">Ward-Level Predictions (MRP)</p>
+          <p className="text-[0.611rem] text-zinc-400 font-medium mb-2">Ward-Level Predictions (MRP)</p>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
             {ecConstituency!.wards.map((ward) => {
               const wColor = PARTY_COLORS[ward.predictedWinner?.toLowerCase().replace("lib", "ld").replace("reform", "reform")] || "#6b7280";
@@ -1021,16 +1022,16 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
                   key={ward.ward}
                   className="flex items-center justify-between bg-zinc-800/30 px-2 py-1.5 rounded-sm"
                 >
-                  <span className="text-[10px] text-zinc-300 truncate flex-1">{ward.ward}</span>
+                  <span className="text-[0.556rem] text-zinc-300 truncate flex-1">{ward.ward}</span>
                   <div className="flex items-center gap-1 ml-2">
-                    {changed && <span className="text-[8px] text-amber-400">⟵</span>}
+                    {changed && <span className="text-[0.444rem] text-amber-400">⟵</span>}
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: wColor }} />
                   </div>
                 </div>
               );
             })}
           </div>
-          <p className="text-[9px] text-zinc-600 mt-1.5">
+          <p className="text-[0.5rem] text-zinc-600 mt-1.5">
             {ecConstituency!.wards.length} wards • Colored dot = predicted winner
             {ecConstituency!.wards.filter(w => w.winner2024 !== w.predictedWinner).length > 0 &&
               ` • ⟵ = changed from 2024`}
@@ -1040,8 +1041,8 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
 
       {/* Vulnerability analysis */}
       <div className="bg-zinc-900/30 border border-zinc-800/50 px-4 py-3">
-        <p className="text-[11px] text-zinc-400 font-medium mb-2">Vulnerability Analysis</p>
-        <div className="space-y-1.5 text-[11px]">
+        <p className="text-[0.611rem] text-zinc-400 font-medium mb-2">Vulnerability Analysis</p>
+        <div className="space-y-1.5 text-[0.611rem]">
           <div className="flex justify-between">
             <span className="text-zinc-500">Swing needed for Reform to win:</span>
             <span className="font-bold" style={{ color: PARTY_COLORS.reform }}>
@@ -1070,7 +1071,7 @@ function BraintreeLocalSection({ averages, ecConstituency, constituencyName }: {
       </div>
 
       {/* Source info */}
-      <div className="flex items-center justify-between text-[10px] text-zinc-700">
+      <div className="flex items-center justify-between text-[0.556rem] text-zinc-700">
         <span>Source: {useEC ? "Electoral Calculus MRP" : "Uniform National Swing estimate"}</span>
         <a
           href={`https://www.electoralcalculus.co.uk/fcgi-bin/seatdetails.py?seat=${encodeURIComponent(constituencyName)}`}
@@ -1111,13 +1112,13 @@ function TrackerChart({
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="text-xs text-zinc-300 font-medium">{title}</p>
-          <p className="text-[10px] text-zinc-600">{subtitle}</p>
+          <p className="text-[0.556rem] text-zinc-600">{subtitle}</p>
         </div>
         <div className="text-right">
           <p className="text-lg font-black" style={{ color }}>
             {allowNegative && latest > 0 ? "+" : ""}{latest}%
           </p>
-          <p className={`text-[10px] ${change > 0 ? "text-emerald-500" : change < 0 ? "text-red-400" : "text-zinc-500"}`}>
+          <p className={`text-[0.556rem] ${change > 0 ? "text-emerald-500" : change < 0 ? "text-red-400" : "text-zinc-500"}`}>
             {change > 0 ? "+" : ""}{change} vs last month
           </p>
         </div>

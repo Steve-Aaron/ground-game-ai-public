@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import SectionLabel from "./ui/SectionLabel";
 
 interface SectionData {
   heading: string;
@@ -67,8 +68,8 @@ function Donut({
           <span className="text-sm font-bold text-zinc-100">{value}%</span>
         </div>
       </div>
-      <span className="text-[10px] text-zinc-400 text-center leading-tight max-w-[90px]">{label}</span>
-      {sub && <span className="text-[9px] text-zinc-600 -mt-0.5">{sub}</span>}
+      <span className="text-[0.556rem] text-zinc-400 text-center leading-tight max-w-[5rem]">{label}</span>
+      {sub && <span className="text-[0.5rem] text-zinc-600 -mt-0.5">{sub}</span>}
     </div>
   );
 }
@@ -78,7 +79,7 @@ function HeroStat({ value, label, color = "text-emerald-400" }: { value: string;
   return (
     <div className="text-center">
       <div className={`text-2xl font-black tracking-tight ${color}`}>{value}</div>
-      <div className="text-[10px] text-zinc-500 mt-0.5 leading-tight">{label}</div>
+      <div className="text-[0.556rem] text-zinc-500 mt-0.5 leading-tight">{label}</div>
     </div>
   );
 }
@@ -88,14 +89,14 @@ function MiniBar({ label, value, max = 100, color = "#34d399" }: { label: string
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] text-zinc-400 w-36 shrink-0 truncate">{label}</span>
+      <span className="text-[0.556rem] text-zinc-400 w-36 shrink-0 truncate">{label}</span>
       <div className="flex-1 h-2.5 bg-zinc-800 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
-      <span className="text-[11px] font-semibold text-zinc-200 w-14 text-right shrink-0">{value}%</span>
+      <span className="text-[0.611rem] font-semibold text-zinc-200 w-14 text-right shrink-0">{value}%</span>
     </div>
   );
 }
@@ -132,7 +133,7 @@ function Delta({ local, national, invert = false }: { local: string; national: s
   const isPct = local.includes("%");
   const display = isPct ? `${sign}${diff.toFixed(1)}pp` : `${sign}${diff.toFixed(0)}`;
   return (
-    <span className={`text-[9px] font-medium ml-1 px-1 py-0.5 rounded ${isGood ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
+    <span className={`text-[0.5rem] font-medium ml-1 px-1 py-0.5 rounded ${isGood ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
       {display} vs England
     </span>
   );
@@ -186,7 +187,7 @@ export default function CommonsLibraryPanel() {
         <p className="text-zinc-400 text-sm font-medium mb-1">
           Demographic profile not yet sourced
         </p>
-        <p className="text-zinc-600 text-[11px]">
+        <p className="text-zinc-600 text-[0.611rem]">
           Census 2021 indicators for {data.constituency} haven&apos;t been added to the data layer yet.
         </p>
       </div>
@@ -260,14 +261,14 @@ export default function CommonsLibraryPanel() {
         <div className="bg-zinc-900 rounded-xl p-3">
           <div className="text-center">
             <div className="text-2xl font-black tracking-tight text-amber-400">{medianAge}</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Median Age</div>
+            <div className="text-[0.556rem] text-zinc-500 mt-0.5">Median Age</div>
             <Delta local={medianAge} national={medianAgeEng} />
           </div>
         </div>
         <div className="bg-zinc-900 rounded-xl p-3">
           <div className="text-center">
             <div className="text-2xl font-black tracking-tight text-purple-400">{avgPrice}</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Avg House Price</div>
+            <div className="text-[0.556rem] text-zinc-500 mt-0.5">Avg House Price</div>
             <Delta local={avgPrice} national={avgPriceEng} />
           </div>
         </div>
@@ -275,9 +276,9 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Donut Charts Row: Key Percentages ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           Key Indicators
-        </div>
+        </SectionLabel>
         <div className="flex justify-around flex-wrap gap-3">
           {empRate && <Donut value={empRate} label="Employment Rate" color="#34d399" />}
           {ownerOcc && <Donut value={ownerOcc} label="Home Ownership" color="#fbbf24" />}
@@ -289,23 +290,23 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Economy ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           💷 Jobs & Economy
-        </div>
+        </SectionLabel>
         <div className="grid grid-cols-3 gap-3 mb-3">
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-lg font-bold text-emerald-400">{empRate}%</div>
-            <div className="text-[9px] text-zinc-500">Employment</div>
+            <div className="text-[0.5rem] text-zinc-500">Employment</div>
             <Delta local={`${empRate}%`} national={empRateEng} />
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-lg font-bold text-red-400">{unempRate}%</div>
-            <div className="text-[9px] text-zinc-500">Unemployment</div>
+            <div className="text-[0.5rem] text-zinc-500">Unemployment</div>
             <Delta local={`${unempRate}%`} national={unempRateEng} invert />
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-lg font-bold text-zinc-200">{medianPay}</div>
-            <div className="text-[9px] text-zinc-500">Median Weekly Pay</div>
+            <div className="text-[0.5rem] text-zinc-500">Median Weekly Pay</div>
             <Delta local={medianPay} national={medianPayEng} />
           </div>
         </div>
@@ -314,9 +315,9 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Housing ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           🏠 Housing Tenure
-        </div>
+        </SectionLabel>
         <div className="space-y-2">
           <div className="flex items-center gap-1">
             {ownerOcc && <MiniBar label="Owner occupied" value={ownerOcc} color="#fbbf24" />}
@@ -329,18 +330,18 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Health ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           ❤️ Health & Wellbeing
-        </div>
+        </SectionLabel>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-base font-bold text-blue-400">{lifeExpM}</div>
-            <div className="text-[9px] text-zinc-500">Life Exp. (Male)</div>
+            <div className="text-[0.5rem] text-zinc-500">Life Exp. (Male)</div>
             <Delta local={lifeExpM} national={lifeExpMEng} />
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-base font-bold text-pink-400">{lifeExpF}</div>
-            <div className="text-[9px] text-zinc-500">Life Exp. (Female)</div>
+            <div className="text-[0.5rem] text-zinc-500">Life Exp. (Female)</div>
             <Delta local={lifeExpF} national={lifeExpFEng} />
           </div>
         </div>
@@ -352,9 +353,9 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Education ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           🎓 Education
-        </div>
+        </SectionLabel>
         <div className="space-y-2">
           <div className="flex items-center gap-1">
             {degree && <MiniBar label="Degree or higher" value={degree} color="#a78bfa" />}
@@ -367,22 +368,22 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Deprivation ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           📊 Deprivation
-        </div>
+        </SectionLabel>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-base font-bold text-orange-400">{imdRank}</div>
-            <div className="text-[9px] text-zinc-500">IMD Rank (of 650)</div>
+            <div className="text-[0.5rem] text-zinc-500">IMD Rank (of 650)</div>
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-base font-bold text-orange-400">{fuelPov}</div>
-            <div className="text-[9px] text-zinc-500">Fuel Poverty</div>
+            <div className="text-[0.5rem] text-zinc-500">Fuel Poverty</div>
             <Delta local={fuelPov} national={fuelPovEng} invert />
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
             <div className="text-base font-bold text-orange-400">{childPov}</div>
-            <div className="text-[9px] text-zinc-500">Child Poverty</div>
+            <div className="text-[0.5rem] text-zinc-500">Child Poverty</div>
             <Delta local={childPov} national={childPovEng} invert />
           </div>
         </div>
@@ -390,9 +391,9 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Transport ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           🚌 Transport & Digital
-        </div>
+        </SectionLabel>
         <div className="space-y-2">
           {carOwn && <MiniBar label="Car ownership (1+ car)" value={carOwn} color="#22d3ee" />}
           {workFromHome && <MiniBar label="Work from home" value={workFromHome} color="#06b6d4" />}
@@ -402,9 +403,9 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Demographics ── */}
       <div className="bg-zinc-900 rounded-xl p-4">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3 font-medium">
+        <SectionLabel className="mb-3 font-medium">
           👥 Demographics
-        </div>
+        </SectionLabel>
         <div className="space-y-2">
           <div className="flex items-center gap-1">
             {bornUK && <MiniBar label="Born in UK" value={bornUK} color="#60a5fa" />}
@@ -416,7 +417,7 @@ export default function CommonsLibraryPanel() {
 
       {/* ── Source ── */}
       <div className="text-center pt-1">
-        <span className="text-[9px] text-zinc-600">
+        <span className="text-[0.5rem] text-zinc-600">
           Census 2021 · ONS · NOMIS{data.source === "mixed" ? " · Live data" : ""}
         </span>
       </div>

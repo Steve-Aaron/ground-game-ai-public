@@ -120,7 +120,7 @@ Routes that depend on `geo` or `areas` return HTTP 400 for the ~107 Scottish, We
 
 Put these in `.env.local` (git-ignored).
 
-### Required: Firebase
+### Required: Firebase (client SDK)
 
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=
@@ -132,17 +132,78 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 ```
 
+### Required: Firebase Admin SDK (server-only, do NOT prefix with NEXT_PUBLIC)
+
+```
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+Get these from Firebase Console → Project Settings → Service Accounts → Generate new private key. Paste the `private_key` value verbatim (with `\n` escape sequences); the loader replaces them with real newlines.
+
 ### Optional: feature-specific keys
 
 | Variable | Enables |
 |---|---|
-| `ANTHROPIC_API_KEY` | Daily AI brief (`/api/ai-brief`) |
+| `GEMINI_API_KEY` | Daily AI brief (`/api/ai-brief`); optional `GEMINI_MODEL` to override default `gemini-2.0-flash` |
 | `EPC_API_KEY` + `EPC_EMAIL` | EPC ratings (`/api/epc`) |
 | `APIFY_API_TOKEN` | X/Twitter mentions and opposition tracking |
 | `SERPAPI_KEY` | Google Trends data |
 | `X_BEARER_TOKEN` | Direct X API access (alternative to Apify) |
 
 Without optional keys the corresponding widget returns a placeholder or falls back to static data. No other routes are affected.
+
+## Authentication & access control
+
+The site is gated. Every API route (except `/api/auth/*`) and every page (except `/login`) requires a signed-in user with a Firestore `users/{uid}` record. Constituency-scoped routes additionally check that the requested slug is in the user's `allowedConstituencies` list.
+
+### How it works
+
+- **Identity**: Firebase Auth, with two sign-in methods enabled: Google OAuth and email magic link. No passwords
+- **Session**: After client-side sign-in, the browser POSTs the ID token to `/api/auth/session`, which mints an httpOnly session cookie via `admin.auth().createSessionCookie()`. The cookie is what every server route authenticates against
+- **Authorisation**:
+  - `users/{uid}.role` is `'user'` or `'admin'`. Mirrored to Firebase Auth custom claims for fast JWT checks
+  - `users/{uid}.allowedConstituencies: string[]` enumerates which constituency slugs the user can read data for. Enforced by `requireConstituencyAccess()` in every geo-scoped API route
+  - Admins are ALSO scoped — they must have the slug in `allowedConstituencies` like users. The `admin` role only unlocks `/admin` and `/api/admin/users/*` endpoints
+- **Defence in depth**:
+  1. Edge middleware (`src/middleware.ts`) redirects unauthenticated requests to `/login`
+  2. API route guards (`src/lib/guards.ts`) verify the session cookie server-side
+  3. Firestore Security Rules (see `firestore.rules`, ship separately) enforce the same gate at the data layer
+
+### Signup model: invite-only
+
+There is no public signup route. Admins invite users by email from `/admin`. Invited users receive a sign-in link (or can use Google with the same email) and the first sign-in completes their account.
+
+### Bootstrap the first admin
+
+The first admin has to be created out-of-band because there's no admin yet to invite them. Run:
+
+```bash
+npm run bootstrap-admin -- you@example.com
+```
+
+This creates the Firebase Auth user, sets `role: 'admin'`, grants access to ALL 650 constituencies, and prints a sign-in link. Open it on the same device to complete sign-in.
+
+### Firebase Console setup (one-time)
+
+1. **Authentication → Sign-in method**: enable Google and Email/Password (the email-link option lives under Email/Password)
+2. **Authentication → Settings → Authorized domains**: add your production domain and `localhost`
+3. **Firestore Database**: create the database in native mode. Default region is fine
+4. **Service account**: Project Settings → Service Accounts → Generate new private key. Use the JSON to populate the `FIREBASE_*` admin env vars above
+
+### Auth routes
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/auth/session` | POST | Exchange Firebase ID token for session cookie |
+| `/api/auth/signout` | POST | Clear cookie + revoke refresh tokens |
+| `/api/auth/me` | GET | Return `{uid, email, role, allowedConstituencies}` for the signed-in user |
+| `/api/admin/users` | GET | List all users (admin only) |
+| `/api/admin/users` | POST | Invite a user by email, returns a magic sign-in link (admin only) |
+| `/api/admin/users/[uid]` | PATCH | Update role + allowedConstituencies (admin only) |
+| `/api/admin/users/[uid]` | DELETE | Delete user + Firestore record (admin only) |
 
 ## Project structure
 

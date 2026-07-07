@@ -36,7 +36,7 @@ export default function ElectionResults() {
                 }}
               />
             </div>
-            <div className="text-[11px] text-zinc-600 mt-0.5">
+            <div className="text-[0.611rem] text-zinc-600 mt-0.5">
               {r.candidate} &middot; {r.votes.toLocaleString()} votes
             </div>
           </div>

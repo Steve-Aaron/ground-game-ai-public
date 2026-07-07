@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/guards";
 
 // Force dynamic — fetches live external data
 export const dynamic = "force-dynamic";
@@ -27,7 +28,10 @@ interface HeadlineItem {
   source: string;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireUser(request);
+  if (__guard instanceof NextResponse) return __guard;
   const allHeadlines: HeadlineItem[] = [];
   const allBriefings: HeadlineItem[] = [];
 

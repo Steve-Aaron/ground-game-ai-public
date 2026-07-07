@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/guards";
 
 // UK Polling Data — aggregated from Wikipedia's polling tables
 // Source: https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election
@@ -253,6 +254,9 @@ async function fetchElectoralCalculusPolls(): Promise<PollRecord[]> {
 }
 
 export async function GET(req: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireUser(req);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") || "all";
 

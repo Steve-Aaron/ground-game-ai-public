@@ -1,31 +1,47 @@
 import { NextResponse } from "next/server";
 import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
-import { isInsideConstituency } from "@/lib/geo";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { db } from "@/lib/firebase";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
 // UK Police API — free, no auth required
 // Docs: https://data.police.uk/docs/
-// Per request, samples a grid of geographic points across the requested
-// constituency (police.uk returns crimes within ~1 mi of each point), then
-// filters the union via isInsideConstituency() to drop anything outside the
-// boundary.
-// IMPORTANT: API rate-limits at ~15 concurrent requests, so we batch in groups.
+//
+// Strategy:
+//  - Use the polygon endpoint (`?poly=...`) so a single request covers the
+//    entire constituency shape rather than approximating via a grid of
+//    1-mile point queries (the previous approach missed gaps in rural seats
+//    and over-counted in dense urban ones).
+//  - data.police.uk limits poly query strings to ~4096 chars, so we simplify
+//    the boundary to <= MAX_POLY_POINTS by even-interval sampling.
+//  - Some crimes are published with `location: null` (force-anonymised). We
+//    still count them toward totals and category summaries — only the map
+//    markers need lat/lng.
+//  - Auto-walk months from 2 → 6 back to find the most recent month that
+//    actually returned crimes. Publication lag varies between forces.
 
-const TTL_MS = 15 * 60 * 1000;
+const TTL_MS = 60 * 60 * 1000; // 1 hour
+const MAX_POLY_POINTS = 50; // Keeps URL well under the 4096-char ceiling.
+const POLICE_API_BASE = "https://data.police.uk/api";
+// Rolling window — the AI Brief and dashboard summarise across this many
+// months ending at the most recent month with published data.
+const MONTHS_WINDOW = 3;
 
-interface CrimeRecord {
+interface PoliceCrime {
   category: string;
   location: {
     latitude: string;
     longitude: string;
-    street: { name: string };
-  };
+    street: { id: number; name: string };
+  } | null;
   month: string;
   outcome_status: { category: string } | null;
   persistent_id?: string;
+  id?: number;
 }
 
 interface CrimeData {
@@ -39,212 +55,277 @@ interface CrimeData {
   }>;
   summary: Array<{ category: string; count: number }>;
   total: number;
+  mappable: number;
+  anonymised: number;
+  // Most recent month in the window — preserved for backward compat with
+  // any consumer that read `month` (e.g. map popup label).
   month: string;
+  // The full rolling window, oldest → newest. Length is up to MONTHS_WINDOW;
+  // shorter if the API returned no data for older months.
+  months: string[];
+  // Per-month totals across the window, oldest → newest. Lets the AI Brief
+  // describe trend (rising / falling) without re-counting.
+  monthlyTotals: Array<{ month: string; count: number }>;
   source: string;
   sourceUrl: string;
 }
 
-// Braintree-only curated fallback. Hand-tuned 28 points across the actual
-// boundary extent (lat 51.829–52.087, lng 0.308–0.782). Used when slug ===
-// "braintree" to preserve the existing high-quality coverage. For other
-// constituencies, see generateSamplePointsFromBbox() below.
-// UK Police API returns crimes within ~1 mile of each point.
-const BRAINTREE_SAMPLE_POINTS: Array<{ lat: number; lng: number }> = [
-  // === FAR NORTH (constituency extends to lat 52.087) ===
-  { lat: 52.080, lng: 0.590 }, // Sturmer / Kedington (extreme north)
-  { lat: 52.060, lng: 0.660 }, // Bumpstead north
-  { lat: 52.040, lng: 0.640 }, // Steeple Bumpstead village
-  { lat: 52.050, lng: 0.530 }, // Ridgewell / Tilbury
-  { lat: 52.030, lng: 0.580 }, // Ashen / Clare border
-  { lat: 52.010, lng: 0.490 }, // Great Yeldham north
+// ── Polygon helpers ─────────────────────────────────────────────────────
 
-  // === NORTHERN WARDS ===
-  { lat: 51.990, lng: 0.650 }, // Bumpstead ward
-  { lat: 51.985, lng: 0.570 }, // Stour Valley / Sturmer
-  { lat: 51.970, lng: 0.440 }, // Finchingfield area
-  { lat: 51.975, lng: 0.500 }, // Yeldham
-  { lat: 51.968, lng: 0.590 }, // Sible Hedingham
-  { lat: 51.955, lng: 0.610 }, // Castle Hedingham
-  { lat: 51.945, lng: 0.639 }, // Halstead
+type LngLat = [number, number];
+type Ring = LngLat[];
 
-  // === CENTRAL WARDS ===
-  { lat: 51.930, lng: 0.490 }, // Wethersfield
-  { lat: 51.930, lng: 0.575 }, // Between Halstead and Earls Colne
-  { lat: 51.921, lng: 0.548 }, // Earls Colne / White Colne
-  { lat: 51.912, lng: 0.440 }, // Gosfield / Greenstead Green
-  { lat: 51.900, lng: 0.566 }, // Bocking
-  { lat: 51.878, lng: 0.556 }, // Braintree town center
-  { lat: 51.868, lng: 0.685 }, // Coggeshall
-  { lat: 51.860, lng: 0.590 }, // Cressing
-
-  // === SOUTHERN WARDS ===
-  { lat: 51.847, lng: 0.535 }, // Great Notley / Black Notley
-  { lat: 51.845, lng: 0.620 }, // Between Great Notley and Kelvedon
-  { lat: 51.838, lng: 0.701 }, // Kelvedon
-  { lat: 51.835, lng: 0.565 }, // Silver End / Rivenhall
-  { lat: 51.840, lng: 0.600 }, // Hatfield Peverel
-  { lat: 51.830, lng: 0.640 }, // Witham-adjacent south
-
-  // === FAR WEST (constituency extends to lng 0.308) ===
-  { lat: 51.860, lng: 0.340 }, // Felsted west edge
-  { lat: 51.860, lng: 0.395 }, // Felsted village
-  { lat: 51.875, lng: 0.400 }, // Rayne
-  { lat: 51.895, lng: 0.460 }, // Stisted / Panfield
-  { lat: 51.960, lng: 0.370 }, // Great Bardfield
-
-  // === FAR EAST ===
-  { lat: 51.835, lng: 0.750 }, // Tiptree
-];
-
-// Heuristic 5×5 grid (25 points) for any non-Braintree constituency. Coverage
-// is uniform across the bbox rather than ward-tuned, so large rural
-// constituencies may have gaps and small urban ones may have redundant
-// fetches. Adequate as a first cut; per-constituency curated points would be
-// better follow-up work.
-function generateSamplePointsFromBbox(
-  bbox: [number, number, number, number]
-): Array<{ lat: number; lng: number }> {
-  const [lngMin, latMin, lngMax, latMax] = bbox;
-  const GRID = 5;
-  const points: Array<{ lat: number; lng: number }> = [];
-  for (let i = 0; i < GRID; i++) {
-    for (let j = 0; j < GRID; j++) {
-      const lng = lngMin + ((lngMax - lngMin) * (i + 0.5)) / GRID;
-      const lat = latMin + ((latMax - latMin) * (j + 0.5)) / GRID;
-      points.push({ lat, lng });
-    }
-  }
-  return points;
+interface GeoFeature {
+  properties: { PCON24CD: string; PCON24NM: string };
+  geometry:
+    | { type: "Polygon"; coordinates: Ring[] }
+    | { type: "MultiPolygon"; coordinates: Ring[][] };
 }
 
-// Fetch a single point with retry on 429
-async function fetchPoint(lat: number, lng: number, dateStr: string, retries = 2): Promise<CrimeRecord[]> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(
-        `https://data.police.uk/api/crimes-street/all-crime?lat=${lat}&lng=${lng}&date=${dateStr}`,
-        {
-          next: { revalidate: 86400 },
-          headers: { Accept: "application/json" },
-        }
-      );
-      if (res.status === 429) {
-        // Rate limited — wait and retry
-        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
-        continue;
-      }
-      if (!res.ok) return [];
-      return await res.json();
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
+let _allGeo: { features: GeoFeature[] } | null = null;
+const _polyCache = new Map<string, Ring | null>();
 
-function formatCategory(cat: string): string {
-  return cat
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-async function generateFreshData(
-  samplePoints: Array<{ lat: number; lng: number }>,
-  constituencySlug: string
-): Promise<CrimeData | null> {
+function loadAllGeo(): { features: GeoFeature[] } {
+  if (_allGeo) return _allGeo;
   try {
-    // Get latest available month (usually 2 months behind)
-    const now = new Date();
-    now.setMonth(now.getMonth() - 2);
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const p = join(process.cwd(), "public", "geojson", "constituencies-all.geojson");
+    _allGeo = JSON.parse(readFileSync(p, "utf-8"));
+  } catch {
+    _allGeo = { features: [] };
+  }
+  return _allGeo!;
+}
 
-    const allCrimes: CrimeRecord[] = [];
-    const seenIds = new Set<string>();
+function getRingForSlug(slug: string): Ring | null {
+  if (_polyCache.has(slug)) return _polyCache.get(slug) ?? null;
+  const data = getFullData(slug);
+  if (!data) {
+    _polyCache.set(slug, null);
+    return null;
+  }
+  const code = data.constituency.onsCode;
+  const feature = loadAllGeo().features.find((f) => f.properties.PCON24CD === code);
+  if (!feature) {
+    _polyCache.set(slug, null);
+    return null;
+  }
+  // Pick the largest outer ring — for MultiPolygon (coastal seats with
+  // islands etc) this gets the mainland, which is what users care about.
+  let ring: Ring;
+  if (feature.geometry.type === "Polygon") {
+    ring = feature.geometry.coordinates[0];
+  } else {
+    ring = feature.geometry.coordinates
+      .map((poly) => poly[0])
+      .reduce((a, b) => (a.length > b.length ? a : b));
+  }
+  _polyCache.set(slug, ring);
+  return ring;
+}
 
-    // Batch requests in groups of 8 with delays to avoid 429 rate limits
-    const BATCH_SIZE = 8;
-    for (let i = 0; i < samplePoints.length; i += BATCH_SIZE) {
-      const batch = samplePoints.slice(i, i + BATCH_SIZE);
-      const results = await Promise.allSettled(
-        batch.map((point) => fetchPoint(point.lat, point.lng, dateStr))
-      );
+/**
+ * Even-interval sample of a ring down to at most `maxPoints` vertices.
+ * Preserves the start point and closes the loop with it. data.police.uk
+ * requires the polygon NOT to be closed in the query string (no repeated
+ * start point), so we return an open list.
+ */
+function simplifyRing(ring: Ring, maxPoints: number): Ring {
+  // Drop the closing duplicate if present (most GeoJSON rings close themselves).
+  const open: Ring =
+    ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]
+      ? ring.slice(0, -1)
+      : ring;
+  if (open.length <= maxPoints) return open;
+  const step = open.length / maxPoints;
+  const out: Ring = [];
+  for (let i = 0; i < maxPoints; i++) {
+    const idx = Math.floor(i * step);
+    out.push(open[idx]);
+  }
+  return out;
+}
 
-      for (const result of results) {
-        if (result.status === "fulfilled") {
-          const crimes: CrimeRecord[] = result.value;
-          for (const crime of crimes) {
-            const key = crime.persistent_id || `${crime.category}-${crime.location.latitude}-${crime.location.longitude}-${crime.location.street.name}`;
-            if (!seenIds.has(key)) {
-              seenIds.add(key);
-              allCrimes.push(crime);
-            }
-          }
-        }
+function ringToPolyParam(ring: Ring): string {
+  // data.police.uk format: `lat,lng:lat,lng:lat,lng`
+  // (Note: lat first, not lng — common gotcha.)
+  return ring.map(([lng, lat]) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join(":");
+}
+
+// ── Police API ──────────────────────────────────────────────────────────
+
+async function fetchCrimesForMonth(polyParam: string, dateStr: string): Promise<PoliceCrime[] | null> {
+  try {
+    const url = `${POLICE_API_BASE}/crimes-street/all-crime?poly=${encodeURIComponent(polyParam)}&date=${dateStr}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) {
+      // The API uses POST for very long polygons. If we get 414/400 try POST.
+      if (res.status === 414 || res.status === 400) {
+        const postRes = await fetch(`${POLICE_API_BASE}/crimes-street/all-crime`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `poly=${encodeURIComponent(polyParam)}&date=${dateStr}`,
+        });
+        if (!postRes.ok) return null;
+        return await postRes.json();
       }
-
-      // Wait between batches to respect rate limits
-      if (i + BATCH_SIZE < samplePoints.length) {
-        await new Promise((r) => setTimeout(r, 1000));
-      }
+      return null;
     }
-
-    // Filter to only crimes inside this constituency's boundary
-    const filteredCrimes = allCrimes.filter((c) => {
-      const lat = parseFloat(c.location.latitude);
-      const lng = parseFloat(c.location.longitude);
-      return lat && lng && isInsideConstituency(lng, lat, constituencySlug);
-    });
-
-    // Categorise and count
-    const categoryCounts: Record<string, number> = {};
-    const crimes = filteredCrimes.slice(0, 500).map((c) => {
-      const cat = formatCategory(c.category);
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      return {
-        category: cat,
-        lat: parseFloat(c.location.latitude),
-        lng: parseFloat(c.location.longitude),
-        street: c.location.street.name,
-        month: c.month,
-        outcome: c.outcome_status?.category || null,
-      };
-    });
-
-    // Sort categories by count
-    const summary = Object.entries(categoryCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([category, count]) => ({ category, count }));
-
-    return {
-      crimes,
-      summary,
-      total: filteredCrimes.length,
-      month: dateStr,
-      source: "data.police.uk",
-      sourceUrl: "https://data.police.uk/",
-    };
-  } catch (err) {
-    console.error("Crime data fetch failed:", err);
+    return await res.json();
+  } catch {
     return null;
   }
 }
 
+/** Shift a YYYY-MM string back by N months. */
+function monthMinus(dateStr: string, n: number): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Today-relative rolling window. Always fetches the MONTHS_WINDOW most recent
+ * months ending at today's month — e.g. on 2 June 2026 the window is
+ * 2026-04 → 2026-06. Months with no published data (data.police.uk has a
+ * 1–2 month publication lag) come back as 0 rather than the route walking
+ * further back, which previously produced misleading 'Jan–Mar' windows when
+ * today was June.
+ *
+ * Returns the months oldest → newest alongside per-month crime arrays.
+ * Returns null only if every month errored at the network/API level (an empty
+ * month is valid data, a null response is not).
+ */
+async function resolveLatestData(
+  polyParam: string
+): Promise<{ months: string[]; crimesByMonth: Record<string, PoliceCrime[]> } | null> {
+  const anchor = currentMonth();
+  const monthList: string[] = [];
+  for (let i = MONTHS_WINDOW - 1; i >= 0; i--) {
+    monthList.push(monthMinus(anchor, i));
+  }
+
+  // Fetch all months in parallel. fetchCrimesForMonth returns null on
+  // network/API failure and [] on a valid-but-empty month.
+  const results = await Promise.all(
+    monthList.map(async (m) => ({ month: m, crimes: await fetchCrimesForMonth(polyParam, m) }))
+  );
+
+  // If every month errored upstream (all nulls), treat as a real failure so
+  // the route can 502. If at least one returned an array (even empty), we
+  // have a valid window — empty months stay as 0.
+  if (results.every((r) => r.crimes === null)) return null;
+
+  const crimesByMonth: Record<string, PoliceCrime[]> = {};
+  for (const r of results) crimesByMonth[r.month] = r.crimes ?? [];
+
+  return { months: monthList, crimesByMonth };
+}
+
+function formatCategory(cat: string): string {
+  return cat.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+function buildCrimeData(
+  months: string[],
+  crimesByMonth: Record<string, PoliceCrime[]>
+): CrimeData {
+  const categoryCounts: Record<string, number> = {};
+  const mapped: CrimeData["crimes"] = [];
+  const monthlyTotals: CrimeData["monthlyTotals"] = [];
+
+  let total = 0;
+
+  // Iterate newest → oldest so the most recent months populate the capped
+  // marker list first (the map shows the most recent activity preferentially).
+  const monthsNewestFirst = [...months].reverse();
+  for (const month of monthsNewestFirst) {
+    const monthCrimes = crimesByMonth[month] ?? [];
+    total += monthCrimes.length;
+
+    for (const c of monthCrimes) {
+      const cat = formatCategory(c.category);
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+
+      // Only add to the mappable list if the API gave us coordinates.
+      if (c.location && c.location.latitude && c.location.longitude) {
+        const lat = parseFloat(c.location.latitude);
+        const lng = parseFloat(c.location.longitude);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+          mapped.push({
+            category: cat,
+            lat,
+            lng,
+            street: c.location.street?.name ?? "",
+            month: c.month,
+            outcome: c.outcome_status?.category || null,
+          });
+        }
+      }
+    }
+  }
+
+  // monthlyTotals are emitted oldest → newest so consumers can render a trend.
+  for (const month of months) {
+    monthlyTotals.push({ month, count: (crimesByMonth[month] ?? []).length });
+  }
+
+  // Cap the markers payload — beyond ~500 the map gets unreadable anyway.
+  const cappedMapped = mapped.slice(0, 500);
+
+  const summary = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, count]) => ({ category, count }));
+
+  // `month` (singular) stays as the latest month for backward compat.
+  const latestMonth = months[months.length - 1];
+
+  return {
+    crimes: cappedMapped,
+    summary,
+    total,
+    mappable: mapped.length,
+    anonymised: total - mapped.length,
+    month: latestMonth,
+    months,
+    monthlyTotals,
+    source: "data.police.uk",
+    sourceUrl: "https://data.police.uk/",
+  };
+}
+
+async function generateFreshData(constituencySlug: string): Promise<CrimeData | null> {
+  const ring = getRingForSlug(constituencySlug);
+  if (!ring) return null;
+
+  const simplified = simplifyRing(ring, MAX_POLY_POINTS);
+  const polyParam = ringToPolyParam(simplified);
+
+  const resolved = await resolveLatestData(polyParam);
+  if (!resolved) return null;
+
+  return buildCrimeData(resolved.months, resolved.crimesByMonth);
+}
+
 async function fetchAndUpdateCache(
-  samplePoints: Array<{ lat: number; lng: number }>,
   constituencySlug: string,
   cacheDocRef: DocumentReference
 ) {
   try {
-    const fresh = await generateFreshData(samplePoints, constituencySlug);
+    const fresh = await generateFreshData(constituencySlug);
     if (!fresh) return;
 
     const existing = await getDoc(cacheDocRef);
     const existingData = existing.exists() ? existing.data().data : null;
-
-    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) {
-      return;
-    }
+    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) return;
 
     await setDoc(cacheDocRef, {
       data: fresh,
@@ -256,46 +337,43 @@ async function fetchAndUpdateCache(
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {
-    return Response.json(
-      { error: "Invalid constituency slug" },
-      { status: 400 }
-    );
+    return Response.json({ error: "Invalid constituency slug" }, { status: 400 });
   }
 
-  // Determine sample points: curated Braintree fallback, else bbox-derived
-  // grid. ~107 non-English constituencies have no geo data populated — return
-  // a clean 400 for those (matches the census/EPC pattern).
-  let samplePoints: Array<{ lat: number; lng: number }>;
-  if (constituencySlug === "braintree") {
-    samplePoints = BRAINTREE_SAMPLE_POINTS;
-  } else if (constituencyData.geo?.bbox) {
-    samplePoints = generateSamplePointsFromBbox(constituencyData.geo.bbox);
-  } else {
+  // Ensure we have a polygon for this seat. Scottish/Welsh/NI seats and any
+  // future English seats missing from the GeoJSON return 400.
+  const ring = getRingForSlug(constituencySlug);
+  if (!ring) {
     return Response.json(
       {
         error: "Crime data not available",
-        message: "Geographic bbox not yet sourced for this constituency",
+        message: "No constituency polygon available for this slug",
         constituency: constituencySlug,
       },
       { status: 400 }
     );
   }
 
-  const cacheDocRef = doc(db, "crime_cache", constituencySlug);
+  // crime_cache_v3: bumped from v2 when the window switched from
+  // "walk back to find data" (which gave Jan–Mar when today was June) to a
+  // today-relative window (most recent 3 months ending at today's month).
+  // Old rows are ignored, not migrated.
+  const cacheDocRef = doc(db, "crime_cache_v3", constituencySlug);
 
   // Cache read is best-effort. If Firestore rules deny or it's unreachable,
   // we skip the cache rather than failing the route.
   let cached: { data: CrimeData; updated_at: string } | null = null;
   try {
     const snap = await getDoc(cacheDocRef);
-    if (snap.exists()) {
-      cached = snap.data() as { data: CrimeData; updated_at: string };
-    }
+    if (snap.exists()) cached = snap.data() as { data: CrimeData; updated_at: string };
   } catch (err) {
     console.warn("Crime cache read failed (continuing without cache):", err);
   }
@@ -303,17 +381,20 @@ export async function GET(request: Request) {
   if (cached) {
     const ageMs = Date.now() - new Date(cached.updated_at).getTime();
     if (ageMs > TTL_MS) {
-      fetchAndUpdateCache(samplePoints, constituencySlug, cacheDocRef);
+      fetchAndUpdateCache(constituencySlug, cacheDocRef);
     }
     return NextResponse.json({ ...cached.data, source: "cache" });
   }
 
-  const fresh = await generateFreshData(samplePoints, constituencySlug);
+  const fresh = await generateFreshData(constituencySlug);
   if (!fresh) {
-    return NextResponse.json({ crimes: [], error: "Failed to fetch" }, { status: 500 });
+    return NextResponse.json(
+      { crimes: [], summary: [], total: 0, error: "Failed to fetch crime data" },
+      { status: 502 }
+    );
   }
 
-  // Cache write is also best-effort — return the fresh data regardless.
+  // Cache write is best-effort — return the fresh data regardless.
   try {
     await setDoc(cacheDocRef, {
       data: fresh,

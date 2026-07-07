@@ -7,11 +7,25 @@ interface PanelProps {
   className?: string;
   headerAction?: React.ReactNode;
   noPadding?: boolean;
+  /**
+   * Identifier emitted as `data-component` on the panel root.
+   * Used to tag each block on the platform (e.g. "politicalHeadlines").
+   */
+  dataComponent: string;
 }
 
-export default function Panel({ title, icon, children, className, headerAction, noPadding }: PanelProps) {
+export default function Panel({
+  title,
+  icon,
+  children,
+  className,
+  headerAction,
+  noPadding,
+  dataComponent,
+}: PanelProps) {
   return (
     <div
+      data-component={dataComponent}
       className={cn(
         "bg-[#141414] border border-[#2a2a2a] overflow-hidden flex flex-col",
         className
@@ -20,7 +34,7 @@ export default function Panel({ title, icon, children, className, headerAction, 
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#2a2a2a]">
         <div className="flex items-center gap-2">
           {icon && <span className="text-emerald-500 opacity-80">{icon}</span>}
-          <h2 className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{title}</h2>
+          <h2 className="text-[0.611rem] font-medium uppercase tracking-wider text-zinc-400">{title}</h2>
         </div>
         {headerAction}
       </div>

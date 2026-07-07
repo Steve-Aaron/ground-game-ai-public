@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ExternalLink } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import FeedItem from "./ui/FeedItem";
+import PanelSkeleton from "./ui/PanelSkeleton";
 
 interface NewsItem {
   title: string;
@@ -12,49 +12,23 @@ interface NewsItem {
   snippet: string;
 }
 
+interface NewsResponse {
+  items?: NewsItem[];
+}
+
 export default function NewsFeed() {
-  const { slug } = useConstituency();
-  const [items, setItems] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const fallback: NewsResponse = { items: getMockNews() };
+  const { data, loading, error } = useConstituencyResource<NewsResponse>(
+    "/api/news",
+    { fallback, errorMessage: "Unable to load news feed" }
+  );
 
-  const fetchNews = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(withConstituency("/api/news", slug));
-      if (!res.ok) throw new Error("Failed to fetch news");
-      const data = await res.json();
-      setItems(data.items || []);
-    } catch {
-      setError("Unable to load news feed");
-      // Fall back to mock data
-      setItems(getMockNews());
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) return <PanelSkeleton variant="list" rows={5} />;
 
-  useEffect(() => {
-    fetchNews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="animate-pulse space-y-2">
-            <div className="h-3.5 bg-zinc-800 rounded w-3/4" />
-            <div className="h-2.5 bg-zinc-800/50 rounded w-1/2" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const items = data?.items ?? [];
 
   return (
-    <div>
+    <div data-component="newsFeedContainer">
       {error && (
         <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-xs text-yellow-400">
           {error} — showing sample data
@@ -62,50 +36,23 @@ export default function NewsFeed() {
       )}
       <div className="divide-y divide-zinc-800/50">
         {items.map((item, i) => (
-          <a
+          <FeedItem
             key={i}
             href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block px-4 py-3 hover:bg-zinc-800/30 transition-colors group"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm text-zinc-200 font-medium leading-snug group-hover:text-emerald-400 transition-colors line-clamp-2">
-                  {item.title}
-                </h3>
-                {item.snippet && (
-                  <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{item.snippet}</p>
-                )}
-                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-zinc-600">
-                  <span className="text-emerald-500/70 font-medium">{item.source}</span>
-                  <span>&middot;</span>
-                  <span>{formatDate(item.pubDate)}</span>
-                </div>
-              </div>
-              <ExternalLink className="h-3.5 w-3.5 text-zinc-600 group-hover:text-emerald-400 mt-0.5 flex-shrink-0" />
-            </div>
-          </a>
+            title={item.title}
+            snippet={item.snippet}
+            meta={
+              <>
+                <span className="text-emerald-500/70 font-medium">{item.source}</span>
+                <span>&middot;</span>
+              </>
+            }
+            date={item.pubDate}
+          />
         ))}
       </div>
     </div>
   );
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffHours < 48) return "Yesterday";
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  } catch {
-    return dateStr;
-  }
 }
 
 function getMockNews(): NewsItem[] {

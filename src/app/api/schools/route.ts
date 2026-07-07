@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,9 @@ function buildSummary(schools: ApiSchool[]) {
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
 

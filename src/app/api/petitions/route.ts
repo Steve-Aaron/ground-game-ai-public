@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 // Force dynamic — fetches live external data
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ interface PetitionResult {
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
   const constituencyData = getFullData(constituencySlug);

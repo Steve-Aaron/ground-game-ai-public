@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import SectionLabel from "./ui/SectionLabel";
+import StatGrid from "./ui/StatGrid";
+import Bar from "./ui/Bar";
 
 interface PetitionItem {
   title: string;
@@ -25,30 +28,9 @@ function heatIcon(salience: number, median: number): string {
 }
 
 export default function PetitionsPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<PetitionsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useConstituencyResource<PetitionsData>("/api/petitions");
 
-  useEffect(() => {
-    fetch(withConstituency("/api/petitions", slug))
-      .then((res) => res.json())
-      .then((d: PetitionsData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-40 mb-4" />
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-zinc-900 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={5} />;
 
   if (!data || data.error || !data.petitions?.length) {
     return <p className="text-zinc-500 text-xs">No petition data available</p>;
@@ -74,41 +56,35 @@ export default function PetitionsPanel() {
   return (
     <div className="space-y-4">
       {/* Summary stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-zinc-900 rounded-xl p-3">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            Local Signatures
-          </div>
-          <div className="text-xl font-bold text-zinc-100 mt-0.5">
-            {totalLocalSigs.toLocaleString()}
-          </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5">
-            Across {petitions.length} petitions
-          </div>
-        </div>
-        <div className="bg-zinc-900 rounded-xl p-3">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            Most Over-indexed
-          </div>
-          <div className="text-sm font-bold text-purple-400 mt-0.5 line-clamp-2 leading-tight">
-            {topPetition.title.length > 60
-              ? topPetition.title.slice(0, 57) + "..."
-              : topPetition.title}
-          </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5">
-            {topPetition.salience.toFixed(1)}x local salience
-          </div>
-        </div>
-      </div>
+      <StatGrid
+        cols={2}
+        items={[
+          {
+            label: "Local Signatures",
+            value: totalLocalSigs.toLocaleString(),
+            subtitle: `Across ${petitions.length} petitions`,
+          },
+          {
+            label: "Most Over-indexed",
+            value: (
+              <span className="text-sm line-clamp-2 leading-tight">
+                {topPetition.title.length > 60
+                  ? topPetition.title.slice(0, 57) + "..."
+                  : topPetition.title}
+              </span>
+            ),
+            color: "#c084fc",
+            valueClassName: "text-sm font-bold mt-0.5",
+            subtitle: `${topPetition.salience.toFixed(1)}x local salience`,
+          },
+        ]}
+      />
 
       {/* Horizontal bar chart — top 8 by salience */}
       <div>
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-          Top Petitions by Local Salience
-        </div>
+        <SectionLabel className="mb-2">Top Petitions by Local Salience</SectionLabel>
         <div className="space-y-1">
           {chartPetitions.map((p, i) => {
-            const pct = maxSalience > 0 ? (p.salience / maxSalience) * 100 : 0;
             const heat = heatIcon(p.salience, medianSalience);
             return (
               <a
@@ -118,24 +94,19 @@ export default function PetitionsPanel() {
                 rel="noopener noreferrer"
                 className="block group"
               >
-                <div className="flex items-center gap-2">
-                  {/* Title — truncated */}
-                  <div className="w-[45%] min-w-0 text-[11px] text-zinc-300 truncate group-hover:text-zinc-100 transition-colors">
-                    {heat && <span className="mr-1">{heat}</span>}
-                    {p.title}
-                  </div>
-                  {/* Bar */}
-                  <div className="flex-1 h-5 bg-zinc-900 rounded overflow-hidden">
-                    <div
-                      className="h-full bg-purple-600/70 rounded transition-all duration-500"
-                      style={{ width: `${Math.max(pct, 2)}%` }}
-                    />
-                  </div>
-                  {/* Score */}
-                  <div className="w-12 text-right text-xs font-mono font-bold text-purple-400 shrink-0">
-                    {p.salience.toFixed(1)}x
-                  </div>
-                </div>
+                <Bar
+                  variant="progress"
+                  value={p.salience}
+                  max={maxSalience}
+                  color="bg-purple-600/70"
+                  height="h-5"
+                  label={`${heat ? heat + " " : ""}${p.title}`}
+                  valueText={
+                    <span className="font-mono font-bold text-purple-400">
+                      {p.salience.toFixed(1)}x
+                    </span>
+                  }
+                />
               </a>
             );
           })}
@@ -144,10 +115,8 @@ export default function PetitionsPanel() {
 
       {/* Full scrollable list */}
       <div>
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-          All Petitions
-        </div>
-        <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+        <SectionLabel className="mb-2">All Petitions</SectionLabel>
+        <div className="space-y-1.5 max-h-[16.667rem] overflow-y-auto pr-1">
           {petitions.map((p, i) => {
             const heat = heatIcon(p.salience, medianSalience);
             return (
@@ -164,7 +133,7 @@ export default function PetitionsPanel() {
                       {heat && <span className="mr-1">{heat}</span>}
                       {p.title}
                     </div>
-                    <div className="text-[10px] text-zinc-500 flex items-center gap-2 mt-1">
+                    <div className="text-[0.556rem] text-zinc-500 flex items-center gap-2 mt-1">
                       <span>{(p.localSignatures ?? 0).toLocaleString()} local sigs</span>
                       <span className="text-zinc-700">&middot;</span>
                       <span>{(p.totalSignatures ?? 0).toLocaleString()} total</span>
@@ -183,7 +152,7 @@ export default function PetitionsPanel() {
                       {p.salience.toFixed(1)}x
                     </div>
                     {p.overIndexed && (
-                      <div className="text-[9px] text-purple-400/80 mt-0.5">
+                      <div className="text-[0.5rem] text-purple-400/80 mt-0.5">
                         over-indexed
                       </div>
                     )}
@@ -201,7 +170,7 @@ export default function PetitionsPanel() {
           href="https://petition.parliament.uk/petitions?state=open"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] text-emerald-500 hover:text-emerald-400 transition-colors"
+          className="text-[0.556rem] text-emerald-500 hover:text-emerald-400 transition-colors"
         >
           View all open petitions on parliament.uk &#8599;
         </a>

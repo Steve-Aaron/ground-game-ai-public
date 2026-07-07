@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 // Parliament Members API — public, no auth required
 // https://members-api.parliament.uk
@@ -45,6 +46,9 @@ interface VoteItem {
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "speeches"; // speeches | questions
 

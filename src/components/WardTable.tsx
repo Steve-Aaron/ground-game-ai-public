@@ -92,7 +92,7 @@ export default function WardTable() {
               </td>
               <td className="py-2 px-3 text-right hidden sm:table-cell">
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  className={`px-1.5 py-0.5 rounded text-[0.556rem] font-medium ${
                     ward.deprivation === "Low"
                       ? "bg-emerald-500/10 text-emerald-400"
                       : ward.deprivation === "Medium"

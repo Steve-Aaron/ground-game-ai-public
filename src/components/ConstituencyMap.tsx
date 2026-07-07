@@ -7,6 +7,7 @@ import { constituencyGeo, wardData, wardElectoralCalc as fallbackWardElectoralCa
 import { Layers, ChevronDown, ChevronUp } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData, WARD_DEPRIVATION } from "@/data";
+import { partyColor as partyColorOf } from "@/lib/palette";
 
 // Layer definitions — World Monitor style
 interface LayerDef {
@@ -22,6 +23,7 @@ const LAYER_DEFS: LayerDef[] = [
   { id: "wards-vote", label: "2024 Vote Share", emoji: "🗳️", description: "Ward-level CON vote choropleth", default: true },
   { id: "wards-prediction", label: "MRP Prediction", emoji: "📊", description: "EC predicted winner per ward", default: false },
   { id: "wards-deprivation", label: "Deprivation", emoji: "📉", description: "Ward deprivation levels", default: false },
+  { id: "police", label: "Police Areas", emoji: "👮", description: "Force tint + local policing team outlines", default: false },
   { id: "crime", label: "Crime Reports", emoji: "🔴", description: "Recent crime data (Police API)", default: false },
   { id: "fixmystreet", label: "Community Issues", emoji: "⚠️", description: "FixMyStreet reports", default: false },
   { id: "planning", label: "Planning Apps", emoji: "🏗️", description: "Recent planning applications", default: false },
@@ -119,6 +121,10 @@ export default function ConstituencyMap() {
   const [censusTopic, setCensusTopic] = useState("age-under16");
   const [censusLabel, setCensusLabel] = useState("");
   const [censusAvg, setCensusAvg] = useState(0);
+  // Resolved police forces for the current constituency; populated lazily
+  // when either the forces or neighbourhoods layer first toggles on.
+  const [policeForces, setPoliceForces] = useState<Array<{ id: string; name: string; colour: string }>>([]);
+  const policeLoaded = useRef(false);
   const [layers, setLayers] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     LAYER_DEFS.forEach((l) => (initial[l.id] = l.default));
@@ -128,6 +134,12 @@ export default function ConstituencyMap() {
   const toggleLayer = useCallback((id: string) => {
     setLayers((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
+
+  // Reset police-loaded flag when constituency changes.
+  useEffect(() => {
+    policeLoaded.current = false;
+    setPoliceForces([]);
+  }, [slug]);
 
   // Initialize map
   useEffect(() => {
@@ -370,9 +382,8 @@ export default function ConstituencyMap() {
           if (!props) return;
           if (currentPopup) currentPopup.remove();
           const changed = props.winner2024 && props.predictedWinner && props.winner2024 !== props.predictedWinner;
-          const partyColor: Record<string, string> = { CON: "#0087DC", LAB: "#DC241f", Reform: "#12B6CF", LIB: "#FAA61A", Green: "#6AB023" };
-          const predColor = partyColor[props.predictedWinner] ?? "#666";
-          const prevColor = partyColor[props.winner2024] ?? "#666";
+          const predColor = partyColorOf(props.predictedWinner);
+          const prevColor = partyColorOf(props.winner2024);
           const popupHtml = `
             <div style="font-family: system-ui; padding: 8px; min-width: 250px;">
               <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #f1f5f9;">${props.name || props.WD24NM || 'Unknown ward'}</div>
@@ -733,6 +744,16 @@ export default function ConstituencyMap() {
     setVis("census-fill", layers["census"]);
     setVis("census-outline", layers["census"]);
 
+    // Police layer (loaded lazily — visibility may apply before sources exist;
+    // setVis swallows the error in that case). Force tint, force outline,
+    // neighbourhood outline and neighbourhood label all toggle together as a
+    // single 'Police Areas' layer. (The force-name label layer was removed —
+    // colour + sidebar legend suffice.)
+    setVis("police-forces-fill", layers["police"]);
+    setVis("police-forces-outline", layers["police"]);
+    setVis("police-neighbourhoods-outline", layers["police"]);
+    setVis("police-neighbourhoods-labels", layers["police"]);
+
     // Reset ward labels to just names when census is turned off
     if (!layers["census"]) {
       try {
@@ -922,6 +943,157 @@ export default function ConstituencyMap() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layers["petitions"], mapReady]);
 
+  // Fetch police areas when the unified Police Areas layer is first toggled on.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapReady) return;
+    if (!layers["police"]) return;
+    if (policeLoaded.current) return;
+    policeLoaded.current = true;
+
+    interface PoliceForce {
+      id: string;
+      name: string;
+      colour: string;
+      polygon: number[][];
+    }
+    interface PoliceNeighbourhood {
+      force: string;
+      forceName: string;
+      id: string;
+      name: string;
+      polygon: number[][];
+    }
+
+    const fetchPolice = async () => {
+      try {
+        const res = await fetch(withConstituency("/api/police-areas", slug));
+        if (!res.ok) return;
+        const data = (await res.json()) as { forces: PoliceForce[]; neighbourhoods: PoliceNeighbourhood[] };
+
+        if (!data.forces?.length && !data.neighbourhoods?.length) return;
+
+        setPoliceForces(data.forces.map((f) => ({ id: f.id, name: f.name, colour: f.colour })));
+
+        // Build a force-fill GeoJSON FeatureCollection with the resolved colour
+        // attached to each feature so the paint expression can pick it up.
+        const forcesGeo: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: data.forces.map((f) => ({
+            type: "Feature" as const,
+            geometry: { type: "Polygon" as const, coordinates: [f.polygon] },
+            properties: { id: f.id, name: f.name, colour: f.colour },
+          })),
+        };
+        const nbGeo: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: data.neighbourhoods.map((n) => ({
+            type: "Feature" as const,
+            geometry: { type: "Polygon" as const, coordinates: [n.polygon] },
+            properties: { force: n.force, forceName: n.forceName, id: n.id, name: n.name },
+          })),
+        };
+
+        // Add sources + layers. Guard against double-init when both layers
+        // are toggled on at once.
+        if (!m.getSource("police-forces")) {
+          m.addSource("police-forces", { type: "geojson", data: forcesGeo });
+          // Very light tint — the force is the *context*, not the focus.
+          // Constituency wards and crime markers should still read cleanly
+          // through the fill.
+          m.addLayer({
+            id: "police-forces-fill",
+            type: "fill",
+            source: "police-forces",
+            paint: { "fill-color": ["get", "colour"], "fill-opacity": 0.05 },
+            layout: { visibility: layers["police"] ? "visible" : "none" },
+          });
+          m.addLayer({
+            id: "police-forces-outline",
+            type: "line",
+            source: "police-forces",
+            paint: { "line-color": ["get", "colour"], "line-width": 2, "line-opacity": 0.85 },
+            layout: { visibility: layers["police"] ? "visible" : "none" },
+          });
+          // Force name labels were intentionally removed — the polygon fill
+          // colour plus the sidebar legend already identifies each force, and
+          // the labels added visual clutter at typical zoom levels.
+
+          // Click → show force name in popup.
+          m.on("click", "police-forces-fill", (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+            const p = e.features?.[0]?.properties;
+            if (!p) return;
+            new maplibregl.Popup({ closeButton: true, maxWidth: "200px" })
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="font-family:system-ui;padding:6px;">
+                  <div style="font-weight:700;font-size:13px;color:#f1f5f9;margin-bottom:2px;">👮 ${p.name}</div>
+                  <div style="font-size:10px;color:#94a3b8;">Police force area</div>
+                </div>`
+              )
+              .addTo(m);
+          });
+        }
+
+        if (!m.getSource("police-neighbourhoods")) {
+          m.addSource("police-neighbourhoods", { type: "geojson", data: nbGeo });
+          m.addLayer({
+            id: "police-neighbourhoods-outline",
+            type: "line",
+            source: "police-neighbourhoods",
+            paint: {
+              "line-color": "#ffffff",
+              "line-width": 1,
+              "line-opacity": 0.55,
+              "line-dasharray": [2, 2],
+            },
+            layout: { visibility: layers["police"] ? "visible" : "none" },
+          });
+          // Label each neighbourhood with its team name. Sized smaller than
+          // the force label so the two layers stack without fighting.
+          m.addLayer({
+            id: "police-neighbourhoods-labels",
+            type: "symbol",
+            source: "police-neighbourhoods",
+            layout: {
+              "text-field": ["get", "name"],
+              "text-size": 10,
+              "text-anchor": "center",
+              "text-max-width": 9,
+              "text-allow-overlap": false,
+              visibility: layers["police"] ? "visible" : "none",
+            },
+            paint: {
+              "text-color": "#cbd5e1",
+              "text-halo-color": "#0a0a0a",
+              "text-halo-width": 1.5,
+            },
+          });
+          // Click → show neighbourhood name + parent force.
+          m.on("click", "police-neighbourhoods-outline", (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+            const p = e.features?.[0]?.properties;
+            if (!p) return;
+            new maplibregl.Popup({ closeButton: true, maxWidth: "220px" })
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="font-family:system-ui;padding:6px;">
+                  <div style="font-weight:700;font-size:13px;color:#f1f5f9;margin-bottom:2px;">🛡️ ${p.name}</div>
+                  <div style="font-size:10px;color:#94a3b8;">${p.forceName}</div>
+                </div>`
+              )
+              .addTo(m);
+          });
+        }
+      } catch (err) {
+        console.error("police-areas fetch failed:", err);
+        policeLoaded.current = false; // allow retry on next toggle
+      }
+    };
+
+    fetchPolice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers["police"], mapReady, slug]);
+
   // Fetch air quality when layer is toggled on
   useEffect(() => {
     const m = map.current;
@@ -1036,7 +1208,7 @@ export default function ConstituencyMap() {
                   />
                   <span className="text-sm">{layer.emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] text-zinc-300">{layer.label}</div>
+                    <div className="text-[0.611rem] text-zinc-300">{layer.label}</div>
                   </div>
                 </label>
                 {/* Census topic selector dropdown */}
@@ -1045,7 +1217,7 @@ export default function ConstituencyMap() {
                     <select
                       value={censusTopic}
                       onChange={(e) => setCensusTopic(e.target.value)}
-                      className="w-full text-[10px] bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-zinc-300 focus:outline-none focus:border-emerald-500"
+                      className="w-full text-[0.556rem] bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-zinc-300 focus:outline-none focus:border-emerald-500"
                     >
                       <option value="age-under16">Age: Under 16</option>
                       <option value="age-over65">Age: Over 65</option>
@@ -1068,10 +1240,36 @@ export default function ConstituencyMap() {
         )}
       </div>
 
+      {/* Police areas legend */}
+      {layers["police"] && policeForces.length > 0 && (
+        <div className="absolute bottom-3 left-3 bg-zinc-900/95 backdrop-blur rounded-lg p-2 border border-zinc-700 z-10">
+          <div className="text-[0.611rem] text-zinc-400 mb-1 font-medium">Police Forces</div>
+          <div className="flex flex-col gap-[0.222rem] mb-1">
+            {policeForces.map((f) => (
+              <div key={f.id} className="flex items-center gap-[0.333rem]">
+                <div
+                  className="h-[0.667rem] w-[0.667rem] rounded-sm"
+                  style={{ background: f.colour }}
+                />
+                <span className="text-[0.611rem] text-zinc-300">{f.name}</span>
+              </div>
+            ))}
+          </div>
+          <a
+            href="https://data.police.uk/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[0.5rem] text-emerald-400 hover:text-emerald-300"
+          >
+            Source: data.police.uk ↗
+          </a>
+        </div>
+      )}
+
       {/* Crime source link */}
       {layers["crime"] && (
         <div className="absolute bottom-3 left-3 bg-zinc-900/95 backdrop-blur rounded-lg p-2 border border-zinc-700 z-10">
-          <div className="text-[10px] text-zinc-400 mb-1 font-medium">Crime Reports</div>
+          <div className="text-[0.556rem] text-zinc-400 mb-1 font-medium">Crime Reports</div>
           <div className="flex flex-wrap gap-1.5 mb-1.5">
             {[
               { cat: "ASB", color: "#f59e0b" },
@@ -1083,11 +1281,11 @@ export default function ConstituencyMap() {
             ].map((c) => (
               <div key={c.cat} className="flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full" style={{ background: c.color }} />
-                <span className="text-[9px] text-zinc-500">{c.cat}</span>
+                <span className="text-[0.5rem] text-zinc-500">{c.cat}</span>
               </div>
             ))}
           </div>
-          <a href="https://data.police.uk/" target="_blank" rel="noopener noreferrer" className="text-[9px] text-emerald-400 hover:text-emerald-300">
+          <a href="https://data.police.uk/" target="_blank" rel="noopener noreferrer" className="text-[0.5rem] text-emerald-400 hover:text-emerald-300">
             Source: data.police.uk ↗
           </a>
         </div>
@@ -1106,7 +1304,7 @@ export default function ConstituencyMap() {
                 <div className="h-3 w-5 rounded-sm" style={{ background: "#2471a3" }} />
                 <div className="h-3 w-5 rounded-sm" style={{ background: "#1a5276" }} />
               </div>
-              <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
+              <div className="flex justify-between text-[0.556rem] text-zinc-500 mt-1">
                 <span>30%</span><span>40%</span><span>50%</span>
               </div>
             </>
@@ -1122,7 +1320,7 @@ export default function ConstituencyMap() {
                 ].map((p) => (
                   <div key={p.party} className="flex items-center gap-1.5">
                     <div className="h-3 w-4 rounded-sm" style={{ background: p.color }} />
-                    <span className="text-[11px] text-zinc-400">{p.party}</span>
+                    <span className="text-[0.611rem] text-zinc-400">{p.party}</span>
                   </div>
                 ))}
               </div>
@@ -1139,7 +1337,7 @@ export default function ConstituencyMap() {
                 ].map((d) => (
                   <div key={d.level} className="flex items-center gap-1.5">
                     <div className="h-3 w-4 rounded-sm" style={{ background: d.color }} />
-                    <span className="text-[11px] text-zinc-400">{d.level}</span>
+                    <span className="text-[0.611rem] text-zinc-400">{d.level}</span>
                   </div>
                 ))}
               </div>
@@ -1148,7 +1346,7 @@ export default function ConstituencyMap() {
           {activeChoropleth === "census" && (
             <>
               <div className="text-xs text-zinc-400 mb-1 font-medium">Census 2021</div>
-              <div className="text-[10px] text-zinc-300 mb-2">{censusLabel}</div>
+              <div className="text-[0.556rem] text-zinc-300 mb-2">{censusLabel}</div>
               <div className="flex items-center gap-0.5">
                 <div className="h-3 w-4 rounded-sm" style={{ background: "#1b263b" }} />
                 <div className="h-3 w-4 rounded-sm" style={{ background: "#415a77" }} />
@@ -1158,10 +1356,10 @@ export default function ConstituencyMap() {
                 <div className="h-3 w-4 rounded-sm" style={{ background: "#e76f51" }} />
                 <div className="h-3 w-4 rounded-sm" style={{ background: "#d62828" }} />
               </div>
-              <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
+              <div className="flex justify-between text-[0.556rem] text-zinc-500 mt-1">
                 <span>Low</span><span>Avg: {censusAvg}%</span><span>High</span>
               </div>
-              <div className="text-[9px] text-zinc-600 mt-1.5">Source: ONS Census 2021</div>
+              <div className="text-[0.5rem] text-zinc-600 mt-1.5">Source: ONS Census 2021</div>
             </>
           )}
         </div>

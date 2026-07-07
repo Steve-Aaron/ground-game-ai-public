@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 // Electoral Calculus scraper for constituency prediction data
 // Scrapes ward-level MRP estimates and constituency predictions
@@ -64,6 +65,9 @@ function strip(s: string): string {
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "seat"; // "seat" | "national" | "both"
 

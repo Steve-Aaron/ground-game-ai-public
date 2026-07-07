@@ -10,7 +10,7 @@ import { useConstituency, type ConstituencySlug } from "@/hooks/useConstituency"
 const ConstituencyMap = dynamic(() => import("@/components/ConstituencyMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center h-full text-zinc-600 text-[11px] uppercase tracking-wider">
+    <div className="flex items-center justify-center h-full text-zinc-600 text-[0.611rem] uppercase tracking-wider">
       Initialising map…
     </div>
   ),
@@ -70,7 +70,7 @@ import {
 export default function DashboardPage() {
   // useSearchParams must be wrapped in Suspense in the App Router.
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
+    <Suspense fallback={<div data-component="dashboardSuspenseFallback" className="min-h-screen bg-[#0a0a0a]" />}>
       <Dashboard />
     </Suspense>
   );
@@ -78,7 +78,7 @@ export default function DashboardPage() {
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabId>("map");
-  const { slug: constituencySlug, name: constituencyName } = useConstituency();
+  const { slug: constituencySlug, name: constituencyName, options, loading } = useConstituency();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -94,17 +94,57 @@ function Dashboard() {
     [router, pathname]
   );
 
+  // No constituencies assigned → render a clean empty state instead of broken
+  // panels that all 401/403. Loading also shows a placeholder.
+  if (loading) {
+    return (
+      <div
+        data-component="dashboardLoading"
+        className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-zinc-600 text-xs uppercase tracking-wider"
+      >
+        Loading…
+      </div>
+    );
+  }
+  if (options.length === 0) {
+    return (
+      <div data-component="dashboardNoAccess" className="min-h-screen bg-[#0a0a0a] text-zinc-200 flex flex-col">
+        <Header
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          constituencySlug=""
+          onConstituencyChange={handleConstituencyChange}
+          options={options}
+        />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div data-component="noAccessCard" className="max-w-sm text-center border border-[#2a2a2a] bg-[#141414] p-8">
+            <p className="text-[0.611rem] uppercase tracking-wider text-zinc-500 mb-2">
+              No access
+            </p>
+            <p className="text-sm text-zinc-300 mb-2">
+              No constituencies assigned to your account.
+            </p>
+            <p className="text-xs text-zinc-600">
+              Contact your administrator to be granted access to one or more constituencies.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div data-component="dashboardRoot" className="min-h-screen bg-[#0a0a0a] flex flex-col">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
         constituencySlug={constituencySlug}
         onConstituencyChange={handleConstituencyChange}
+        options={options}
       />
 
-      <main className="flex-1 p-2 lg:p-3">
-        <div className="max-w-[1800px] mx-auto">
+      <main data-component="dashboardMain" className="flex-1 p-2 lg:p-3">
+        <div data-component="dashboardGridContainer" className="max-w-[100rem] mx-auto">
 
           {/* ═══ MAP TAB ═══ */}
           {activeTab === "map" && (
@@ -112,8 +152,9 @@ function Dashboard() {
               {/* Map — dominant panel */}
               <Panel
                 title="Constituency Map"
+                dataComponent="constituencyMap"
                 icon={<Map className="h-3.5 w-3.5" />}
-                className="lg:col-span-8 lg:row-span-2 min-h-[450px] lg:min-h-[650px]"
+                className="lg:col-span-8 lg:row-span-2 min-h-[25rem] lg:min-h-[36.111rem]"
               >
                 <ConstituencyMap />
               </Panel>
@@ -121,6 +162,7 @@ function Dashboard() {
               {/* Profile sidebar */}
               <Panel
                 title={constituencyName}
+                dataComponent="constituencyProfileSidebar"
                 icon={<Users className="h-3.5 w-3.5" />}
                 className="lg:col-span-4"
               >
@@ -130,10 +172,11 @@ function Dashboard() {
               {/* Electoral Intelligence */}
               <Panel
                 title="Electoral Intelligence"
+                dataComponent="electoralIntelligence"
                 icon={<Vote className="h-3.5 w-3.5" />}
                 className="lg:col-span-4"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">EC + Parliament</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">EC + Parliament</span>
                 }
               >
                 <ElectoralIntel />
@@ -142,10 +185,11 @@ function Dashboard() {
               {/* AI Brief */}
               <Panel
                 title="AI Intelligence Brief"
+                dataComponent="aiBrief"
                 icon={<Brain className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-[0.5rem] text-emerald-600 uppercase tracking-wider flex items-center gap-1">
                     <Brain className="h-3 w-3" />
                     AI-Powered
                   </span>
@@ -162,10 +206,11 @@ function Dashboard() {
               {/* Electoral Intelligence — wide */}
               <Panel
                 title="Electoral Intelligence"
+                dataComponent="electoralIntelligence"
                 icon={<Vote className="h-3.5 w-3.5" />}
                 className="lg:col-span-8"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">EC + Parliament</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">EC + Parliament</span>
                 }
               >
                 <ElectoralIntel />
@@ -174,10 +219,11 @@ function Dashboard() {
               {/* Opposition Tracker */}
               <Panel
                 title="Opposition Tracker"
+                dataComponent="oppositionTracker"
                 icon={<Shield className="h-3.5 w-3.5" />}
                 className="lg:col-span-4"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Social Intel</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Social Intel</span>
                 }
               >
                 <OppositionTracker />
@@ -186,10 +232,11 @@ function Dashboard() {
               {/* Activity Charts — time-series graphs */}
               <Panel
                 title="Activity Over Time"
+                dataComponent="activityCharts"
                 icon={<Activity className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Trends</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Trends</span>
                 }
               >
                 <ActivityCharts />
@@ -198,10 +245,11 @@ function Dashboard() {
               {/* Political Headlines */}
               <Panel
                 title="Political Headlines"
+                dataComponent="politicalHeadlines"
                 icon={<FileText className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[500px]"
+                className="lg:col-span-4 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">UK Politics</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">UK Politics</span>
                 }
               >
                 <Headlines />
@@ -210,10 +258,11 @@ function Dashboard() {
               {/* Parliamentary Activity */}
               <Panel
                 title="Parliamentary Activity"
+                dataComponent="parliamentaryActivity"
                 icon={<Landmark className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[500px]"
+                className="lg:col-span-4 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Live</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Live</span>
                 }
               >
                 <ParliamentBills />
@@ -222,10 +271,11 @@ function Dashboard() {
               {/* Hansard */}
               <Panel
                 title="Hansard"
+                dataComponent="hansard"
                 icon={<BookOpen className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[500px]"
+                className="lg:col-span-4 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Parliament.uk</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Parliament.uk</span>
                 }
               >
                 <HansardFeed />
@@ -234,10 +284,11 @@ function Dashboard() {
               {/* Social Mentions */}
               <Panel
                 title="Social Mentions"
+                dataComponent="socialMentions"
                 icon={<AtSign className="h-3.5 w-3.5" />}
-                className="lg:col-span-6 max-h-[500px]"
+                className="lg:col-span-6 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">X / Social</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">X / Social</span>
                 }
               >
                 <MentionsFeed />
@@ -246,10 +297,11 @@ function Dashboard() {
               {/* Live News */}
               <Panel
                 title="Live News"
+                dataComponent="liveNews"
                 icon={<Tv className="h-3.5 w-3.5" />}
                 className="lg:col-span-6"
                 headerAction={
-                  <span className="text-[9px] text-red-500 flex items-center gap-1 uppercase tracking-wider">
+                  <span className="text-[0.5rem] text-red-500 flex items-center gap-1 uppercase tracking-wider">
                     <span className="h-1.5 w-1.5 bg-red-500 rounded-full animate-pulse" />
                     Live
                   </span>
@@ -261,10 +313,11 @@ function Dashboard() {
               {/* AI Brief */}
               <Panel
                 title="AI Intelligence Brief"
+                dataComponent="aiBrief"
                 icon={<Brain className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-[0.5rem] text-emerald-600 uppercase tracking-wider flex items-center gap-1">
                     <Brain className="h-3 w-3" />
                     AI-Powered
                   </span>
@@ -276,10 +329,11 @@ function Dashboard() {
               {/* Ward Explorer — all ward data in one place */}
               <Panel
                 title="Ward Explorer"
+                dataComponent="wardExplorer"
                 icon={<LayoutGrid className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">28 WARDS</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">28 WARDS</span>
                 }
               >
                 <WardDataHub />
@@ -293,10 +347,11 @@ function Dashboard() {
               {/* National Polling — full width */}
               <Panel
                 title="National Polling"
+                dataComponent="nationalPolling"
                 icon={<PieChart className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Wikipedia / BPC Pollsters</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Wikipedia / BPC Pollsters</span>
                 }
               >
                 <PollingDashboard />
@@ -310,10 +365,11 @@ function Dashboard() {
               {/* Demographics — wide panel with charts */}
               <Panel
                 title="Demographics"
+                dataComponent="demographics"
                 icon={<BarChart3 className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Census 2021</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Census 2021</span>
                 }
               >
                 <Demographics />
@@ -322,10 +378,11 @@ function Dashboard() {
               {/* Schools */}
               <Panel
                 title="Schools"
+                dataComponent="schools"
                 icon={<GraduationCap className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">DfE / GIAS</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">DfE / GIAS</span>
                 }
               >
                 <SchoolsPanel />
@@ -334,10 +391,11 @@ function Dashboard() {
               {/* Public Health */}
               <Panel
                 title="Public Health"
+                dataComponent="publicHealth"
                 icon={<HeartPulse className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">PHE Fingertips</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">PHE Fingertips</span>
                 }
               >
                 <HealthPanel />
@@ -346,10 +404,11 @@ function Dashboard() {
               {/* Employment */}
               <Panel
                 title="Employment & Economy"
+                dataComponent="employmentEconomy"
                 icon={<Briefcase className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">NOMIS / ONS</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">NOMIS / ONS</span>
                 }
               >
                 <EmploymentPanel />
@@ -358,10 +417,11 @@ function Dashboard() {
               {/* House Prices */}
               <Panel
                 title="House Prices"
+                dataComponent="housePrices"
                 icon={<Home className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">HM Land Registry</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">HM Land Registry</span>
                 }
               >
                 <HousePricesPanel />
@@ -370,10 +430,11 @@ function Dashboard() {
               {/* Universal Credit */}
               <Panel
                 title="Universal Credit"
+                dataComponent="universalCredit"
                 icon={<CreditCard className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">DWP / Stat-Xplore</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">DWP / Stat-Xplore</span>
                 }
               >
                 <UniversalCreditPanel />
@@ -382,10 +443,11 @@ function Dashboard() {
               {/* EPC Ratings */}
               <Panel
                 title="EPC Ratings"
+                dataComponent="epcRatings"
                 icon={<Zap className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">MHCLG / EPC Register</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">MHCLG / EPC Register</span>
                 }
               >
                 <EPCPanel />
@@ -394,10 +456,11 @@ function Dashboard() {
               {/* Constituency Profile */}
               <Panel
                 title="Constituency Profile"
+                dataComponent="constituencyProfileLibrary"
                 icon={<BookOpen className="h-3.5 w-3.5" />}
                 className="lg:col-span-12"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Census · NOMIS · ONS</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Census · NOMIS · ONS</span>
                 }
               >
                 <CommonsLibraryPanel />
@@ -406,10 +469,11 @@ function Dashboard() {
               {/* E-Petitions */}
               <Panel
                 title="E-Petitions"
+                dataComponent="ePetitions"
                 icon={<FileText className="h-3.5 w-3.5" />}
-                className="lg:col-span-8 max-h-[600px]"
+                className="lg:col-span-8 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Parliament</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Parliament</span>
                 }
               >
                 <PetitionsPanel />
@@ -418,10 +482,11 @@ function Dashboard() {
               {/* Care Quality */}
               <Panel
                 title="Care Quality"
+                dataComponent="careQuality"
                 icon={<Stethoscope className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[600px]"
+                className="lg:col-span-4 max-h-[33.333rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">CQC</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">CQC</span>
                 }
               >
                 <CQCPanel />
@@ -435,10 +500,11 @@ function Dashboard() {
               {/* Community Issues */}
               <Panel
                 title="Community Issues"
+                dataComponent="communityIssues"
                 icon={<AlertTriangle className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[500px]"
+                className="lg:col-span-4 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">FixMyStreet</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">FixMyStreet</span>
                 }
               >
                 <FixMyStreet />
@@ -447,10 +513,11 @@ function Dashboard() {
               {/* Local News */}
               <Panel
                 title="Local News"
+                dataComponent="localNews"
                 icon={<Newspaper className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[500px]"
+                className="lg:col-span-4 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Auto-updating</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Auto-updating</span>
                 }
               >
                 <NewsFeed />
@@ -459,10 +526,11 @@ function Dashboard() {
               {/* Search Trends */}
               <Panel
                 title="Search Trends"
+                dataComponent="searchTrends"
                 icon={<TrendingUp className="h-3.5 w-3.5" />}
-                className="lg:col-span-4 max-h-[500px]"
+                className="lg:col-span-4 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">Google Trends</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Google Trends</span>
                 }
               >
                 <TrendsPanel />
@@ -471,10 +539,11 @@ function Dashboard() {
               {/* Political Headlines (local relevance) */}
               <Panel
                 title="Political Headlines"
+                dataComponent="politicalHeadlines"
                 icon={<FileText className="h-3.5 w-3.5" />}
-                className="lg:col-span-6 max-h-[500px]"
+                className="lg:col-span-6 max-h-[27.778rem]"
                 headerAction={
-                  <span className="text-[9px] text-zinc-600 uppercase tracking-wider">UK Politics</span>
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">UK Politics</span>
                 }
               >
                 <Headlines />
@@ -483,10 +552,11 @@ function Dashboard() {
               {/* Live News */}
               <Panel
                 title="Live News"
+                dataComponent="liveNews"
                 icon={<Tv className="h-3.5 w-3.5" />}
                 className="lg:col-span-6"
                 headerAction={
-                  <span className="text-[9px] text-red-500 flex items-center gap-1 uppercase tracking-wider">
+                  <span className="text-[0.5rem] text-red-500 flex items-center gap-1 uppercase tracking-wider">
                     <span className="h-1.5 w-1.5 bg-red-500 rounded-full animate-pulse" />
                     Live
                   </span>
@@ -499,8 +569,8 @@ function Dashboard() {
         </div>
 
         {/* Footer */}
-        <footer className="mt-4 pb-3 text-center">
-          <p className="text-[10px] text-zinc-700 uppercase tracking-wider">
+        <footer data-component="dashboardFooter" className="mt-4 pb-3 text-center">
+          <p className="text-[0.556rem] text-zinc-700 uppercase tracking-wider">
             Ground Game Intel &middot; Constituency Intelligence Platform
           </p>
         </footer>

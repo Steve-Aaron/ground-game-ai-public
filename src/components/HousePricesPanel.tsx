@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import SectionLabel from "./ui/SectionLabel";
+import { formatGbDate } from "@/lib/format";
 
 interface IndexItem {
   period: string;
@@ -44,44 +46,10 @@ function formatPrice(p: number): string {
   return `£${p.toLocaleString()}`;
 }
 
-function formatDate(d: string): string {
-  try {
-    return new Date(d).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return d;
-  }
-}
-
 export default function HousePricesPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<HousePriceData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useConstituencyResource<HousePriceData>("/api/house-prices");
 
-  useEffect(() => {
-    fetch(withConstituency("/api/house-prices", slug))
-      .then((res) => res.json())
-      .then((d: HousePriceData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-40 mb-4" />
-        <div className="h-16 bg-zinc-900 rounded-xl mb-3" />
-        <div className="space-y-2">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 bg-zinc-900 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={4} />;
 
   if (!data || data.error) {
     return (
@@ -134,7 +102,7 @@ export default function HousePricesPanel() {
           href={data.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+          className="text-[0.556rem] text-zinc-600 hover:text-zinc-400 transition-colors"
         >
           HM Land Registry
         </a>
@@ -144,9 +112,7 @@ export default function HousePricesPanel() {
       {latest && (
         <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-              Average Price
-            </div>
+            <SectionLabel>Average Price</SectionLabel>
             <div className="text-xl font-bold text-zinc-100 mt-0.5">
               {latest.averagePrice != null
                 ? `£${Number(latest.averagePrice).toLocaleString()}`
@@ -162,17 +128,17 @@ export default function HousePricesPanel() {
               )}
             </div>
             {latest.salesVolume != null && (
-              <div className="text-[10px] text-zinc-500 mt-0.5">
+              <div className="text-[0.556rem] text-zinc-500 mt-0.5">
                 {Number(latest.salesVolume).toLocaleString()} sales
               </div>
             )}
           </div>
           <div className="text-right">
-            <div className="text-[10px] text-zinc-600">
+            <div className="text-[0.556rem] text-zinc-600">
               {latest.period ?? ""}
             </div>
             {annualChange != null && (
-              <div className="text-[10px] text-zinc-600 mt-0.5">Annual change</div>
+              <div className="text-[0.556rem] text-zinc-600 mt-0.5">Annual change</div>
             )}
           </div>
         </div>
@@ -181,9 +147,7 @@ export default function HousePricesPanel() {
       {/* Property type breakdown + price range */}
       {typeEntries.length > 0 && (
         <div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-            By Property Type
-          </div>
+          <SectionLabel className="mb-2">By Property Type</SectionLabel>
           <div className="bg-zinc-900 rounded-xl p-3 space-y-2">
             {typeEntries.map(([label, stats]) => (
               <div key={label} className="flex items-center justify-between text-xs">
@@ -195,7 +159,7 @@ export default function HousePricesPanel() {
                   <span className="text-zinc-100 font-semibold">
                     {formatPrice(Math.round(stats.totalPrice / stats.count))}
                   </span>
-                  <span className="text-zinc-600 text-[10px] ml-1.5">
+                  <span className="text-zinc-600 text-[0.556rem] ml-1.5">
                     avg
                   </span>
                 </div>
@@ -208,17 +172,13 @@ export default function HousePricesPanel() {
       {allPrices.length > 0 && (
         <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-              Price Range
-            </div>
+            <SectionLabel>Price Range</SectionLabel>
             <div className="text-xs text-zinc-200 mt-0.5">
               {formatPrice(priceMin)} &mdash; {formatPrice(priceMax)}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-              Sales
-            </div>
+            <SectionLabel>Sales</SectionLabel>
             <div className="text-xs text-zinc-200 mt-0.5">{allPrices.length}</div>
           </div>
         </div>
@@ -227,10 +187,8 @@ export default function HousePricesPanel() {
       {/* Recent sales */}
       {data.recentSales.length > 0 && (
         <div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-            Recent Sales
-          </div>
-          <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
+          <SectionLabel className="mb-2">Recent Sales</SectionLabel>
+          <div className="space-y-1.5 max-h-[15.556rem] overflow-y-auto pr-1">
             {data.recentSales.slice(0, 10).map((sale, i) => {
               const typeKey = sale.type ?? "";
               const typeLabel =
@@ -244,8 +202,8 @@ export default function HousePricesPanel() {
                     <div className="text-xs text-zinc-200 truncate">
                       {sale.address || "Address unavailable"}
                     </div>
-                    <div className="text-[10px] text-zinc-500 flex items-center gap-2 mt-0.5">
-                      <span>{formatDate(sale.date)}</span>
+                    <div className="text-[0.556rem] text-zinc-500 flex items-center gap-2 mt-0.5">
+                      <span>{formatGbDate(sale.date)}</span>
                       {typeLabel && (
                         <>
                           <span className="text-zinc-700">·</span>

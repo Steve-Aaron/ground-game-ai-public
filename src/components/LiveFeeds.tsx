@@ -93,7 +93,7 @@ export default function LiveFeeds() {
           <button
             key={ch.name}
             onClick={() => setActiveChannel(i)}
-            className={`flex-1 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide transition-all ${
+            className={`flex-1 px-2 py-2 text-[0.611rem] font-semibold uppercase tracking-wide transition-all ${
               i === activeChannel
                 ? `${ch.textColor} border-b-2 ${ch.textColor.replace("text-", "border-")}`
                 : "text-zinc-600 hover:text-zinc-400"
@@ -123,7 +123,7 @@ export default function LiveFeeds() {
               <Tv className={`h-6 w-6 ${channel.textColor}`} />
             </div>
             <p className="text-xs text-zinc-400 mb-1 font-medium">{channel.name}</p>
-            <p className="text-[11px] text-zinc-600 mb-3">
+            <p className="text-[0.611rem] text-zinc-600 mb-3">
               {channel.description}
             </p>
             <a
@@ -144,13 +144,13 @@ export default function LiveFeeds() {
       <div className="px-3 py-1.5 flex items-center justify-between border-t border-zinc-800/50">
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[10px] text-red-400 font-semibold">LIVE</span>
+          <span className="text-[0.556rem] text-red-400 font-semibold">LIVE</span>
         </div>
         <a
           href={channel.directUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] text-zinc-600 hover:text-emerald-400 flex items-center gap-1 transition-colors"
+          className="text-[0.556rem] text-zinc-600 hover:text-emerald-400 flex items-center gap-1 transition-colors"
         >
           Open in new tab <ExternalLink className="h-2.5 w-2.5" />
         </a>

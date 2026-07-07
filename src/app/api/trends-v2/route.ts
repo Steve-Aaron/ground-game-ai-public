@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getFullData } from "@/data";
 import googleTrends from "google-trends-api";
+import { requireUser } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -281,6 +282,9 @@ const EMPTY_PAYLOAD = {
 };
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireUser(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const forceRefresh = searchParams.get("refresh") === "true";
 

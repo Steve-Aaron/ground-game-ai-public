@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { TrendingUp, Search, BarChart3 } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
 
 // ── Types — match /api/trends-v2 response shape ─────────────────────────────
 
@@ -79,81 +80,7 @@ function getPartyLabel(query: string): string {
   return "";
 }
 
-// ── SVG Sparkline (unchanged from previous version) ─────────────────────────
-
-interface SparklineProps {
-  data: number[];
-  color: string;
-  width?: number;
-  height?: number;
-  id: string;
-}
-
-function Sparkline({ data, color, width = 280, height = 48, id }: SparklineProps) {
-  if (data.length < 2) return null;
-
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const padY = 4;
-
-  const points = data.map((v, i) => ({
-    x: (i / (data.length - 1)) * width,
-    y: padY + (1 - (v - min) / range) * (height - padY * 2),
-  }));
-
-  const linePath = points
-    .map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`))
-    .join(" ");
-
-  const areaPath = `${linePath} L ${width},${height} L 0,${height} Z`;
-
-  const gradientId = `grad-${id}`;
-  const areaGradientId = `area-${id}`;
-
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      width="100%"
-      height={height}
-      preserveAspectRatio="none"
-      className="overflow-visible"
-    >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={color} stopOpacity="1" />
-        </linearGradient>
-        <linearGradient id={areaGradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.15" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={areaPath} fill={`url(#${areaGradientId})`} />
-      <path
-        d={linePath}
-        fill="none"
-        stroke={`url(#${gradientId})`}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx={points[points.length - 1].x}
-        cy={points[points.length - 1].y}
-        r="3"
-        fill={color}
-      />
-      <circle
-        cx={points[points.length - 1].x}
-        cy={points[points.length - 1].y}
-        r="5"
-        fill={color}
-        opacity="0.3"
-      />
-    </svg>
-  );
-}
+// ── SVG Sparkline now lives in ui/Sparkline — see import at top ────────────
 
 // ── Comparison chart: overlaid sparklines for the time-series ───────────────
 
@@ -289,10 +216,10 @@ function ComparisonChart({ series }: { series: ComparisonSeries[] }) {
               className="inline-block w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: s.color }}
             />
-            <span className="text-[11px] text-zinc-400">{s.label}</span>
+            <span className="text-[0.611rem] text-zinc-400">{s.label}</span>
             {s.partyTag && (
               <span
-                className="text-[9px] font-bold px-1 py-px rounded"
+                className="text-[0.5rem] font-bold px-1 py-px rounded"
                 style={{
                   color: s.color,
                   backgroundColor: `${s.color}18`,
@@ -301,7 +228,7 @@ function ComparisonChart({ series }: { series: ComparisonSeries[] }) {
                 {s.partyTag}
               </span>
             )}
-            <span className="text-[11px] font-medium text-zinc-300">{s.current}</span>
+            <span className="text-[0.611rem] font-medium text-zinc-300">{s.current}</span>
           </div>
         ))}
       </div>
@@ -322,31 +249,10 @@ function UnavailableSection({ height = "py-4" }: { height?: string }) {
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function TrendsPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<TrendsV2Data | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchTrends() {
-      try {
-        const res = await fetch(withConstituency("/api/trends-v2", slug));
-        if (!res.ok && res.status !== 200) throw new Error("Failed");
-        const json = await res.json();
-        if (!cancelled) {
-          setData(json);
-        }
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    fetchTrends();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  const { data, loading, error: errorMsg } = useConstituencyResource<TrendsV2Data>(
+    "/api/trends-v2"
+  );
+  const error = !!errorMsg;
 
   // Build the two-series time-series chart from interestOverTime.
   // MP series uses CON blue; constituency series uses default green.
@@ -397,33 +303,7 @@ export default function TrendsPanel() {
 
   // ── Loading state ─────────────────────────────────────────────────────────
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-4 w-4 bg-zinc-800 rounded animate-pulse" />
-          <div className="h-3 w-32 bg-zinc-800 rounded animate-pulse" />
-        </div>
-        <div className="h-28 bg-zinc-900/50 rounded-lg animate-pulse" />
-        <div className="flex gap-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-1">
-              <div className="h-2.5 w-2.5 rounded-full bg-zinc-800 animate-pulse" />
-              <div className="h-2.5 w-16 bg-zinc-800 rounded animate-pulse" />
-            </div>
-          ))}
-        </div>
-        <div className="space-y-3 mt-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-1">
-              <div className="h-2.5 w-24 bg-zinc-800 rounded animate-pulse" />
-              <div className="h-2 bg-zinc-800/50 rounded-full animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="chart" rows={2} />;
 
   // ── Total-failure fallback (network error AND no data) ────────────────────
   if (error && !data) {
@@ -435,7 +315,7 @@ export default function TrendsPanel() {
         <p className="text-sm font-medium text-zinc-400">
           Search trends data unavailable
         </p>
-        <p className="text-[11px] text-zinc-600 mt-1.5 max-w-[280px] mx-auto">
+        <p className="text-[0.611rem] text-zinc-600 mt-1.5 max-w-[15.556rem] mx-auto">
           Could not reach the trends route.
         </p>
       </div>
@@ -460,7 +340,7 @@ export default function TrendsPanel() {
             <div className="bg-zinc-900/40 rounded-lg p-3 border border-zinc-800/50">
               <ComparisonChart series={comparisonSeries} />
             </div>
-            <p className="text-[10px] text-zinc-600 mt-1.5 px-1">
+            <p className="text-[0.556rem] text-zinc-600 mt-1.5 px-1">
               Party comparison data currently unavailable.
             </p>
           </>
@@ -486,13 +366,13 @@ export default function TrendsPanel() {
             {data.regionalVsNational.map((r) => (
               <div key={r.keyword} className="px-3 py-2">
                 <div className="flex justify-between items-center mb-0.5">
-                  <span className="text-[12px] text-zinc-300">{r.keyword}</span>
-                  <span className="text-[11px] text-zinc-400 tabular-nums">
+                  <span className="text-[0.667rem] text-zinc-300">{r.keyword}</span>
+                  <span className="text-[0.611rem] text-zinc-400 tabular-nums">
                     EoE {r.eastOfEnglandValue ?? "—"} · avg {r.nationalAverage}
                   </span>
                 </div>
                 {r.rank != null && (
-                  <p className="text-[10px] text-zinc-600">
+                  <p className="text-[0.556rem] text-zinc-600">
                     Rank {r.rank} of {r.totalRegions} regions
                   </p>
                 )}
@@ -520,9 +400,9 @@ export default function TrendsPanel() {
                 key={t.title}
                 className="flex justify-between items-center px-3 py-2 hover:bg-zinc-800/20 transition-colors"
               >
-                <span className="text-[12px] text-zinc-300">{t.title}</span>
+                <span className="text-[0.667rem] text-zinc-300">{t.title}</span>
                 {t.traffic && (
-                  <span className="text-[11px] font-semibold text-emerald-400 tabular-nums">
+                  <span className="text-[0.611rem] font-semibold text-emerald-400 tabular-nums">
                     {t.traffic}
                   </span>
                 )}
@@ -537,12 +417,10 @@ export default function TrendsPanel() {
       </div>
 
       {/* Footer */}
-      <div className="px-3 text-[10px] text-zinc-700 text-center pb-1">
+      <div className="px-3 text-[0.556rem] text-zinc-700 text-center pb-1">
         {fetchedTime ? `Updated ${fetchedTime} · ` : ""}Data via Google Trends
       </div>
     </div>
   );
 }
 
-// Re-export Sparkline to keep symbol available for potential future use.
-export { Sparkline };

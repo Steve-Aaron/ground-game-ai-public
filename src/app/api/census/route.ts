@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -307,6 +308,9 @@ async function fetchAndUpdateCache(topic: CensusTopic, cacheDocRef: DocumentRefe
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const topicId = searchParams.get("topic") || "age-under16";
 

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Search, ExternalLink, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import { formatGbDate } from "@/lib/format";
 
 type Tab = "votes" | "bills";
 
@@ -99,18 +101,7 @@ export default function ParliamentBills() {
     fetchBills(search || undefined);
   }
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="animate-pulse space-y-2">
-            <div className="h-3 bg-zinc-800 rounded w-4/5" />
-            <div className="h-2.5 bg-zinc-800/50 rounded w-2/5" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="list" rows={5} />;
 
   // Group bills by stage for board view
   const billsByStage: Record<string, Bill[]> = {};
@@ -159,19 +150,17 @@ export default function ParliamentBills() {
                       {vote.votedAye ? <ThumbsUp className="h-3 w-3 text-emerald-400" /> : <ThumbsDown className="h-3 w-3 text-red-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] text-zinc-300 leading-snug group-hover:text-zinc-100">
+                      <p className="text-[0.667rem] text-zinc-300 leading-snug group-hover:text-zinc-100">
                         {vote.title}
                         <ExternalLink className="inline h-2.5 w-2.5 ml-1 text-zinc-600 group-hover:text-zinc-400" />
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5 text-[10px]">
+                      <div className="flex items-center gap-2 mt-0.5 text-[0.556rem]">
                         <span className={vote.votedAye ? "text-emerald-400" : "text-red-400"}>
                           {vote.votedAye ? "Aye" : "No"}
                         </span>
                         <span className="text-zinc-600">{vote.ayes}–{vote.noes}</span>
                         <span className={won ? "text-emerald-500" : "text-red-500"}>{won ? "Won" : "Lost"}</span>
-                        <span className="text-zinc-600">
-                          {new Date(vote.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                        </span>
+                        <span className="text-zinc-600">{formatGbDate(vote.date)}</span>
                       </div>
                     </div>
                   </div>
@@ -210,17 +199,17 @@ export default function ParliamentBills() {
                 <div key={stage.key}>
                   <div className="flex items-center gap-2 mb-1">
                     <div className={`h-2 w-2 rounded-full ${stage.color.replace("bg-", "bg-").replace("/5", "/60")}`} />
-                    <span className="text-[11px] font-medium text-zinc-400">
+                    <span className="text-[0.611rem] font-medium text-zinc-400">
                       {stage.label}
                     </span>
-                    <span className="text-[10px] text-zinc-600">({stageBills.length})</span>
+                    <span className="text-[0.556rem] text-zinc-600">({stageBills.length})</span>
                   </div>
                   <div className="space-y-1 ml-4">
                     {stageBills.slice(0, 4).map((bill) => (
                       <a key={bill.id} href={bill.url} target="_blank" rel="noopener noreferrer"
-                        className={`block px-2 py-1.5 rounded border text-[11px] hover:bg-zinc-800/30 transition-colors ${stage.color}`}>
+                        className={`block px-2 py-1.5 rounded border text-[0.611rem] hover:bg-zinc-800/30 transition-colors ${stage.color}`}>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[9px] font-bold px-1 rounded ${
+                          <span className={`text-[0.5rem] font-bold px-1 rounded ${
                             bill.house === "Commons" ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"
                           }`}>
                             {bill.house === "Commons" ? "HC" : "HL"}
@@ -229,14 +218,12 @@ export default function ParliamentBills() {
                           <ExternalLink className="h-2.5 w-2.5 text-zinc-600 flex-shrink-0" />
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 ml-6">
-                          <span className="text-[9px] text-zinc-500">
-                            {new Date(bill.lastUpdate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                          </span>
+                          <span className="text-[0.5rem] text-zinc-500">{formatGbDate(bill.lastUpdate)}</span>
                         </div>
                       </a>
                     ))}
                     {stageBills.length > 4 && (
-                      <div className="text-[10px] text-zinc-600 ml-2">+{stageBills.length - 4} more</div>
+                      <div className="text-[0.556rem] text-zinc-600 ml-2">+{stageBills.length - 4} more</div>
                     )}
                   </div>
                 </div>
@@ -247,7 +234,7 @@ export default function ParliamentBills() {
       )}
 
       <div className="px-3 py-2 border-t border-zinc-800/50 text-center">
-        <span className="text-[10px] text-zinc-600">
+        <span className="text-[0.556rem] text-zinc-600">
           {tab === "votes" ? "James Cleverly voting record" : "Bill stages pipeline"} · Parliament API
         </span>
       </div>

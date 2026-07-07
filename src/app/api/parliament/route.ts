@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 // UK Parliament APIs — public, no auth required
 // Members API: https://members-api.parliament.uk
@@ -33,6 +34,9 @@ interface ApiBill {
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
 
   // Get constituency from query param, default to braintree

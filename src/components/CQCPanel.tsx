@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
+import SectionLabel from "./ui/SectionLabel";
+import StatGrid from "./ui/StatGrid";
+import RatingBadge, { type RatingStyle } from "./ui/RatingBadge";
+import { formatGbDate } from "@/lib/format";
 
 // Match the actual API response from /api/cqc
 interface LocationResult {
@@ -65,64 +69,24 @@ const RATING_CONFIG: Record<
   },
 };
 
-function RatingBadge({ rating }: { rating: string }) {
-  const config = RATING_CONFIG[rating] ?? {
-    label: rating || "Not rated",
-    badgeBg: "bg-zinc-700",
-    badgeText: "text-zinc-300",
-  };
-  return (
-    <span
-      className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${config.badgeBg} ${config.badgeText}`}
-    >
-      {config.label}
-    </span>
-  );
-}
+// Adapt the legacy RATING_CONFIG shape (badgeBg/badgeText) to the shared
+// RatingBadge config shape (bg/text/label).
+const RATING_BADGE_CONFIG: Record<string, RatingStyle> = Object.fromEntries(
+  Object.entries(RATING_CONFIG).map(([k, v]) => [
+    k,
+    { bg: v.badgeBg, text: v.badgeText, label: v.label },
+  ])
+);
 
 function formatDate(d: string): string {
   if (!d) return "—";
-  try {
-    return new Date(d).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return d;
-  }
+  return formatGbDate(d);
 }
 
 export default function CQCPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<CQCData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useConstituencyResource<CQCData>("/api/cqc");
 
-  useEffect(() => {
-    fetch(withConstituency("/api/cqc", slug))
-      .then((res) => res.json())
-      .then((d: CQCData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-40 mb-4" />
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 bg-zinc-900 rounded-xl" />
-          ))}
-        </div>
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 bg-zinc-900 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={4} />;
 
   if (!data || data.error) {
     return <p className="text-zinc-500 text-xs">CQC data unavailable</p>;
@@ -158,34 +122,26 @@ export default function CQCPanel() {
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {summaryCards.map((card) => (
-          <div
-            key={card.key}
-            className={`${card.bgColor} rounded-xl p-3 text-center`}
-          >
-            <div className={`text-2xl font-bold ${card.color}`}>
-              {card.count}
-            </div>
-            <div className="text-[10px] text-zinc-400 uppercase tracking-wider mt-1">
-              {card.label}
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatGrid
+        cols={4}
+        items={summaryCards.map((card) => ({
+          label: card.label,
+          value: card.count,
+          color: card.color.startsWith("text-") ? undefined : card.color,
+          valueClassName: `text-2xl font-bold ${card.color}`,
+        }))}
+      />
 
       {/* Total */}
-      <div className="text-[10px] text-zinc-500 text-center">
+      <div className="text-[0.556rem] text-zinc-500 text-center">
         {total} registered locations
       </div>
 
       {/* Locations list */}
       {locations.length > 0 && (
         <div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-            Inspected Locations
-          </div>
-          <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1">
+          <SectionLabel className="mb-2">Inspected Locations</SectionLabel>
+          <div className="space-y-1.5 max-h-[22.222rem] overflow-y-auto pr-1">
             {locations.map((loc, i) => (
               <div
                 key={i}
@@ -219,7 +175,7 @@ export default function CQCPanel() {
                       loc.name
                     )}
                   </div>
-                  <div className="text-[10px] text-zinc-500 flex items-center gap-2 mt-0.5">
+                  <div className="text-[0.556rem] text-zinc-500 flex items-center gap-2 mt-0.5">
                     <span>{loc.type}</span>
                     {loc.lastInspection && (
                       <>
@@ -229,7 +185,7 @@ export default function CQCPanel() {
                     )}
                   </div>
                 </div>
-                <RatingBadge rating={loc.rating} />
+                <RatingBadge rating={loc.rating} config={RATING_BADGE_CONFIG} />
               </div>
             ))}
           </div>

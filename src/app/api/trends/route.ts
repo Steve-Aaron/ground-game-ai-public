@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/guards";
 
 // Force dynamic — needs runtime env vars (SERPAPI_KEY)
 export const dynamic = "force-dynamic";
@@ -12,7 +13,10 @@ interface TrendItem {
   rising?: boolean;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireUser(request);
+  if (__guard instanceof NextResponse) return __guard;
   const apiKey = process.env.SERPAPI_KEY;
 
   // If no API key, return unavailable state (no fake data)

@@ -100,8 +100,6 @@ One row per `route.ts` under `src/app/api/`. "Cache" = uses Firestore cache-then
 Keys present (from `grep -E "^[A-Z_]+=" .env.local | cut -d= -f1`):
 
 ```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_FIREBASE_API_KEY
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -128,8 +126,6 @@ Cross-reference against every `process.env.*` reference in source:
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `src/lib/firebase.ts:8` | ✅ yes | — |
 | `SERPAPI_KEY` | `src/app/api/trends/route.ts:16` | ❌ no | Trends panel renders empty unavailable state |
 | `X_BEARER_TOKEN` | `src/app/api/mentions/route.ts:28,35,96` | ❌ no | Falls through to Apify path; if that's also missing, mentions empty |
-
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are present in `.env.local` but **not referenced by any source file** — appear to be dead config.
 
 ---
 

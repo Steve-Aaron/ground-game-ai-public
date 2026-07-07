@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "./ui/PanelSkeleton";
 
 interface HealthIndicator {
   id: number;
@@ -72,7 +72,7 @@ function ProgressBar({ value, englandAvg, unit, significance }: {
         {/* England average marker */}
         {avgPct !== null && (
           <div
-            className="absolute top-[-2px] h-[12px] w-[2px] bg-zinc-300 rounded-full"
+            className="absolute top-[-2px] h-[0.667rem] w-[0.111rem] bg-zinc-300 rounded-full"
             style={{ left: `${avgPct}%` }}
             title={`England avg: ${englandAvg}${unit === "%" ? "%" : ""}`}
           />
@@ -80,7 +80,7 @@ function ProgressBar({ value, englandAvg, unit, significance }: {
       </div>
       {/* Labels under bar */}
       {englandAvg !== null && (
-        <div className="flex justify-between text-[10px] text-zinc-500">
+        <div className="flex justify-between text-[0.556rem] text-zinc-500">
           <span>Braintree: {value}{unit === "%" ? "%" : ""}</span>
           <span>England: {englandAvg}{unit === "%" ? "%" : ""}</span>
         </div>
@@ -90,46 +90,19 @@ function ProgressBar({ value, englandAvg, unit, significance }: {
 }
 
 export default function HealthPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error } = useConstituencyResource<HealthData>(
+    "/api/health",
+    { errorMessage: "Failed to fetch health data" }
+  );
 
-  useEffect(() => {
-    async function fetchHealth() {
-      try {
-        const res = await fetch(withConstituency("/api/health", slug));
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json: HealthData = await res.json();
-        if (json.error) throw new Error(json.error);
-        setData(json);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch health data");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchHealth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        <div className="text-xs text-zinc-500">Loading health data...</div>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 bg-zinc-800/50 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <PanelSkeleton variant="cards" rows={4} />;
 
   if (error) {
     return (
       <div className="p-4">
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
           <div className="text-xs text-red-400 font-medium">Health data unavailable</div>
-          <div className="text-[11px] text-red-400/70 mt-1">{error}</div>
+          <div className="text-[0.611rem] text-red-400/70 mt-1">{error}</div>
         </div>
       </div>
     );
@@ -152,19 +125,19 @@ export default function HealthPanel() {
       {/* Summary badges */}
       <div className="flex items-center gap-2 flex-wrap">
         {counts.better > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] font-medium">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[0.611rem] font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             {counts.better} better than avg
           </span>
         )}
         {counts.similar > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[11px] font-medium">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[0.611rem] font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             {counts.similar} similar
           </span>
         )}
         {counts.worse > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 text-[11px] font-medium">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 text-[0.611rem] font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
             {counts.worse} worse than avg
           </span>
@@ -187,11 +160,11 @@ export default function HealthPanel() {
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-2">
-                <div className="text-[11px] text-zinc-400 leading-tight">
+                <div className="text-[0.611rem] text-zinc-400 leading-tight">
                   {indicator.name}
                 </div>
                 <span
-                  className={`flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${config.badge}`}
+                  className={`flex-shrink-0 text-[0.556rem] font-medium px-1.5 py-0.5 rounded ${config.badge}`}
                 >
                   {config.label}
                 </span>
@@ -206,10 +179,10 @@ export default function HealthPanel() {
                       : indicator.value.toLocaleString("en-GB", { maximumFractionDigits: 1 })
                     : "N/A"}
                 </span>
-                <span className="text-[10px] text-zinc-600">{indicator.unit !== "%" ? indicator.unit : ""}</span>
+                <span className="text-[0.556rem] text-zinc-600">{indicator.unit !== "%" ? indicator.unit : ""}</span>
                 {diff !== null && (
                   <span
-                    className={`text-[10px] tabular-nums ml-auto ${
+                    className={`text-[0.556rem] tabular-nums ml-auto ${
                       diff > 0 ? "text-zinc-500" : diff < 0 ? "text-zinc-500" : "text-zinc-600"
                     }`}
                   >
@@ -228,14 +201,14 @@ export default function HealthPanel() {
               />
 
               {/* Period */}
-              <div className="mt-1.5 text-[10px] text-zinc-600">{indicator.period}</div>
+              <div className="mt-1.5 text-[0.556rem] text-zinc-600">{indicator.period}</div>
             </div>
           );
         })}
       </div>
 
       {/* Source attribution */}
-      <div className="text-[10px] text-zinc-600 text-center pt-1">
+      <div className="text-[0.556rem] text-zinc-600 text-center pt-1">
         Source:{" "}
         <a
           href={data.sourceUrl}

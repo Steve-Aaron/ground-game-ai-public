@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getFullData } from "@/data";
+import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -203,6 +204,9 @@ async function fetchAndUpdateCache(
 }
 
 export async function GET(request: Request) {
+  // __AUTH_GUARD__
+  const __guard = await requireConstituencyAccess(request);
+  if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
   const constituencyData = getFullData(constituencySlug);

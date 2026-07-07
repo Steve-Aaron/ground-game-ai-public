@@ -8,15 +8,18 @@ import {
   demographics,
   type DemographicSet,
 } from "@/data/braintree";
+import { partyColor as partyColorOf } from "@/lib/palette";
+import SectionLabel from "./ui/SectionLabel";
+import DataTable, { type DataTableColumn } from "./ui/DataTable";
 
 /* ── helpers ────────────────────────────────────────────────── */
 
 const partyColor: Record<string, string> = {
-  CON: "#0087DC",
-  LAB: "#DC241f",
-  Reform: "#12B6CF",
-  LD: "#FAA61A",
-  Green: "#6AB023",
+  CON: partyColorOf("CON"),
+  LAB: partyColorOf("LAB"),
+  Reform: partyColorOf("Reform"),
+  LD: partyColorOf("LIB"),
+  Green: partyColorOf("Green"),
 };
 
 const partyBg: Record<string, string> = {
@@ -34,9 +37,6 @@ const depBg: Record<string, string> = {
   "Medium-High": "bg-orange-500/20 text-orange-400",
   High: "bg-red-500/20 text-red-400",
 };
-
-type SortKey = "name" | "population" | "deprivation" | "conVote" | "refVote";
-type SortDir = "asc" | "desc";
 
 const depOrder: Record<string, number> = {
   Low: 1,
@@ -80,7 +80,7 @@ function buildWards(): EnrichedWard[] {
 
 function VoteBar({ label, pct, color }: { label: string; pct: number; color: string }) {
   return (
-    <div className="flex items-center gap-2 text-[11px]">
+    <div className="flex items-center gap-2 text-[0.611rem]">
       <span className="w-10 text-zinc-500 text-right shrink-0">{label}</span>
       <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
         <div
@@ -120,7 +120,7 @@ function DemoSection({
   const colors = catColors[catKey] ?? catColors.age;
   return (
     <div>
-      <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">{label}</div>
+      <div className="text-[0.556rem] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">{label}</div>
       <div className="h-4 rounded-full overflow-hidden flex mb-1.5">
         {data.map((item, i) => (
           <div
@@ -136,7 +136,7 @@ function DemoSection({
           const avgItem = avg.find((a) => getLabel(a as Record<string, unknown>) === lbl);
           const diff = avgItem ? item.percentage - avgItem.percentage : 0;
           return (
-            <div key={lbl} className="flex items-center gap-1 text-[10px]">
+            <div key={lbl} className="flex items-center gap-1 text-[0.556rem]">
               <div
                 className="w-1.5 h-1.5 rounded-sm shrink-0"
                 style={{ backgroundColor: colors[i % colors.length] }}
@@ -145,7 +145,7 @@ function DemoSection({
               <span className="text-zinc-300 tabular-nums">{item.percentage}%</span>
               {diff !== 0 && (
                 <span
-                  className={`text-[8px] tabular-nums ${diff > 0 ? "text-emerald-400" : "text-red-400"}`}
+                  className={`text-[0.444rem] tabular-nums ${diff > 0 ? "text-emerald-400" : "text-red-400"}`}
                 >
                   {diff > 0 ? "+" : ""}
                   {diff.toFixed(1)}
@@ -166,141 +166,76 @@ function DemoSection({
 export default function WardDataHub() {
   const wards = useMemo(buildWards, []);
   const [selected, setSelected] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-  /* sorting */
-  const sorted = useMemo(() => {
-    const copy = [...wards];
-    copy.sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
-      else if (sortKey === "population") cmp = a.population - b.population;
-      else if (sortKey === "deprivation") cmp = (depOrder[a.deprivation] ?? 0) - (depOrder[b.deprivation] ?? 0);
-      else if (sortKey === "conVote") cmp = a.conVote - b.conVote;
-      else if (sortKey === "refVote") cmp = a.refVote - b.refVote;
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return copy;
-  }, [wards, sortKey, sortDir]);
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir(key === "name" ? "asc" : "desc");
-    }
-  };
-
-  const arrow = (key: SortKey) =>
-    sortKey === key ? (sortDir === "asc" ? " \u25B2" : " \u25BC") : "";
 
   const detail = selected ? wards.find((w) => w.name === selected) : null;
   const detailDemo: DemographicSet | null =
     selected && wardDemographics[selected] ? wardDemographics[selected] : null;
 
+  const columns: DataTableColumn<EnrichedWard>[] = [
+    {
+      key: "name",
+      label: "Ward",
+      sort: "string",
+      render: (w) => (
+        <span className="text-zinc-200 font-medium whitespace-nowrap">
+          {w.name}
+          {w.swing && (
+            <span className="ml-1 text-[0.444rem] text-amber-400" title="Predicted to swing">
+              SWING
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "population",
+      label: "Pop",
+      sort: "number",
+      align: "right",
+      className: "tabular-nums text-zinc-400",
+      render: (w) => w.population.toLocaleString(),
+    },
+    {
+      key: "deprivation",
+      label: "Deprivation",
+      sort: "number",
+      align: "center",
+      accessor: (w) => depOrder[w.deprivation] ?? 0,
+      render: (w) => (
+        <span
+          className={`inline-block px-1.5 py-0.5 rounded text-[0.5rem] font-medium ${
+            depBg[w.deprivation] ?? "bg-zinc-800 text-zinc-400"
+          }`}
+        >
+          {w.deprivation}
+        </span>
+      ),
+    },
+    { key: "winner2024", label: "2024", align: "center", render: (w) => <PartyChip party={w.winner2024} /> },
+    { key: "predictedWinner", label: "Predicted", align: "center", render: (w) => <PartyChip party={w.predictedWinner} /> },
+    { key: "conVote", label: "CON", sort: "number", align: "right", className: "tabular-nums text-zinc-400", render: (w) => `${w.conVote}%` },
+    { key: "refVote", label: "REF", sort: "number", align: "right", className: "tabular-nums text-zinc-400", render: (w) => `${w.refVote}%` },
+    { key: "labVote", label: "LAB", align: "right", className: "tabular-nums text-zinc-400", render: (w) => `${w.labVote}%` },
+    { key: "electorate", label: "Electorate", align: "right", className: "tabular-nums text-zinc-400", render: (w) => (w.electorate ? w.electorate.toLocaleString() : "—") },
+  ];
+
   return (
     <div className="p-3 space-y-3">
       {/* ── SUMMARY TABLE ──────────────────────────────────── */}
       <div className="overflow-x-auto rounded-xl border border-zinc-800">
-        <table className="w-full text-[10px]">
-          <thead>
-            <tr className="bg-zinc-900/60 text-zinc-500 uppercase tracking-wider">
-              <th
-                className="text-left px-2 py-1.5 cursor-pointer hover:text-zinc-300 transition-colors"
-                onClick={() => toggleSort("name")}
-              >
-                Ward{arrow("name")}
-              </th>
-              <th
-                className="text-right px-2 py-1.5 cursor-pointer hover:text-zinc-300 transition-colors"
-                onClick={() => toggleSort("population")}
-              >
-                Pop{arrow("population")}
-              </th>
-              <th
-                className="text-center px-2 py-1.5 cursor-pointer hover:text-zinc-300 transition-colors"
-                onClick={() => toggleSort("deprivation")}
-              >
-                Deprivation{arrow("deprivation")}
-              </th>
-              <th className="text-center px-2 py-1.5">2024</th>
-              <th className="text-center px-2 py-1.5">Predicted</th>
-              <th
-                className="text-right px-2 py-1.5 cursor-pointer hover:text-zinc-300 transition-colors"
-                onClick={() => toggleSort("conVote")}
-              >
-                CON{arrow("conVote")}
-              </th>
-              <th
-                className="text-right px-2 py-1.5 cursor-pointer hover:text-zinc-300 transition-colors"
-                onClick={() => toggleSort("refVote")}
-              >
-                REF{arrow("refVote")}
-              </th>
-              <th className="text-right px-2 py-1.5">LAB</th>
-              <th className="text-right px-2 py-1.5">Electorate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((w) => (
-              <tr
-                key={w.name}
-                className={`border-t border-zinc-800/60 cursor-pointer transition-colors ${
-                  selected === w.name
-                    ? "bg-emerald-500/10"
-                    : "hover:bg-zinc-800/40"
-                }`}
-                onClick={() => setSelected(selected === w.name ? null : w.name)}
-              >
-                <td className="px-2 py-1.5 text-zinc-200 font-medium whitespace-nowrap">
-                  {w.name}
-                  {w.swing && (
-                    <span className="ml-1 text-[8px] text-amber-400" title="Predicted to swing">
-                      SWING
-                    </span>
-                  )}
-                </td>
-                <td className="text-right px-2 py-1.5 text-zinc-400 tabular-nums">
-                  {w.population.toLocaleString()}
-                </td>
-                <td className="text-center px-2 py-1.5">
-                  <span
-                    className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium ${
-                      depBg[w.deprivation] ?? "bg-zinc-800 text-zinc-400"
-                    }`}
-                  >
-                    {w.deprivation}
-                  </span>
-                </td>
-                <td className="text-center px-2 py-1.5">
-                  <span
-                    className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium ${
-                      partyBg[w.winner2024] ?? "text-zinc-400"
-                    }`}
-                  >
-                    {w.winner2024}
-                  </span>
-                </td>
-                <td className="text-center px-2 py-1.5">
-                  <span
-                    className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium ${
-                      partyBg[w.predictedWinner] ?? "text-zinc-400"
-                    }`}
-                  >
-                    {w.predictedWinner}
-                  </span>
-                </td>
-                <td className="text-right px-2 py-1.5 text-zinc-400 tabular-nums">{w.conVote}%</td>
-                <td className="text-right px-2 py-1.5 text-zinc-400 tabular-nums">{w.refVote}%</td>
-                <td className="text-right px-2 py-1.5 text-zinc-400 tabular-nums">{w.labVote}%</td>
-                <td className="text-right px-2 py-1.5 text-zinc-400 tabular-nums">
-                  {w.electorate ? w.electorate.toLocaleString() : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          rows={wards}
+          columns={columns}
+          getRowId={(w) => w.name}
+          density="tight"
+          initialSort={{ key: "name", dir: "asc" }}
+          onRowClick={(w) => setSelected(selected === w.name ? null : w.name)}
+          rowClassName={(w) =>
+            selected === w.name ? "bg-emerald-500/10" : "hover:bg-zinc-800/40"
+          }
+          headerRowClassName="bg-zinc-900/60 uppercase tracking-wider"
+          className="text-[0.556rem]"
+        />
       </div>
 
       {/* ── DETAIL CARD ────────────────────────────────────── */}
@@ -310,11 +245,11 @@ export default function WardDataHub() {
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-sm font-semibold text-zinc-100">{detail.name}</h3>
-              <div className="flex items-center gap-3 mt-1 text-[10px] text-zinc-500">
+              <div className="flex items-center gap-3 mt-1 text-[0.556rem] text-zinc-500">
                 <span>Pop {detail.population.toLocaleString()}</span>
                 <span>Electorate {detail.electorate.toLocaleString()}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                  className={`px-1.5 py-0.5 rounded text-[0.5rem] font-medium ${
                     depBg[detail.deprivation] ?? ""
                   }`}
                 >
@@ -333,8 +268,8 @@ export default function WardDataHub() {
           {/* swing indicator */}
           {detail.swing && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <span className="text-amber-400 text-[11px] font-medium">Swing ward</span>
-              <span className="text-[10px] text-zinc-400">
+              <span className="text-amber-400 text-[0.611rem] font-medium">Swing ward</span>
+              <span className="text-[0.556rem] text-zinc-400">
                 {detail.winner2024} &rarr; {detail.predictedWinner}
               </span>
             </div>
@@ -343,7 +278,7 @@ export default function WardDataHub() {
           {/* electoral */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-zinc-800/50 p-3">
-              <div className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">2024 Winner</div>
+              <div className="text-[0.5rem] text-zinc-500 uppercase tracking-wider mb-1">2024 Winner</div>
               <span
                 className={`text-sm font-bold ${
                   partyBg[detail.winner2024]?.split(" ")[1] ?? "text-zinc-300"
@@ -353,7 +288,7 @@ export default function WardDataHub() {
               </span>
             </div>
             <div className="rounded-lg bg-zinc-800/50 p-3">
-              <div className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">Predicted</div>
+              <div className="text-[0.5rem] text-zinc-500 uppercase tracking-wider mb-1">Predicted</div>
               <span
                 className={`text-sm font-bold ${
                   partyBg[detail.predictedWinner]?.split(" ")[1] ?? "text-zinc-300"
@@ -366,7 +301,7 @@ export default function WardDataHub() {
 
           {/* vote bars */}
           <div className="space-y-1.5">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Vote Share Estimates</div>
+            <SectionLabel>Vote Share Estimates</SectionLabel>
             <VoteBar label="CON" pct={detail.conVote} color={partyColor.CON} />
             <VoteBar label="REF" pct={detail.refVote} color={partyColor.Reform} />
             <VoteBar label="LAB" pct={detail.labVote} color={partyColor.LAB} />
@@ -377,10 +312,10 @@ export default function WardDataHub() {
           {/* demographics (if available) */}
           {detailDemo ? (
             <div className="space-y-3">
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+              <SectionLabel>
                 Census Demographics
                 <span className="ml-1 text-zinc-600">(+/- vs constituency avg)</span>
-              </div>
+              </SectionLabel>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <DemoSection label="Age" catKey="age" data={detailDemo.age} avg={demographics.age} />
                 <DemoSection
@@ -404,7 +339,7 @@ export default function WardDataHub() {
               </div>
             </div>
           ) : (
-            <div className="text-[10px] text-zinc-600 italic">
+            <div className="text-[0.556rem] text-zinc-600 italic">
               Ward-level census demographics not available for this ward.
             </div>
           )}
@@ -412,10 +347,22 @@ export default function WardDataHub() {
       )}
 
       {!selected && (
-        <div className="text-[10px] text-zinc-600 text-center">
+        <div className="text-[0.556rem] text-zinc-600 text-center">
           Click a row to view detailed ward data
         </div>
       )}
     </div>
+  );
+}
+
+function PartyChip({ party }: { party: string }) {
+  return (
+    <span
+      className={`inline-block px-1.5 py-0.5 rounded text-[0.5rem] font-medium ${
+        partyBg[party] ?? "text-zinc-400"
+      }`}
+    >
+      {party}
+    </span>
   );
 }
