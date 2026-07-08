@@ -147,7 +147,6 @@ async function fetchFromCSV(districtCode: string): Promise<HealthIndicator[]> {
 async function generateFreshData(
   districtCode: string,
   districtName: string,
-  constituencySlug: string
 ): Promise<HealthData> {
   try {
     const indicators = await fetchFromCSV(districtCode);
@@ -234,7 +233,7 @@ export async function GET(request: Request) {
     if (cacheAge > TTL_MS) {
       (async () => {
         try {
-          const fresh = await generateFreshData(districtCode, districtName, constituencySlug);
+          const fresh = await generateFreshData(districtCode, districtName);
           await cacheDocRef.set({ data: fresh, updated_at: new Date().toISOString() });
         } catch (err) {
           console.warn("Health background refresh failed:", err);
@@ -245,7 +244,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const fresh = await generateFreshData(districtCode, districtName, constituencySlug);
+    const fresh = await generateFreshData(districtCode, districtName);
 
     const cachedAt = Date.now();
     try {
