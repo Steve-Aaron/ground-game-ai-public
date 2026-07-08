@@ -185,7 +185,7 @@ export default function ElectoralIntel() {
   return (
     <div>
       {/* View tabs */}
-      <div className="flex border-b border-zinc-800">
+      <div className="flex border-b border-border">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -227,7 +227,7 @@ export default function ElectoralIntel() {
                         </div>
                         <span className="text-[0.667rem] font-medium text-zinc-200">{r.percentage}%</span>
                       </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${r.percentage}%`, backgroundColor: r.color }} />
                       </div>
                       <div className="text-[0.556rem] text-zinc-600 mt-0.5">
@@ -248,8 +248,8 @@ export default function ElectoralIntel() {
       {/* MRP Prediction */}
       {view === "prediction" && (
         <div className="p-4 space-y-3">
-          <div className="bg-zinc-800/30 rounded-lg p-3 text-center">
-            <div className="text-[0.611rem] text-zinc-500 mb-1">Constituency Prediction</div>
+          <div className="bg-muted/30 rounded-lg p-3 text-center">
+            <div className="text-[11px] text-zinc-500 mb-1">Constituency Prediction</div>
             <div className="text-base font-bold text-cyan-400">{ecPrediction.prediction}</div>
           </div>
 
@@ -276,8 +276,8 @@ export default function ElectoralIntel() {
               .sort((a, b) => b[1] - a[1])
               .map(([party, share]) => (
                 <div key={party} className="flex items-center gap-2">
-                  <span className="text-[0.611rem] text-zinc-400 w-14">{party}</span>
-                  <div className="flex-1 bg-zinc-800 rounded-full h-3 overflow-hidden">
+                  <span className="text-[11px] text-zinc-400 w-14">{party}</span>
+                  <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${share * 2}%`, backgroundColor: partyColor(party), opacity: 0.8 }} />
                   </div>
                   <span className="text-[0.611rem] text-zinc-300 font-medium w-10 text-right">{share}%</span>
@@ -300,19 +300,19 @@ export default function ElectoralIntel() {
             {Object.entries(wardCounts)
               .sort((a, b) => b[1] - a[1])
               .map(([party, count]) => (
-                <div key={party} className="flex-1 bg-zinc-800/30 rounded-lg p-2 text-center">
+                <div key={party} className="flex-1 bg-muted/30 rounded-lg p-2 text-center">
                   <div className="text-lg font-bold" style={{ color: partyColor(party) }}>{count}</div>
-                  <div className="text-[0.556rem] text-zinc-500">{party}</div>
+                  <div className="text-[10px] text-zinc-500">{party}</div>
                 </div>
               ))}
           </div>
           <div className="text-[0.556rem] text-zinc-600 text-center">{swings.length} wards predicted to change hands</div>
 
           {/* Ward table */}
-          <div className="overflow-auto max-h-[13.889rem]">
-            <table className="w-full text-[0.611rem]">
-              <thead className="sticky top-0 bg-zinc-900">
-                <tr className="text-zinc-500 border-b border-zinc-800">
+          <div className="overflow-auto max-h-[250px]">
+            <table className="w-full text-[11px]">
+              <thead className="sticky top-0 bg-muted">
+                <tr className="text-zinc-500 border-b border-border">
                   <th className="text-left py-1 font-medium">Ward</th>
                   <th className="text-center py-1 font-medium">2024</th>
                   <th className="text-center py-1 font-medium">Pred</th>
@@ -323,7 +323,7 @@ export default function ElectoralIntel() {
                 {wards.map(([name, data]) => {
                   const changed = data.winner2024 !== data.predictedWinner;
                   return (
-                    <tr key={name} className={`border-b border-zinc-800/30 ${changed ? "bg-red-500/5" : ""}`}>
+                    <tr key={name} className={`border-b border-border/30 ${changed ? "bg-red-500/5" : ""}`}>
                       <td className="py-1 text-zinc-300">{name}</td>
                       <td className="text-center">
                         <span style={{ color: partyColor(data.winner2024) }}>{data.winner2024}</span>

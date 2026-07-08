@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
+import type { DocumentReference } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
 import { getFullData } from "@/data";
 import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // UK Police API — free, no auth required
 // Docs: https://data.police.uk/docs/
@@ -323,11 +324,14 @@ async function fetchAndUpdateCache(
     const fresh = await generateFreshData(constituencySlug);
     if (!fresh) return;
 
-    const existing = await getDoc(cacheDocRef);
-    const existingData = existing.exists() ? existing.data().data : null;
-    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) return;
+    const existing = await cacheDocRef.get();
+    const existingData = existing.data()?.data ?? null;
 
-    await setDoc(cacheDocRef, {
+    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) {
+      return;
+    }
+
+    await cacheDocRef.set({
       data: fresh,
       updated_at: new Date().toISOString(),
     });
@@ -342,6 +346,7 @@ export async function GET(request: Request) {
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
+  const force = searchParams.get("force") === "1";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {
@@ -366,24 +371,27 @@ export async function GET(request: Request) {
   // "walk back to find data" (which gave Jan–Mar when today was June) to a
   // today-relative window (most recent 3 months ending at today's month).
   // Old rows are ignored, not migrated.
-  const cacheDocRef = doc(db, "crime_cache_v3", constituencySlug);
+  const cacheDocRef = adminDb().collection("crime_cache_v3").doc(constituencySlug);
 
   // Cache read is best-effort. If Firestore rules deny or it's unreachable,
   // we skip the cache rather than failing the route.
   let cached: { data: CrimeData; updated_at: string } | null = null;
   try {
-    const snap = await getDoc(cacheDocRef);
-    if (snap.exists()) cached = snap.data() as { data: CrimeData; updated_at: string };
+    const snap = await cacheDocRef.get();
+    if (snap.exists) {
+      cached = snap.data() as { data: CrimeData; updated_at: string };
+    }
   } catch (err) {
     console.warn("Crime cache read failed (continuing without cache):", err);
   }
 
-  if (cached) {
-    const ageMs = Date.now() - new Date(cached.updated_at).getTime();
-    if (ageMs > TTL_MS) {
-      fetchAndUpdateCache(constituencySlug, cacheDocRef);
+  if (cached && !force) {
+    const cacheAge = Date.now() - new Date(cached.updated_at).getTime();
+    if (cacheAge > TTL_MS) {
+      fetchAndUpdateCache(constituencySlug, cacheDocRef)
+        .catch(err => console.warn("Crime background refresh failed:", err));
     }
-    return NextResponse.json({ ...cached.data, source: "cache" });
+    return NextResponse.json({ ...cached.data, source: "cache", _cachedAt: new Date(cached.updated_at).getTime() });
   }
 
   const fresh = await generateFreshData(constituencySlug);
@@ -394,15 +402,16 @@ export async function GET(request: Request) {
     );
   }
 
-  // Cache write is best-effort — return the fresh data regardless.
+  // Cache write is also best-effort — return the fresh data regardless.
+  const cachedAt = Date.now();
   try {
-    await setDoc(cacheDocRef, {
+    await cacheDocRef.set({
       data: fresh,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(cachedAt).toISOString(),
     });
   } catch (err) {
     console.warn("Crime cache write failed (returning fresh anyway):", err);
   }
 
-  return NextResponse.json(fresh);
+  return NextResponse.json({ ...fresh, _cachedAt: cachedAt });
 }

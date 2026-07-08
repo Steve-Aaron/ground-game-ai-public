@@ -53,7 +53,7 @@ export default function HousePricesPanel() {
 
   if (!data || data.error) {
     return (
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4">
+      <div className="bg-background border border-border rounded-2xl p-4">
         <p className="text-zinc-500 text-xs">House price data unavailable</p>
       </div>
     );
@@ -94,7 +94,7 @@ export default function HousePricesPanel() {
   const priceMax = allPrices.length > 0 ? Math.max(...allPrices) : 0;
 
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-4">
+    <div className="bg-background border border-border rounded-2xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-200">House Prices</h3>
@@ -110,7 +110,7 @@ export default function HousePricesPanel() {
 
       {/* Headline — average price */}
       {latest && (
-        <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
+        <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
           <div>
             <SectionLabel>Average Price</SectionLabel>
             <div className="text-xl font-bold text-zinc-100 mt-0.5">
@@ -148,7 +148,7 @@ export default function HousePricesPanel() {
       {typeEntries.length > 0 && (
         <div>
           <SectionLabel className="mb-2">By Property Type</SectionLabel>
-          <div className="bg-zinc-900 rounded-xl p-3 space-y-2">
+          <div className="bg-muted rounded-xl p-3 space-y-2">
             {typeEntries.map(([label, stats]) => (
               <div key={label} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
@@ -170,7 +170,7 @@ export default function HousePricesPanel() {
       )}
 
       {allPrices.length > 0 && (
-        <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
+        <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
           <div>
             <SectionLabel>Price Range</SectionLabel>
             <div className="text-xs text-zinc-200 mt-0.5">
@@ -196,7 +196,7 @@ export default function HousePricesPanel() {
               return (
                 <div
                   key={i}
-                  className="bg-zinc-900 rounded-xl px-3 py-2 flex items-center justify-between gap-2"
+                  className="bg-muted rounded-xl px-3 py-2 flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-zinc-200 truncate">

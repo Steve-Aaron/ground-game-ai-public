@@ -53,8 +53,8 @@ export default function OppositionTracker() {
   return (
     <div data-component="oppositionTrackerContainer">
       {data.source === "candidates_only" && (
-        <div className="px-4 py-2 bg-zinc-800/40 border-b border-zinc-700/30 flex items-center justify-between">
-          <span className="text-[0.611rem] text-zinc-500">
+        <div className="px-4 py-2 bg-muted/40 border-b border-border/30 flex items-center justify-between">
+          <span className="text-[11px] text-zinc-500">
             Showing 2024 election candidates — social activity monitoring not yet configured
           </span>
         </div>
@@ -78,7 +78,8 @@ export default function OppositionTracker() {
         ))}
       </div>
 
-      <div className="px-4 py-2 border-t border-zinc-800/50 flex items-center justify-between text-[0.611rem] text-zinc-600">
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-border/50 flex items-center justify-between text-[11px] text-zinc-600">
         <span>Updated {formatTimeAgo(data.lastUpdated)}</span>
         <button
           type="button"

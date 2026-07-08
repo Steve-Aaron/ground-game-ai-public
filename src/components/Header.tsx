@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useMe } from "@/hooks/useMe";
 import type { ConstituencyOption, ConstituencySlug } from "@/hooks/useConstituency";
 import ConstituencySearch from "./ConstituencySearch";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export type TabId = "map" | "political" | "polling" | "demographics" | "local";
 
@@ -56,18 +57,18 @@ export default function Header({
 
   return (
     <>
-      <header data-component="header" className="bg-[#141414] border-b border-[#2a2a2a] sticky top-0 z-50">
+      <header data-component="header" className="bg-card border-b border-border sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 py-2">
           {/* Left: Logo */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-sm font-bold text-zinc-100 tracking-tight uppercase">
+              <span className="text-sm font-bold text-foreground tracking-tight uppercase">
                 Ground Game <span className="text-emerald-500">Intel</span>
               </span>
             </div>
-            <div className="hidden sm:block h-4 w-px bg-[#2a2a2a]" />
-            <span className="hidden sm:block text-[0.556rem] text-zinc-600 uppercase tracking-widest">
+            <div className="hidden sm:block h-4 w-px bg-border" />
+            <span className="hidden sm:block text-[10px] text-zinc-600 uppercase tracking-widest">
               Constituency Monitor
             </span>
           </div>
@@ -78,7 +79,7 @@ export default function Header({
               <Link
                 href="/admin"
                 data-component="AdminLink"
-                className="hidden md:flex items-center gap-1 text-[0.556rem] uppercase tracking-wider text-zinc-500 hover:text-emerald-400"
+                className="hidden md:flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 hover:text-emerald-400"
               >
                 <Shield className="h-3 w-3" />
                 Admin
@@ -87,7 +88,7 @@ export default function Header({
             {me ? (
               <span
                 data-component="SignedInEmail"
-                className="hidden lg:block text-[0.556rem] text-zinc-600 uppercase tracking-wider truncate max-w-[10rem]"
+                className="hidden lg:block text-[10px] text-zinc-600 uppercase tracking-wider truncate max-w-[10rem]"
                 title={me.email}
               >
                 {me.email}
@@ -101,12 +102,13 @@ export default function Header({
             >
               <LogOut className="h-4 w-4" />
             </button>
-            <div className="hidden md:flex items-center gap-1.5 px-2 py-1 border border-[#2a2a2a]">
+            <div className="hidden md:flex items-center gap-1.5 px-2 py-1 border border-border">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[0.556rem] text-zinc-500 uppercase tracking-wider">Live</span>
             </div>
+            <ThemeToggle />
             <button
-              className="text-zinc-400 hover:text-white"
+              className="text-zinc-400 hover:text-foreground transition-colors"
               onClick={() => setSidebarOpen((v) => !v)}
               aria-label={sidebarOpen ? "Close constituency menu" : "Open constituency menu"}
               aria-expanded={sidebarOpen}
@@ -117,7 +119,7 @@ export default function Header({
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-t border-[#2a2a2a] overflow-x-auto">
+        <div className="flex border-t border-border overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -146,20 +148,20 @@ export default function Header({
       {/* Sidebar */}
       <aside
         data-component="constituencySidebar"
-        className={`fixed inset-y-0 right-0 w-72 bg-[#141414] border-l border-[#2a2a2a] z-[70] flex flex-col transform transition-transform duration-200 ease-out ${
+        className={`fixed inset-y-0 right-0 w-72 bg-card border-l border-border z-[70] flex flex-col transform transition-transform duration-200 ease-out ${
           sidebarOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!sidebarOpen}
         aria-label="Constituency selector"
       >
-        <div className="flex items-center justify-between px-[0.889rem] py-[0.667rem] border-b border-[#2a2a2a]">
-          <span className="text-[0.611rem] uppercase tracking-wider text-zinc-500">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="text-[11px] uppercase tracking-wider text-zinc-500">
             Constituencies ({options.length})
           </span>
           <button
             onClick={() => setSidebarOpen(false)}
             aria-label="Close menu"
-            className="text-zinc-400 hover:text-white"
+            className="text-zinc-400 hover:text-foreground"
           >
             <X className="h-[0.889rem] w-[0.889rem]" />
           </button>
@@ -167,7 +169,7 @@ export default function Header({
 
         {/* Search — typeahead over the user's allowed list */}
         {options.length > 0 ? (
-          <div className="px-[0.889rem] py-[0.667rem] border-b border-[#2a2a2a]">
+          <div className="px-4 py-3 border-b border-border">
             <ConstituencySearch
               options={options}
               selectedSlug={constituencySlug}
@@ -179,9 +181,9 @@ export default function Header({
           </div>
         ) : null}
 
-        <nav className="flex-1 overflow-y-auto py-[0.444rem]">
+        <nav className="flex-1 overflow-y-auto py-2">
           {options.length === 0 ? (
-            <div className="px-[0.889rem] py-[1.333rem] text-[0.667rem] text-zinc-600">
+            <div className="px-4 py-6 text-xs text-zinc-600">
               No constituencies assigned to your account. Contact your administrator.
             </div>
           ) : (
@@ -194,10 +196,10 @@ export default function Header({
                     onConstituencyChange(c.slug);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full text-left px-[0.889rem] py-[0.556rem] text-[0.667rem] transition-colors border-l-2 ${
+                  className={`w-full text-left px-4 py-2.5 text-xs transition-colors border-l-2 ${
                     isActive
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500 font-medium"
-                      : "text-zinc-400 border-transparent hover:bg-zinc-800/50 hover:text-zinc-200"
+                      : "text-zinc-400 border-transparent hover:bg-muted/50 hover:text-zinc-200"
                   }`}
                 >
                   {c.name}
@@ -208,11 +210,11 @@ export default function Header({
         </nav>
 
         {/* Mobile-only admin + signout (md+ shows them in the topbar) */}
-        <div className="border-t border-[#2a2a2a] p-4 md:hidden flex items-center justify-between">
+        <div className="border-t border-border p-4 md:hidden flex items-center justify-between">
           {me?.role === "admin" ? (
             <Link
               href="/admin"
-              className="flex items-center gap-1 text-[0.556rem] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
               onClick={() => setSidebarOpen(false)}
             >
               <Shield className="h-3 w-3" />
@@ -223,7 +225,7 @@ export default function Header({
           )}
           <button
             onClick={signOut}
-            className="flex items-center gap-1 text-[0.556rem] uppercase tracking-wider text-zinc-400 hover:text-red-400"
+            className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-red-400"
           >
             <LogOut className="h-3 w-3" />
             Sign out

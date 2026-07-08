@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import type { DocumentReference } from "firebase-admin/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import { getFullData } from "@/data";
 import { requireConstituencyAccess } from "@/lib/guards";
 
@@ -382,10 +382,13 @@ async function generateWithRetries(
 
 async function tryWriteCache(cacheDocRef: DocumentReference, fresh: BriefData) {
   try {
-    const existing = await getDoc(cacheDocRef);
-    const existingData = existing.exists() ? existing.data().data : null;
+    const existing = await cacheDocRef.get();
+    const existingData = existing.data()?.data ?? null;
     if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) return;
-    await setDoc(cacheDocRef, { data: fresh, updated_at: new Date().toISOString() });
+    await cacheDocRef.set({
+      data: fresh,
+      updated_at: new Date().toISOString(),
+    });
   } catch (err) {
     console.warn("AI brief cache write failed (returning fresh anyway):", err);
   }
@@ -404,9 +407,10 @@ export async function GET(request: Request) {
   // Plain JSON callers (server-side aggregations etc) still get the legacy
   // shape with no progress events.
   const wantsStream = searchParams.get("stream") === "1";
-  // `?refresh=1` forces a fresh Gemini call, ignoring any cached brief.
-  // Surfaced via the refresh button in AIBrief.tsx.
-  const forceRefresh = searchParams.get("refresh") === "1";
+  // `?refresh=1` (or upstream's `?force=1`) forces a fresh Gemini call,
+  // ignoring any cached brief. Surfaced via the refresh button in AIBrief.tsx.
+  const forceRefresh =
+    searchParams.get("refresh") === "1" || searchParams.get("force") === "1";
   // Forwarded to sub-fetches so the auth guard on /api/crime etc lets them
   // through. Server-to-server fetch() does NOT auto-attach incoming cookies.
   const cookieHeader = request.headers.get("cookie") ?? "";
@@ -425,14 +429,14 @@ export async function GET(request: Request) {
   const MP_NAME = constituencyData.mp.name;
   const MP_PARTY = constituencyData.constituency.party;
 
-  const cacheDocRef = doc(db, "ai_brief_cache", constituencySlug);
+  const cacheDocRef = adminDb().collection("ai_brief_cache").doc(constituencySlug);
 
   // Cache read is best-effort.
   let cached: { data: BriefData; updated_at: string } | null = null;
   if (!forceRefresh) {
     try {
-      const snap = await getDoc(cacheDocRef);
-      if (snap.exists()) {
+      const snap = await cacheDocRef.get();
+      if (snap.exists) {
         const candidate = snap.data() as { data: BriefData; updated_at: string };
         const ageMs = Date.now() - new Date(candidate.updated_at).getTime();
         if (ageMs <= BRIEF_CACHE_TTL_MS) {
@@ -458,7 +462,11 @@ export async function GET(request: Request) {
         headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
       });
     }
-    return NextResponse.json({ ...cached.data, source: "cache" });
+    return NextResponse.json({
+      ...cached.data,
+      source: "cache",
+      _cachedAt: new Date(cached.updated_at).getTime(),
+    });
   }
 
   // No key configured: serve the placeholder brief, no retries possible.
@@ -552,6 +560,7 @@ export async function GET(request: Request) {
     );
   }
 
+  const cachedAt = Date.now();
   await tryWriteCache(cacheDocRef, fresh);
-  return NextResponse.json(fresh, { status: 200 });
+  return NextResponse.json({ ...fresh, _cachedAt: cachedAt }, { status: 200 });
 }

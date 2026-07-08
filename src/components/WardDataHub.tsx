@@ -11,6 +11,7 @@ import {
 import { partyColor as partyColorOf } from "@/lib/palette";
 import SectionLabel from "./ui/SectionLabel";
 import DataTable, { type DataTableColumn } from "./ui/DataTable";
+import { useConstituency } from "@/hooks/useConstituency";
 
 /* ── helpers ────────────────────────────────────────────────── */
 
@@ -82,7 +83,7 @@ function VoteBar({ label, pct, color }: { label: string; pct: number; color: str
   return (
     <div className="flex items-center gap-2 text-[0.611rem]">
       <span className="w-10 text-zinc-500 text-right shrink-0">{label}</span>
-      <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%`, backgroundColor: color }}
@@ -164,8 +165,19 @@ function DemoSection({
    ══════════════════════════════════════════════════════════════ */
 
 export default function WardDataHub() {
+  const { slug, name: constituencyName } = useConstituency();
   const wards = useMemo(buildWards, []);
   const [selected, setSelected] = useState<string | null>(null);
+
+  if (slug !== "braintree") {
+    return (
+      <div className="p-4 text-center">
+        <div className="text-xs text-zinc-500">
+          Ward-level data not yet available for {constituencyName}.
+        </div>
+      </div>
+    );
+  }
 
   const detail = selected ? wards.find((w) => w.name === selected) : null;
   const detailDemo: DemographicSet | null =
@@ -222,7 +234,7 @@ export default function WardDataHub() {
   return (
     <div className="p-3 space-y-3">
       {/* ── SUMMARY TABLE ──────────────────────────────────── */}
-      <div className="overflow-x-auto rounded-xl border border-zinc-800">
+      <div className="overflow-x-auto rounded-xl border border-border">
         <DataTable
           rows={wards}
           columns={columns}
@@ -231,16 +243,16 @@ export default function WardDataHub() {
           initialSort={{ key: "name", dir: "asc" }}
           onRowClick={(w) => setSelected(selected === w.name ? null : w.name)}
           rowClassName={(w) =>
-            selected === w.name ? "bg-emerald-500/10" : "hover:bg-zinc-800/40"
+            selected === w.name ? "bg-emerald-500/10" : "hover:bg-muted/40"
           }
-          headerRowClassName="bg-zinc-900/60 uppercase tracking-wider"
-          className="text-[0.556rem]"
+          headerRowClassName="bg-muted/60 uppercase tracking-wider"
+          className="text-[10px]"
         />
       </div>
 
       {/* ── DETAIL CARD ────────────────────────────────────── */}
       {detail && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 space-y-4">
+        <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-4">
           {/* header */}
           <div className="flex items-start justify-between">
             <div>
@@ -277,8 +289,8 @@ export default function WardDataHub() {
 
           {/* electoral */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-zinc-800/50 p-3">
-              <div className="text-[0.5rem] text-zinc-500 uppercase tracking-wider mb-1">2024 Winner</div>
+            <div className="rounded-lg bg-muted/50 p-3">
+              <div className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">2024 Winner</div>
               <span
                 className={`text-sm font-bold ${
                   partyBg[detail.winner2024]?.split(" ")[1] ?? "text-zinc-300"
@@ -287,8 +299,8 @@ export default function WardDataHub() {
                 {detail.winner2024}
               </span>
             </div>
-            <div className="rounded-lg bg-zinc-800/50 p-3">
-              <div className="text-[0.5rem] text-zinc-500 uppercase tracking-wider mb-1">Predicted</div>
+            <div className="rounded-lg bg-muted/50 p-3">
+              <div className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">Predicted</div>
               <span
                 className={`text-sm font-bold ${
                   partyBg[detail.predictedWinner]?.split(" ")[1] ?? "text-zinc-300"

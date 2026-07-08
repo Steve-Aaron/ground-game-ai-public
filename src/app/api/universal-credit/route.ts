@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import type { DocumentReference } from "firebase-admin/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import { getFullData } from "@/data";
 import { requireConstituencyAccess } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // Nomis / ONS Claimant Count — free, no auth required
 // Dataset NM_162_1: Claimant count by constituency (wpca24 geography type).
@@ -188,14 +189,14 @@ async function fetchAndUpdateCache(cacheDocRef: DocumentReference, wpca24Code: s
     const fresh = await generateFreshData(wpca24Code);
     if (!fresh) return;
 
-    const existing = await getDoc(cacheDocRef);
-    const existingData = existing.exists() ? existing.data().data : null;
+    const existing = await cacheDocRef.get();
+    const existingData = existing.data()?.data ?? null;
 
     if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) {
       return;
     }
 
-    await setDoc(cacheDocRef, {
+    await cacheDocRef.set({
       data: fresh,
       updated_at: new Date().toISOString(),
     });
@@ -210,6 +211,7 @@ export async function GET(request: Request) {
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
+  const force = searchParams.get("force") === "1";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {
@@ -240,25 +242,26 @@ export async function GET(request: Request) {
     );
   }
 
-  const cacheDocRef = doc(db, "universal_credit_cache", constituencySlug);
+  const cacheDocRef = adminDb().collection("universal_credit_cache").doc(constituencySlug);
 
   type CacheDoc = { data: Record<string, unknown>; updated_at: string };
   let cached: CacheDoc | null = null;
   try {
-    const snap = await getDoc(cacheDocRef);
-    if (snap.exists()) {
+    const snap = await cacheDocRef.get();
+    if (snap.exists) {
       cached = snap.data() as CacheDoc;
     }
   } catch (err) {
     console.warn("Universal Credit cache read failed (continuing without cache):", err);
   }
 
-  if (cached) {
-    const ageMs = Date.now() - new Date(cached.updated_at).getTime();
-    if (ageMs > TTL_MS) {
-      fetchAndUpdateCache(cacheDocRef, CONSTITUENCY_CODE);
+  if (cached && !force) {
+    const cacheAge = Date.now() - new Date(cached.updated_at).getTime();
+    if (cacheAge > TTL_MS) {
+      fetchAndUpdateCache(cacheDocRef, CONSTITUENCY_CODE)
+        .catch(err => console.warn("Universal Credit background refresh failed:", err));
     }
-    return NextResponse.json({ ...cached.data, source: "cache" });
+    return NextResponse.json({ ...cached.data, source: "cache", _cachedAt: new Date(cached.updated_at).getTime() });
   }
 
   const fresh = await generateFreshData(CONSTITUENCY_CODE);
@@ -269,14 +272,15 @@ export async function GET(request: Request) {
     );
   }
 
+  const cachedAt = Date.now();
   try {
-    await setDoc(cacheDocRef, {
+    await cacheDocRef.set({
       data: fresh,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(cachedAt).toISOString(),
     });
   } catch (err) {
     console.warn("Universal Credit cache write failed (returning fresh anyway):", err);
   }
 
-  return NextResponse.json(fresh);
+  return NextResponse.json({ ...fresh, _cachedAt: cachedAt });
 }

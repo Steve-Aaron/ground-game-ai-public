@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CONSTITUENCIES } from "@/data/constituencies";
 import { useMe } from "./useMe";
 
-// Slug type is now a plain string — the set of valid slugs is the full 650
+// Slug type is a plain string — the set of valid slugs is the full 650
 // constituencies, filtered at runtime by the signed-in user's allowed list.
 export type ConstituencySlug = string;
 
@@ -13,6 +13,11 @@ export interface ConstituencyOption {
   slug: string;
   name: string;
 }
+
+// Full selectable list (upstream API) — auth-agnostic. Prefer the `options`
+// returned by useConstituency() in signed-in contexts.
+export const SELECTABLE_CONSTITUENCIES: ConstituencyOption[] =
+  CONSTITUENCIES.map((c) => ({ slug: c.slug, name: c.name }));
 
 // Index `name` by `slug` once at module load — used to attach friendly names
 // to the user's allowed slugs.

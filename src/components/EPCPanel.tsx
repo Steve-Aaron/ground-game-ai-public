@@ -105,12 +105,12 @@ export default function EPCPanel() {
                 color={BAND_COLORS[b.band] ?? "bg-zinc-500"}
                 height="h-4"
                 valueText={
-                  <span className="text-[0.556rem] text-zinc-400">
+                  <span className="text-[10px] text-zinc-400">
                     {b.percentage.toFixed(1)}%
                   </span>
                 }
               />
-              <span className="text-[0.556rem] text-zinc-600 w-14 text-right">
+              <span className="text-[10px] text-zinc-600 w-14 text-right">
                 {b.count.toLocaleString()}
               </span>
             </div>
@@ -119,7 +119,7 @@ export default function EPCPanel() {
       </div>
 
       {/* Stacked bar summary */}
-      <div className="bg-zinc-900 rounded-xl p-3">
+      <div className="bg-muted rounded-xl p-3">
         <div className="flex h-4 rounded-full overflow-hidden">
           {bands.map((b) => (
             <div

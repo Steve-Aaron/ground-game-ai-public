@@ -56,7 +56,8 @@ export default function MentionsFeed() {
         ))}
       </div>
 
-      <div className="px-4 py-2 border-t border-zinc-800/50 flex items-center justify-between text-[0.611rem] text-zinc-600">
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-border/50 flex items-center justify-between text-[11px] text-zinc-600">
         <span>{data.total} mentions</span>
         <button
           type="button"

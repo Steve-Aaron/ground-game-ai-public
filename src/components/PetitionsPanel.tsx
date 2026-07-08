@@ -125,7 +125,7 @@ export default function PetitionsPanel() {
                 href={p.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block bg-zinc-900 rounded-xl px-3 py-2 hover:bg-zinc-800 transition-colors"
+                className="block bg-muted rounded-xl px-3 py-2 hover:bg-muted transition-colors"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">

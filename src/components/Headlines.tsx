@@ -79,7 +79,7 @@ export default function Headlines() {
         </div>
       )}
 
-      <div className="px-3 py-2 text-[0.556rem] text-zinc-700 text-center border-t border-zinc-800/50">
+      <div className="px-3 py-2 text-[10px] text-zinc-700 text-center border-t border-border/50">
         BBC, Sky, Guardian, Telegraph, GB News, Politico &middot; Updates every 10 min
       </div>
     </div>

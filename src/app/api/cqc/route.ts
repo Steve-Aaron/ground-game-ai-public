@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, setDoc, type DocumentReference } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
 import { getFullData } from "@/data";
 import { requireConstituencyAccess } from "@/lib/guards";
 
@@ -11,15 +10,11 @@ export const maxDuration = 30;
 // Docs: https://api.cqc.org.uk/public/v1
 // partnerCode is an optional identifier for tracking (not per-constituency).
 
-const TTL_MS = 24 * 60 * 60 * 1000;
+const TTL_MS = 7 * 24 * 60 * 60 * 1000; // CQC inspection cycle is months–years — weekly refresh is enough
 
 const CQC_BASE = "https://api.cqc.org.uk/public/v1";
 const PARTNER_CODE = "GroundGame";
 
-// Braintree-only postcode fallback. The data layer doesn't yet have a
-// per-constituency `postcodes` field; same gap as /api/epc. When sourced,
-// the cast at the call site (`constituencyData.areas?.postcodes`) will pick
-// up the new field automatically.
 const BRAINTREE_POSTCODES = ["CM7", "CM77", "CO9"];
 
 const MAX_DETAIL_FETCHES = 15;
@@ -179,29 +174,6 @@ async function generateFreshData(
   }
 }
 
-async function fetchAndUpdateCache(
-  postcodes: string[],
-  constituencySlug: string,
-  cacheDocRef: DocumentReference
-) {
-  try {
-    const fresh = await generateFreshData(postcodes, constituencySlug);
-
-    const existing = await getDoc(cacheDocRef);
-    const existingData = existing.exists() ? existing.data().data : null;
-
-    if (existingData && JSON.stringify(existingData) === JSON.stringify(fresh)) {
-      return;
-    }
-
-    await setDoc(cacheDocRef, {
-      data: fresh,
-      updated_at: new Date().toISOString(),
-    });
-  } catch (err) {
-    console.error("Background CQC cache update failed:", err);
-  }
-}
 
 export async function GET(request: Request) {
   // __AUTH_GUARD__
@@ -209,6 +181,7 @@ export async function GET(request: Request) {
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const constituencySlug = searchParams.get("constituency") || "braintree";
+  const force = searchParams.get("force") === "1";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {
@@ -219,15 +192,7 @@ export async function GET(request: Request) {
   }
 
   // Determine postcodes: Braintree fallback, else try the (forward-compatible)
-  // data-layer field once it's populated. ConstituencyAreas doesn't yet declare
-  // a `postcodes` field — same cast pattern as /api/epc. Other constituencies
-  // get a clean 400 until postcode data is sourced.
-  const areasWithPostcodes = constituencyData.areas as
-    | { postcodes?: string[] }
-    | undefined;
-  const postcodes =
-    areasWithPostcodes?.postcodes ??
-    (constituencySlug === "braintree" ? BRAINTREE_POSTCODES : null);
+  const postcodes = constituencyData.areas?.postcodes ?? (constituencySlug === "braintree" ? BRAINTREE_POSTCODES : null);
 
   if (!postcodes) {
     return Response.json(
@@ -240,40 +205,48 @@ export async function GET(request: Request) {
     );
   }
 
-  const cacheDocRef = doc(db, "cqc_cache", constituencySlug);
+  const cacheDocRef = adminDb().collection("cqc_cache").doc(constituencySlug);
 
   type CacheDoc = { data: Record<string, unknown>; updated_at: string };
   let cached: CacheDoc | null = null;
   try {
-    const snap = await getDoc(cacheDocRef);
-    if (snap.exists()) {
+    const snap = await cacheDocRef.get();
+    if (snap.exists) {
       cached = snap.data() as CacheDoc;
     }
   } catch (err) {
     console.warn("CQC cache read failed (continuing without cache):", err);
   }
 
-  if (cached) {
-    const ageMs = Date.now() - new Date(cached.updated_at).getTime();
-    if (ageMs > TTL_MS) {
-      fetchAndUpdateCache(postcodes, constituencySlug, cacheDocRef);
+  if (cached && !force) {
+    const cacheAge = Date.now() - new Date(cached.updated_at).getTime();
+    if (cacheAge > TTL_MS) {
+      (async () => {
+        try {
+          const fresh = await generateFreshData(postcodes, constituencySlug);
+          await cacheDocRef.set({ data: fresh, updated_at: new Date().toISOString() });
+        } catch (err) {
+          console.warn("CQC background refresh failed:", err);
+        }
+      })();
     }
-    return NextResponse.json({ ...cached.data, source: "cache" });
+    return NextResponse.json({ ...cached.data, source: "cache", _cachedAt: new Date(cached.updated_at).getTime() });
   }
 
   try {
     const fresh = await generateFreshData(postcodes, constituencySlug);
 
+    const cachedAt = Date.now();
     try {
-      await setDoc(cacheDocRef, {
+      await cacheDocRef.set({
         data: fresh,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date(cachedAt).toISOString(),
       });
     } catch (err) {
       console.warn("CQC cache write failed (returning fresh anyway):", err);
     }
 
-    return NextResponse.json(fresh);
+    return NextResponse.json({ ...fresh, _cachedAt: cachedAt });
   } catch {
     return NextResponse.json(getFallbackData(constituencySlug));
   }

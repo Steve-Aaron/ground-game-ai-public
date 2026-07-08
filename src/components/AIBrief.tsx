@@ -212,7 +212,7 @@ export default function AIBrief() {
     // letting the middle take flex-1 + min-h-0 fixes that.
     <div data-component="AIBrief" className="flex flex-col h-full max-h-[40rem]">
       {/* Header bar with timestamp and refresh */}
-      <div className="flex-shrink-0 flex items-center justify-between px-[0.667rem] py-[0.333rem] border-b border-zinc-800/50 bg-zinc-900/30">
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-1.5 border-b border-border/50 bg-muted/30">
         {generated && (
           <span className="text-[0.556rem] text-zinc-600">
             Generated:{" "}
@@ -227,7 +227,7 @@ export default function AIBrief() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="p-[0.222rem] rounded hover:bg-zinc-800 transition-colors disabled:opacity-50"
+          className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50"
           title="Regenerate brief"
         >
           <RefreshCw
@@ -273,7 +273,12 @@ export default function AIBrief() {
               );
             }
             if (line.startsWith("---")) {
-              return <hr key={i} className="border-zinc-800 my-[0.444rem]" />;
+              return (
+                <hr
+                  key={i}
+                  className="border-border my-2"
+                />
+              );
             }
             if (line.startsWith("- ") || line.startsWith("* ")) {
               const content = line.replace(/^[-*] /, "").trim();
@@ -315,8 +320,8 @@ export default function AIBrief() {
         </div>
       </div>
 
-      <div className="flex-shrink-0 px-[0.667rem] py-[0.444rem] border-t border-zinc-800/50 text-center">
-        <span className="text-[0.556rem] text-zinc-600">
+      <div className="flex-shrink-0 px-3 py-2 border-t border-border/50 text-center">
+        <span className="text-[10px] text-zinc-600">
           Powered by Knox Digital AI
         </span>
       </div>
@@ -336,9 +341,6 @@ function formatInline(text: string): string {
 
   return safe
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-zinc-200">$1</strong>')
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(
-      /`([^`]+)`/g,
-      '<code class="text-emerald-400 bg-zinc-800/50 px-1 rounded text-[0.556rem]">$1</code>'
-    );
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code class="text-emerald-400 bg-muted/50 px-1 rounded text-[10px]">$1</code>');
 }

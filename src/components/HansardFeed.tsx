@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { ExternalLink, MessageSquare, HelpCircle, Vote, FileText } from "lucide-react";
+import { useConstituency } from "@/hooks/useConstituency";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "./ui/PanelSkeleton";
 import { formatGbDate } from "@/lib/format";
+import { getFullData } from "@/data";
 
 type Tab = "speeches" | "questions";
 
@@ -37,6 +39,9 @@ interface QuestionsResponse {
 }
 
 export default function HansardFeed() {
+  const { slug } = useConstituency();
+  const memberId = getFullData(slug)?.constituency.memberId ?? null;
+  const twfyUrl = memberId ? `https://www.theyworkforyou.com/mp/${memberId}` : null;
   const [tab, setTab] = useState<Tab>("speeches");
 
   const speechesQ = useConstituencyResource<SpeechesResponse>(
@@ -55,7 +60,7 @@ export default function HansardFeed() {
 
   return (
     <div data-component="hansardContainer">
-      <div data-component="hansardTabs" className="flex border-b border-zinc-800">
+      <div data-component="hansardTabs" className="flex border-b border-border">
         <TabButton active={tab === "speeches"} onClick={() => setTab("speeches")} icon={MessageSquare}>
           Recent Activity
         </TabButton>
@@ -90,16 +95,18 @@ export default function HansardFeed() {
         </div>
       )}
 
-      <div className="px-3 py-2 border-t border-zinc-800/50 text-center">
-        <a
-          href="https://www.theyworkforyou.com/mp/11816/james_cleverly/braintree"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[0.556rem] text-zinc-600 hover:text-emerald-400 transition-colors"
-        >
-          View full record on TheyWorkForYou ↗
-        </a>
-      </div>
+      {twfyUrl && (
+        <div className="px-3 py-2 border-t border-border/50 text-center">
+          <a
+            href={twfyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-zinc-600 hover:text-emerald-400 transition-colors"
+          >
+            View full record on TheyWorkForYou ↗
+          </a>
+        </div>
+      )}
     </div>
   );
 }

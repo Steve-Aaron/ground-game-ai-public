@@ -27,11 +27,11 @@ export default function Panel({
     <div
       data-component={dataComponent}
       className={cn(
-        "bg-[#141414] border border-[#2a2a2a] overflow-hidden flex flex-col",
+        "bg-card border border-border overflow-hidden flex flex-col",
         className
       )}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#2a2a2a]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <div className="flex items-center gap-2">
           {icon && <span className="text-emerald-500 opacity-80">{icon}</span>}
           <h2 className="text-[0.611rem] font-medium uppercase tracking-wider text-zinc-400">{title}</h2>

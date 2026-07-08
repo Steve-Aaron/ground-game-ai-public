@@ -61,7 +61,7 @@ export default function UniversalCreditPanel() {
   return (
     <div className="space-y-4">
       {/* Headline figures */}
-      <div className="bg-zinc-900 rounded-xl p-3 flex items-center justify-between">
+      <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
         <div>
           <SectionLabel>Claimant Count</SectionLabel>
           <div className="text-xl font-bold text-zinc-100 mt-0.5">
@@ -89,7 +89,7 @@ export default function UniversalCreditPanel() {
       {trendValues.length > 1 && (
         <div>
           <SectionLabel className="mb-2">12-Month Trend</SectionLabel>
-          <div className="bg-zinc-900 rounded-xl p-3">
+          <div className="bg-muted rounded-xl p-3">
             <Sparkline
               id="uc-trend"
               data={trend.filter((t) => t.count > 0).map((t) => t.count)}
@@ -97,7 +97,7 @@ export default function UniversalCreditPanel() {
               height={40}
               showEndpoint={false}
             />
-            <div className="flex justify-between text-[0.5rem] text-zinc-600 mt-1">
+            <div className="flex justify-between text-[9px] text-zinc-600 mt-1">
               <span>{trend[0]?.date}</span>
               <span>{trend[trend.length - 1]?.date}</span>
             </div>
@@ -109,7 +109,7 @@ export default function UniversalCreditPanel() {
       {ageBreakdown.length > 0 && (
         <div>
           <SectionLabel className="mb-2">Age Breakdown</SectionLabel>
-          <div className="bg-zinc-900 rounded-xl p-3">
+          <div className="bg-muted rounded-xl p-3">
             <div className="flex h-4 rounded-full overflow-hidden">
               {ageBreakdown.map((seg, i) => (
                 <div

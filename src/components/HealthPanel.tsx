@@ -1,5 +1,6 @@
 "use client";
 
+import { useConstituency } from "@/hooks/useConstituency";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "./ui/PanelSkeleton";
 
@@ -28,11 +29,12 @@ const significanceConfig = {
   unknown: { color: "text-zinc-500", bg: "bg-zinc-500", badge: "bg-zinc-500/20 text-zinc-500", label: "N/A" },
 };
 
-function ProgressBar({ value, englandAvg, unit, significance }: {
+function ProgressBar({ value, englandAvg, unit, significance, constituencyName }: {
   value: number | null;
   englandAvg: number | null;
   unit: string;
   significance: HealthIndicator["significance"];
+  constituencyName: string;
 }) {
   if (value === null) return null;
 
@@ -64,7 +66,7 @@ function ProgressBar({ value, englandAvg, unit, significance }: {
   return (
     <div className="mt-1.5 space-y-1">
       {/* Bar */}
-      <div className="relative h-2 bg-zinc-800 rounded-full overflow-visible">
+      <div className="relative h-2 bg-muted rounded-full overflow-visible">
         <div
           className={`absolute top-0 left-0 h-full rounded-full ${config.bg} opacity-80`}
           style={{ width: `${localPct}%` }}
@@ -80,8 +82,8 @@ function ProgressBar({ value, englandAvg, unit, significance }: {
       </div>
       {/* Labels under bar */}
       {englandAvg !== null && (
-        <div className="flex justify-between text-[0.556rem] text-zinc-500">
-          <span>Braintree: {value}{unit === "%" ? "%" : ""}</span>
+        <div className="flex justify-between text-[10px] text-zinc-500">
+          <span>{constituencyName}: {value}{unit === "%" ? "%" : ""}</span>
           <span>England: {englandAvg}{unit === "%" ? "%" : ""}</span>
         </div>
       )}
@@ -90,6 +92,7 @@ function ProgressBar({ value, englandAvg, unit, significance }: {
 }
 
 export default function HealthPanel() {
+  const { name: constituencyName } = useConstituency();
   const { data, loading, error } = useConstituencyResource<HealthData>(
     "/api/health",
     { errorMessage: "Failed to fetch health data" }
@@ -156,7 +159,7 @@ export default function HealthPanel() {
           return (
             <div
               key={indicator.id}
-              className="bg-zinc-900 border border-zinc-800 rounded-lg p-3"
+              className="bg-muted border border-border rounded-lg p-3"
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-2">
@@ -198,6 +201,7 @@ export default function HealthPanel() {
                 englandAvg={indicator.englandAvg}
                 unit={indicator.unit}
                 significance={indicator.significance}
+                constituencyName={constituencyName}
               />
 
               {/* Period */}
