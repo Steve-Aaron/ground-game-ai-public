@@ -191,3 +191,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const guard = await requireConstituencyAccess(request);
+  if (guard instanceof NextResponse) return guard;
+  const { session } = guard;
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  try {
+    const ref = adminDb().collection(COLLECTION).doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const doc = snap.data() as LeafletDoc;
+
+    // Only the uploader or an admin may delete.
+    if (doc.uploadedBy !== session.email && session.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await adminBucket().file(doc.storagePath).delete({ ignoreNotFound: true });
+    await ref.delete();
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Leaflet delete failed:", err);
+    return NextResponse.json(
+      { error: `Delete failed: ${(err as Error).message}` },
+      { status: 500 }
+    );
+  }
+}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, ImageIcon, Upload, X } from "lucide-react";
+import { Camera, ImageIcon, Trash2, Upload, X } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useMe } from "@/hooks/useMe";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
@@ -245,12 +246,31 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
 }
 
 /** Single gallery card. */
-function LeafletCard({ item }: { item: LeafletItem }) {
+function LeafletCard({
+  item,
+  canDelete,
+  onDelete,
+}: {
+  item: LeafletItem;
+  canDelete: boolean;
+  onDelete: () => void;
+}) {
   return (
     <figure
       data-component="leafletCard"
-      className="border border-border bg-muted/20 overflow-hidden flex flex-col"
+      className="relative border border-border bg-muted/20 overflow-hidden flex flex-col group"
     >
+      {canDelete ? (
+        <button
+          data-component="leafletDelete"
+          onClick={onDelete}
+          aria-label="Delete upload"
+          title="Delete upload"
+          className="absolute top-1.5 right-1.5 z-10 p-1.5 bg-black/60 text-zinc-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
       <a href={item.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
         {/* Signed URLs expire hourly, so next/image caching hurts here. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -290,10 +310,20 @@ function LeafletCard({ item }: { item: LeafletItem }) {
  * leaflets, posters and social media screenshots seen in the constituency.
  */
 export default function LeafletsPanel() {
+  const { slug } = useConstituency();
+  const { me } = useMe();
   const { data, loading, error, refetch } = useConstituencyResource<{ items: LeafletItem[] }>(
     "/api/leaflets"
   );
   const items = data?.items ?? [];
+
+  async function deleteItem(id: string) {
+    if (!window.confirm("Delete this upload? This cannot be undone.")) return;
+    const res = await fetch(withConstituency(`/api/leaflets?id=${encodeURIComponent(id)}`, slug), {
+      method: "DELETE",
+    });
+    if (res.ok) refetch();
+  }
 
   return (
     <div data-component="leafletsPanel">
@@ -311,7 +341,12 @@ export default function LeafletsPanel() {
       ) : (
         <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {items.map((item) => (
-            <LeafletCard key={item.id} item={item} />
+            <LeafletCard
+              key={item.id}
+              item={item}
+              canDelete={me?.role === "admin" || me?.email === item.uploadedBy}
+              onDelete={() => deleteItem(item.id)}
+            />
           ))}
         </div>
       )}
