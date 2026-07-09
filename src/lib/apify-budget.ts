@@ -4,9 +4,10 @@ import { adminDb } from "@/lib/firebase-admin";
 // Apify-backed feature (social tracker, opposition tracker). Sized against
 // $5/month/constituency at ~$0.40 per 1,000 scraped posts.
 //
-// Worst case: 120 runs/month × ~50 posts/run = 6,000 posts ≈ $2.40/month.
+// Worst case: 90 runs/month × 5 accounts × 20 posts = 9,000 posts ≈
+// $3.60/month, leaving headroom under the cap.
 export const APIFY_MAX_RUNS_PER_DAY = 6;
-export const APIFY_MAX_RUNS_PER_MONTH = 120;
+export const APIFY_MAX_RUNS_PER_MONTH = 90;
 
 const USAGE_COLLECTION = "social_usage";
 

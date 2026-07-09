@@ -172,28 +172,68 @@ html:not(.dark) .text-zinc-400 {
 }
 
 /* ── video.js skin (Ground Game) ──────────────────────────────────────────
-   Applied to players created by src/components/ui/VideoPlayer.tsx */
+   Custom playbox applied by src/components/ui/VideoPlayer.tsx. Squared-off,
+   emerald-accented control bar matching the panel chrome. */
 .vjs-gg-skin.video-js {
   font-family: inherit;
+  font-size: 10px;
   background-color: #000;
 }
 .vjs-gg-skin .vjs-control-bar {
-  background: rgba(10, 10, 10, 0.85);
-  backdrop-filter: blur(4px);
+  height: 2.6em;
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.92), rgba(10, 10, 10, 0.55));
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.vjs-gg-skin .vjs-button > .vjs-icon-placeholder:before {
+  line-height: 2.6em;
+}
+.vjs-gg-skin .vjs-button:hover {
+  color: #10b981; /* emerald-500 */
+  text-shadow: none;
 }
 .vjs-gg-skin .vjs-play-progress,
 .vjs-gg-skin .vjs-volume-level {
-  background-color: #10b981; /* emerald-500 */
+  background-color: #10b981;
+}
+.vjs-gg-skin .vjs-play-progress:before {
+  color: #10b981;
+}
+.vjs-gg-skin .vjs-load-progress,
+.vjs-gg-skin .vjs-load-progress div {
+  background: rgba(255, 255, 255, 0.2);
 }
 .vjs-gg-skin .vjs-slider {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.vjs-gg-skin .vjs-slider:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5);
+  text-shadow: none;
 }
 .vjs-gg-skin .vjs-big-play-button {
   display: none; /* we autoplay muted; the unmute overlay is the CTA */
 }
+.vjs-gg-skin .vjs-loading-spinner {
+  border-color: rgba(16, 185, 129, 0.7);
+}
 .vjs-gg-skin .vjs-live-control,
 .vjs-gg-skin .vjs-seek-to-live-control {
   color: #f87171; /* red-400 — matches the LIVE badge */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.vjs-gg-skin .vjs-seek-to-live-control .vjs-icon-placeholder:before {
+  color: #f87171;
+}
+.vjs-gg-skin .vjs-menu-content {
+  background: rgba(10, 10, 10, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.vjs-gg-skin .vjs-menu li.vjs-selected,
+.vjs-gg-skin .vjs-menu li.vjs-selected:hover {
+  background-color: #10b981;
+  color: #000;
 }
 
 /* ── Party colours (canonical — keep in sync with src/lib/palette.ts) ──── */

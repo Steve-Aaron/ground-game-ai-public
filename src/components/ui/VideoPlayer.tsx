@@ -74,7 +74,7 @@ export default function VideoPlayer({ src, kind, title, onFatalError }: VideoPla
   }
 
   return (
-    <div data-component="videoPlayer" data-kind={kind} className="relative bg-black">
+    <div data-component="videoPlayer" data-kind={kind} className="relative bg-black group/player">
       {kind === "radio" ? (
         <div className="flex items-center gap-2 px-3 pt-3 pb-1">
           <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -86,11 +86,12 @@ export default function VideoPlayer({ src, kind, title, onFatalError }: VideoPla
 
       <div ref={containerRef} />
 
-      {/* Centre unmute overlay — shown while muted; native controls still work */}
+      {/* Centre unmute overlay — appears on hover (or keyboard focus) while
+          muted; only the button captures clicks so controls stay usable */}
       {muted ? (
         <div
           data-component="unmuteOverlay"
-          className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
+          className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none opacity-0 group-hover/player:opacity-100 focus-within:opacity-100 transition-opacity duration-200"
         >
           <button
             onClick={unmute}

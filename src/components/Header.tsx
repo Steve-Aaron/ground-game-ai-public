@@ -8,7 +8,7 @@ import type { ConstituencyOption, ConstituencySlug } from "@/hooks/useConstituen
 import ConstituencySearch from "./ConstituencySearch";
 import ThemeToggle from "@/components/ThemeToggle";
 
-export type TabId = "map" | "political" | "polling" | "demographics" | "local" | "material";
+export type TabId = "map" | "political" | "polling" | "demographics" | "local" | "material" | "canvassing";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "map", label: "Map" },
@@ -17,6 +17,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "demographics", label: "Demographics" },
   { id: "local", label: "Local Issues" },
   { id: "material", label: "Campaign Material" },
+  { id: "canvassing", label: "Canvassing Sessions" },
 ];
 
 interface HeaderProps {

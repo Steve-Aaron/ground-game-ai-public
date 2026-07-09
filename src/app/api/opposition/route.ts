@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { requireConstituencyAccess } from "@/lib/guards";
 import { consumeApifyRun } from "@/lib/apify-budget";
+import { fetchTwitterProfile } from "@/lib/apify-twitter";
 import { partyColor } from "@/lib/palette";
 
 // Force dynamic — needs runtime env vars (APIFY_API_TOKEN)
@@ -17,9 +18,6 @@ const PEOPLE_COLLECTION = "opposition_people";
 const CACHE_COLLECTION = "opposition_cache";
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000;
 const POSTS_PER_PERSON = 5;
-
-const APIFY_ACTOR = "apidojo~twitter-scraper-lite";
-const APIFY_BASE = "https://api.apify.com/v2/acts";
 
 interface OppositionPerson {
   id: string;
@@ -52,22 +50,6 @@ interface CachePayload {
   updatedAt: string;
 }
 
-interface ApifyTweet {
-  full_text?: string;
-  text?: string;
-  created_at?: string;
-  createdAt?: string;
-  favorite_count?: number;
-  favoriteCount?: number;
-  likeCount?: number;
-  retweet_count?: number;
-  retweetCount?: number;
-  url?: string;
-  id_str?: string;
-  id?: string;
-  tweetUrl?: string;
-}
-
 function toOpponent(person: OppositionPerson, posts: OpponentPost[]): Opponent {
   return {
     party: person.party,
@@ -83,30 +65,14 @@ function toOpponent(person: OppositionPerson, posts: OpponentPost[]): Opponent {
 
 async function fetchPersonPosts(person: OppositionPerson, token: string): Promise<OpponentPost[]> {
   if (!person.handle) return [];
-  const res = await fetch(
-    `${APIFY_BASE}/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${token}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        searchTerms: [`from:${person.handle}`],
-        maxItems: POSTS_PER_PERSON,
-        sort: "Latest",
-      }),
-    }
-  );
-  if (!res.ok) throw new Error(`Apify returned ${res.status} for @${person.handle}`);
-
-  const tweets = (await res.json()) as ApifyTweet[];
-  return tweets
-    .filter((t) => (t.full_text || t.text || "").length > 0)
-    .map((t) => ({
-      text: (t.full_text || t.text || "").slice(0, 280),
-      date: t.created_at || t.createdAt || "",
-      likes: t.favorite_count ?? t.favoriteCount ?? t.likeCount ?? 0,
-      retweets: t.retweet_count ?? t.retweetCount ?? 0,
-      url: t.tweetUrl || t.url || (t.id_str || t.id ? `https://x.com/i/status/${t.id_str || t.id}` : `https://x.com/${person.handle}`),
-    }));
+  const profile = await fetchTwitterProfile(person.handle, POSTS_PER_PERSON, token);
+  return profile.posts.map((t) => ({
+    text: t.text.slice(0, 280),
+    date: t.date,
+    likes: t.likes,
+    retweets: t.retweets,
+    url: t.url,
+  }));
 }
 
 export async function GET(request: Request) {

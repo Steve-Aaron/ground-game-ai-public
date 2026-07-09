@@ -31,6 +31,7 @@ import WardDataHub from "@/components/WardDataHub";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import LeafletsPanel from "@/components/LeafletsPanel";
 import SocialTrackerPanel from "@/components/SocialTrackerPanel";
+import CanvassingPanel from "@/components/CanvassingPanel";
 import MentionsFeed from "@/components/MentionsFeed";
 import ActivityCharts from "@/components/ActivityCharts";
 import PollingDashboard from "@/components/PollingDashboard";
@@ -69,6 +70,7 @@ import {
   Stethoscope,
   LayoutGrid,
   Camera,
+  MapPin,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -627,6 +629,23 @@ function Dashboard() {
                 }
               >
                 <LeafletsPanel />
+              </Panel>
+            </div>
+          )}
+
+          {activeTab === "canvassing" && (
+            <div className="grid grid-cols-1 gap-2 lg:gap-3">
+              <Panel
+                title="Canvassing Sessions"
+                dataComponent="canvassingSessions"
+                icon={<MapPin className="h-3.5 w-3.5" />}
+                headerAction={
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
+                    On-the-ground activity
+                  </span>
+                }
+              >
+                <CanvassingPanel />
               </Panel>
             </div>
           )}
