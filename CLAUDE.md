@@ -62,4 +62,9 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
+## 5. Work through tasks sequentially.
+
+**If new tasks appear to you, work through them after you have confirmed the previous task is done. Do not attempt multiple fixes at once; instead, make things work, then work to implement the next item.
+
+
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

@@ -135,7 +135,7 @@ function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { el
 export default function ElectoralIntel() {
   const { slug } = useConstituency();
   const results2024 = deriveResults(slug);
-  const [view, setView] = useState<View>("results");
+  const [view, setView] = useState<View>("prediction");
   const [ecPrediction, setEcPrediction] = useState<{
     prediction: string;
     predicted: Record<string, number>;
@@ -173,8 +173,8 @@ export default function ElectoralIntel() {
   }, [slug]);
 
   const tabs: { key: View; label: string }[] = [
-    { key: "results", label: "2024 Results" },
     { key: "prediction", label: "MRP Forecast" },
+    { key: "results", label: "2024 Results" },
     { key: "wards", label: "Ward Map" },
   ];
 
