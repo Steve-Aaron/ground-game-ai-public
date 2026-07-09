@@ -66,5 +66,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **If new tasks appear to you, work through them after you have confirmed the previous task is done. Do not attempt multiple fixes at once; instead, make things work, then work to implement the next item.
 
+## 6. Never use git unless explicitly told to do so.
+
+Git commands are for the user to do so. When you are told in a command to 'use git' or similar, then you can stage and commit changes. When told to git push, then (and only then) can you git push. Never do any git controls otherwise. 
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

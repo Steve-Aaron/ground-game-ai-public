@@ -1,9 +1,33 @@
 import { NextResponse } from "next/server";
-import { getFullData } from "@/data";
+import { adminDb } from "@/lib/firebase-admin";
 import { requireConstituencyAccess } from "@/lib/guards";
+import { consumeApifyRun } from "@/lib/apify-budget";
+import { partyColor } from "@/lib/palette";
 
 // Force dynamic — needs runtime env vars (APIFY_API_TOKEN)
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+// Opposition Tracker feed. The people watched are defined per constituency
+// by admins via /api/opposition-people (blank by default — no hardcoded
+// candidate lists). Recent X posts come from Apify, drawing on the SAME
+// per-constituency budget as the Social Media Tracker (src/lib/apify-budget).
+
+const PEOPLE_COLLECTION = "opposition_people";
+const CACHE_COLLECTION = "opposition_cache";
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000;
+const POSTS_PER_PERSON = 5;
+
+const APIFY_ACTOR = "apidojo~twitter-scraper-lite";
+const APIFY_BASE = "https://api.apify.com/v2/acts";
+
+interface OppositionPerson {
+  id: string;
+  name: string;
+  party: string;
+  handle: string;
+  role: string;
+}
 
 interface OpponentPost {
   text: string;
@@ -17,10 +41,15 @@ interface Opponent {
   party: string;
   candidate: string;
   handle: string;
-  followers: string;
+  role: string;
   recentPosts: OpponentPost[];
   activityLevel: "high" | "medium" | "low" | "unknown";
   color: string;
+}
+
+interface CachePayload {
+  opponents: Opponent[];
+  updatedAt: string;
 }
 
 interface ApifyTweet {
@@ -30,250 +59,140 @@ interface ApifyTweet {
   createdAt?: string;
   favorite_count?: number;
   favoriteCount?: number;
+  likeCount?: number;
   retweet_count?: number;
   retweetCount?: number;
   url?: string;
   id_str?: string;
   id?: string;
   tweetUrl?: string;
-  author?: { userName?: string };
 }
 
-// Real 2024 General Election candidates for Braintree constituency.
-// Source: Electoral Commission results.
-//
-// The data layer's `candidates` field only has {name, party, votes, share,
-// elected} — no Twitter handles, search terms, party colours, or council
-// representatives. Until that's sourced per-constituency, only Braintree has
-// the rich data needed to run Apify Twitter scrapes; other constituencies
-// get a 400 from the gate in GET().
-interface BraintreeCandidate {
-  party: string;
-  candidate: string;
-  handle: string;
-  votes2024: number;
-  votePct: string;
-  color: string;
-  searchTerms: string[];
-  councilRep: string;
-  councilHandle: string;
+function toOpponent(person: OppositionPerson, posts: OpponentPost[]): Opponent {
+  return {
+    party: person.party,
+    candidate: person.name,
+    handle: person.handle,
+    role: person.role,
+    recentPosts: posts.slice(0, 3),
+    activityLevel:
+      posts.length > 4 ? "high" : posts.length > 1 ? "medium" : posts.length > 0 ? "low" : person.handle ? "low" : "unknown",
+    color: partyColor(person.party),
+  };
 }
 
-const BRAINTREE_CANDIDATES: BraintreeCandidate[] = [
-  {
-    party: "Reform UK",
-    candidate: "Richard Thomson",
-    handle: "",
-    votes2024: 11346,
-    votePct: "23.14%",
-    color: "#12B6CF",
-    searchTerms: ["Reform UK Braintree", "Reform Braintree Essex"],
-    councilRep: "Nathan Robins", // First Reform councillor on Braintree DC
-    councilHandle: "@NathanRobinsUK",
-  },
-  {
-    party: "Labour",
-    candidate: "Matthew Wright",
-    handle: "@MatthewKWright",
-    votes2024: 13744,
-    votePct: "28.03%",
-    color: "#DC241f",
-    searchTerms: ["Labour Braintree", "MatthewKWright Braintree"],
-    councilRep: "",
-    councilHandle: "",
-  },
-  {
-    party: "Liberal Democrats",
-    candidate: "Kieron Franks",
-    handle: "@k_afranks",
-    votes2024: 2879,
-    votePct: "5.87%",
-    color: "#FAA61A",
-    searchTerms: ["Lib Dems Braintree", "Liberal Democrats Braintree"],
-    councilRep: "",
-    councilHandle: "",
-  },
-  {
-    party: "Green Party",
-    candidate: "Paul Thorogood",
-    handle: "",
-    votes2024: 2878,
-    votePct: "5.87%",
-    color: "#6AB023",
-    searchTerms: ["Green Party Braintree", "Green Braintree Essex"],
-    councilRep: "Paul Thorogood", // Also a Braintree DC councillor (Eastern & Kelvedon/Feering)
-    councilHandle: "",
-  },
-];
-
-const APIFY_ACTOR = "apidojo~twitter-scraper-lite";
-const APIFY_BASE = "https://api.apify.com/v2/acts";
-
-async function fetchFromApify(candidates: BraintreeCandidate[]): Promise<Opponent[]> {
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token) return [];
-
-  const settled = await Promise.allSettled(
-    candidates.map(async (candidate) => {
-      const searchQuery = candidate.searchTerms[0];
-      const res = await fetch(
-        `${APIFY_BASE}/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${token}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            searchTerms: [searchQuery],
-            maxItems: 5,
-            sort: "Latest",
-          }),
-        }
-      );
-
-      let recentPosts: OpponentPost[] = [];
-      let activityLevel: "high" | "medium" | "low" = "low";
-
-      if (res.ok) {
-        const tweets: ApifyTweet[] = await res.json();
-        const validTweets = tweets.filter((t) => {
-          const text = t.full_text || t.text || "";
-          return text.length > 10;
-        });
-
-        recentPosts = validTweets.slice(0, 3).map((t) => ({
-          text: (t.full_text || t.text || "").slice(0, 280),
-          date: t.created_at || t.createdAt || new Date().toISOString(),
-          likes: t.favorite_count || t.favoriteCount || 0,
-          retweets: t.retweet_count || t.retweetCount || 0,
-          url: t.tweetUrl || t.url || `https://x.com/i/status/${t.id_str || t.id || ""}`,
-        }));
-
-        activityLevel = validTweets.length > 4 ? "high" : validTweets.length > 1 ? "medium" : "low";
-      }
-
-      return {
-        party: candidate.party,
-        candidate: candidate.candidate,
-        handle: candidate.handle || candidate.councilHandle || "",
-        followers: candidate.votePct ? `${candidate.votePct} (2024)` : "N/A",
-        recentPosts,
-        activityLevel,
-        color: candidate.color,
-      };
-    })
+async function fetchPersonPosts(person: OppositionPerson, token: string): Promise<OpponentPost[]> {
+  if (!person.handle) return [];
+  const res = await fetch(
+    `${APIFY_BASE}/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${token}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        searchTerms: [`from:${person.handle}`],
+        maxItems: POSTS_PER_PERSON,
+        sort: "Latest",
+      }),
+    }
   );
+  if (!res.ok) throw new Error(`Apify returned ${res.status} for @${person.handle}`);
 
-  return settled.map((result, i) => {
-    if (result.status === "fulfilled") return result.value;
-    const candidate = candidates[i];
-    return {
-      party: candidate.party,
-      candidate: candidate.candidate,
-      handle: candidate.handle || candidate.councilHandle || "",
-      followers: candidate.votePct ? `${candidate.votePct} (2024)` : "N/A",
-      recentPosts: [],
-      activityLevel: "low" as const,
-      color: candidate.color,
-    };
-  });
-}
-
-function getCandidateInfo(candidates: BraintreeCandidate[]): Opponent[] {
-  // Return real candidate data from the 2024 General Election — no fake social posts
-  return candidates.map((c) => ({
-    party: c.party,
-    candidate: c.candidate,
-    handle: c.handle || c.councilHandle || "",
-    followers: c.votePct ? `${c.votePct} (2024)` : "N/A",
-    recentPosts: [],
-    activityLevel: "unknown" as "high" | "medium" | "low",
-    color: c.color,
-  }));
-}
-
-const PARTY_COLORS: Record<string, string> = {
-  "Labour": "#DC241f",
-  "Labour (Co-op)": "#DC241f",
-  "Conservative": "#0087DC",
-  "Reform UK": "#12B6CF",
-  "Liberal Democrats": "#FAA61A",
-  "Green Party": "#6AB023",
-  "SNP": "#FDF38E",
-  "Plaid Cymru": "#3F8428",
-  "Independent": "#6b7280",
-};
-
-function normalisePartyName(raw: string): string {
-  if (/labour.*co.op/i.test(raw)) return "Labour (Co-op)";
-  if (/labour/i.test(raw)) return "Labour";
-  if (/conservative/i.test(raw)) return "Conservative";
-  if (/reform/i.test(raw)) return "Reform UK";
-  if (/liberal democrat/i.test(raw)) return "Liberal Democrats";
-  if (/green/i.test(raw)) return "Green Party";
-  if (/snp|scottish national/i.test(raw)) return "SNP";
-  if (/plaid cymru/i.test(raw)) return "Plaid Cymru";
-  if (/independent/i.test(raw)) return "Independent";
-  return raw;
+  const tweets = (await res.json()) as ApifyTweet[];
+  return tweets
+    .filter((t) => (t.full_text || t.text || "").length > 0)
+    .map((t) => ({
+      text: (t.full_text || t.text || "").slice(0, 280),
+      date: t.created_at || t.createdAt || "",
+      likes: t.favorite_count ?? t.favoriteCount ?? t.likeCount ?? 0,
+      retweets: t.retweet_count ?? t.retweetCount ?? 0,
+      url: t.tweetUrl || t.url || (t.id_str || t.id ? `https://x.com/i/status/${t.id_str || t.id}` : `https://x.com/${person.handle}`),
+    }));
 }
 
 export async function GET(request: Request) {
-  // __AUTH_GUARD__
-  const __guard = await requireConstituencyAccess(request);
-  if (__guard instanceof NextResponse) return __guard;
-  const { searchParams } = new URL(request.url);
-  const constituencySlug = searchParams.get("constituency") ?? "";
-  const constituencyData = getFullData(constituencySlug);
+  const guard = await requireConstituencyAccess(request);
+  if (guard instanceof NextResponse) return guard;
+  const { slug } = guard;
 
-  if (!constituencyData) {
-    return Response.json(
-      { error: "Invalid constituency slug" },
-      { status: 400 }
-    );
-  }
+  try {
+    const db = adminDb();
+    const peopleSnap = await db.collection(PEOPLE_COLLECTION).doc(slug).get();
+    const people =
+      ((peopleSnap.data() as { people?: OppositionPerson[] } | undefined)?.people ?? []);
 
-  // Braintree has rich candidate data (handles, search terms, colours) for
-  // Apify scraping. All other constituencies fall back to the data-layer
-  // candidates which have name/party/votes/share but no social handles.
-  if (constituencySlug === "braintree") {
-    const apifyData = await fetchFromApify(BRAINTREE_CANDIDATES);
-    const hasApifyPosts = apifyData.some((o) => o.recentPosts.length > 0);
-
-    if (hasApifyPosts) {
+    // Blank until an admin defines people for this constituency.
+    if (people.length === 0) {
       return NextResponse.json({
-        opponents: apifyData,
+        opponents: [],
+        configured: false,
         lastUpdated: new Date().toISOString(),
-        source: "apify" as const,
+        source: "unconfigured" as const,
       });
     }
 
-    return NextResponse.json({
-      opponents: getCandidateInfo(BRAINTREE_CANDIDATES),
-      lastUpdated: new Date().toISOString(),
-      source: "candidates_only" as const,
-      message: "Social activity monitoring not yet configured",
-    });
-  }
+    const cacheRef = db.collection(CACHE_COLLECTION).doc(slug);
+    const cached = (await cacheRef.get()).data() as CachePayload | undefined;
+    const cacheAge = cached ? Date.now() - new Date(cached.updatedAt).getTime() : Infinity;
+    const cachedNames = (cached?.opponents ?? []).map((o) => o.candidate.toLowerCase()).sort().join(",");
+    const wantedNames = people.map((p) => p.name.toLowerCase()).sort().join(",");
+    const listChanged = cachedNames !== wantedNames;
 
-  // All other constituencies: build from the data-layer candidates (no handles)
-  const rawCandidates = constituencyData.candidates.filter((c) => !c.elected);
-  if (!rawCandidates.length) {
-    return Response.json(
-      { error: "No candidate data available for this constituency" },
-      { status: 404 }
+    const token = process.env.APIFY_API_TOKEN;
+    const trackable = people.filter((p) => p.handle);
+    const needsRefresh = listChanged || cacheAge > CACHE_TTL_MS;
+
+    // No handles to monitor (or no token): people-only view, no Apify spend.
+    if (trackable.length === 0 || !token) {
+      return NextResponse.json({
+        opponents: people.map((p) => toOpponent(p, [])),
+        configured: true,
+        lastUpdated: new Date().toISOString(),
+        source: "people_only" as const,
+      });
+    }
+
+    if (!needsRefresh && cached) {
+      return NextResponse.json({
+        opponents: cached.opponents,
+        configured: true,
+        lastUpdated: cached.updatedAt,
+        source: "cache" as const,
+      });
+    }
+
+    const budget = await consumeApifyRun(slug, trackable.length * POSTS_PER_PERSON);
+    if (!budget.allowed) {
+      return NextResponse.json({
+        opponents: cached?.opponents ?? people.map((p) => toOpponent(p, [])),
+        configured: true,
+        lastUpdated: cached?.updatedAt ?? new Date().toISOString(),
+        source: "cache" as const,
+        limitReached: true,
+      });
+    }
+
+    const settled = await Promise.allSettled(
+      people.map((p) => fetchPersonPosts(p, token))
+    );
+    const opponents = people.map((p, i) =>
+      toOpponent(p, settled[i].status === "fulfilled" ? (settled[i] as PromiseFulfilledResult<OpponentPost[]>).value : [])
+    );
+
+    const payload: CachePayload = { opponents, updatedAt: new Date().toISOString() };
+    await cacheRef.set(payload);
+
+    return NextResponse.json({
+      opponents,
+      configured: true,
+      lastUpdated: payload.updatedAt,
+      source: "apify" as const,
+      limits: budget.limits,
+    });
+  } catch (err) {
+    console.error("Opposition tracker failed:", err);
+    return NextResponse.json(
+      { error: `Opposition tracker failed: ${(err as Error).message}` },
+      { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    opponents: rawCandidates.map((c) => ({
-      party: normalisePartyName(c.party),
-      candidate: c.name,
-      handle: "",
-      followers: `${c.share}% (2024)`,
-      recentPosts: [],
-      activityLevel: "unknown" as const,
-      color: PARTY_COLORS[normalisePartyName(c.party)] ?? "#6b7280",
-    })),
-    lastUpdated: new Date().toISOString(),
-    source: "candidates_only" as const,
-    message: "Social activity monitoring not yet configured for this constituency",
-  });
 }

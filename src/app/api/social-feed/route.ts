@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { requireConstituencyAccess } from "@/lib/guards";
+import { consumeApifyRun } from "@/lib/apify-budget";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -15,9 +16,9 @@ export const maxDuration = 60;
 // Limits are enforced server-side per constituency via a Firestore usage
 // doc; when a limit is hit the cached feed is served instead — Apify is
 // never called past the cap.
+// Run caps live in src/lib/apify-budget.ts — the budget is SHARED with the
+// opposition tracker so total Apify spend per constituency stays capped.
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // min gap between refreshes: 4h
-const MAX_RUNS_PER_DAY = 6;
-const MAX_RUNS_PER_MONTH = 120;
 const POSTS_PER_ACCOUNT = 10;
 
 const APIFY_ACTOR = "apidojo~twitter-scraper-lite";
@@ -25,7 +26,6 @@ const APIFY_BASE = "https://api.apify.com/v2/acts";
 
 const TRACKING_COLLECTION = "social_tracking";
 const CACHE_COLLECTION = "social_feed_cache";
-const USAGE_COLLECTION = "social_usage";
 
 interface TrackedAccount {
   handle: string;
@@ -54,13 +54,6 @@ interface FeedPayload {
   updatedAt: string;
 }
 
-interface UsageDoc {
-  month: string; // YYYY-MM — doc resets when the month rolls over
-  runs: number;
-  posts: number;
-  days: Record<string, number>; // YYYY-MM-DD → runs that day
-}
-
 // Apify tweet shape — field names vary between actor versions, read
 // defensively (same approach as /api/opposition).
 interface ApifyTweet {
@@ -86,13 +79,6 @@ interface ApifyTweet {
     followers?: number;
     followersCount?: number;
   };
-}
-
-function monthKey(d = new Date()): string {
-  return d.toISOString().slice(0, 7);
-}
-function dayKey(d = new Date()): string {
-  return d.toISOString().slice(0, 10);
 }
 
 async function fetchAccountPosts(handle: string, token: string): Promise<SocialProfile> {
@@ -146,8 +132,7 @@ export async function GET(request: Request) {
     }
 
     const cacheRef = db.collection(CACHE_COLLECTION).doc(slug);
-    const usageRef = db.collection(USAGE_COLLECTION).doc(slug);
-    const [cacheSnap, usageSnap] = await Promise.all([cacheRef.get(), usageRef.get()]);
+    const cacheSnap = await cacheRef.get();
 
     const cached = cacheSnap.data() as FeedPayload | undefined;
     const cacheAge = cached ? Date.now() - new Date(cached.updatedAt).getTime() : Infinity;
@@ -157,40 +142,29 @@ export async function GET(request: Request) {
     const wantedHandles = accounts.map((a) => a.handle.toLowerCase()).sort().join(",");
     const listChanged = cachedHandles !== wantedHandles;
 
-    let usage = (usageSnap.data() as UsageDoc | undefined) ?? { month: monthKey(), runs: 0, posts: 0, days: {} };
-    if (usage.month !== monthKey()) {
-      usage = { month: monthKey(), runs: 0, posts: 0, days: {} };
-    }
-    const runsToday = usage.days[dayKey()] ?? 0;
-
-    const limits = {
-      runsToday,
-      maxRunsPerDay: MAX_RUNS_PER_DAY,
-      runsThisMonth: usage.runs,
-      maxRunsPerMonth: MAX_RUNS_PER_MONTH,
-      cacheTtlHours: CACHE_TTL_MS / 3600000,
-    };
-
     const debug = new URL(request.url).searchParams.get("debug") === "1";
-    const withinBudget = runsToday < MAX_RUNS_PER_DAY && usage.runs < MAX_RUNS_PER_MONTH;
     const needsRefresh = debug || listChanged || cacheAge > CACHE_TTL_MS;
     const token = process.env.APIFY_API_TOKEN;
 
-    if (!needsRefresh || !withinBudget || !token) {
+    if (!needsRefresh || !token) {
       return NextResponse.json({
         ...(cached ?? { profiles: [], updatedAt: null }),
-        limits,
-        limitReached: needsRefresh && !withinBudget,
+        limits: null,
+        limitReached: false,
         source: "cache",
       });
     }
 
-    // Count the run BEFORE calling Apify — a crash mid-run still consumes
-    // budget, which is the safe direction for a hard spend cap.
-    usage.runs += 1;
-    usage.days[dayKey()] = runsToday + 1;
-    usage.posts += accounts.length * POSTS_PER_ACCOUNT;
-    await usageRef.set(usage);
+    const budget = await consumeApifyRun(slug, accounts.length * POSTS_PER_ACCOUNT);
+    const limits = { ...budget.limits, cacheTtlHours: CACHE_TTL_MS / 3600000 };
+    if (!budget.allowed) {
+      return NextResponse.json({
+        ...(cached ?? { profiles: [], updatedAt: null }),
+        limits,
+        limitReached: true,
+        source: "cache",
+      });
+    }
 
     const settled = await Promise.allSettled(
       accounts.map((a) => fetchAccountPosts(a.handle, token))
@@ -211,7 +185,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       ...payload,
-      limits: { ...limits, runsToday: runsToday + 1, runsThisMonth: usage.runs },
+      limits,
       limitReached: false,
       source: "live",
       ...(failures ? { failures } : {}),
