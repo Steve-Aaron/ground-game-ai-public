@@ -29,6 +29,7 @@ import LiveFeeds from "@/components/LiveFeeds";
 import OppositionTracker from "@/components/OppositionTracker";
 import WardDataHub from "@/components/WardDataHub";
 import PageSkeleton from "@/components/ui/PageSkeleton";
+import LeafletsPanel from "@/components/LeafletsPanel";
 import MentionsFeed from "@/components/MentionsFeed";
 import ActivityCharts from "@/components/ActivityCharts";
 import PollingDashboard from "@/components/PollingDashboard";
@@ -66,6 +67,7 @@ import {
   Zap,
   Stethoscope,
   LayoutGrid,
+  Camera,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -591,6 +593,21 @@ function Dashboard() {
                 }
               >
                 <LiveFeeds />
+              </Panel>
+
+              {/* Campaign material — user-uploaded leaflets, posters, social posts */}
+              <Panel
+                title="Campaign Material"
+                dataComponent="campaignMaterial"
+                icon={<Camera className="h-3.5 w-3.5" />}
+                className="lg:col-span-12"
+                headerAction={
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
+                    Seen locally
+                  </span>
+                }
+              >
+                <LeafletsPanel />
               </Panel>
             </div>
           )}

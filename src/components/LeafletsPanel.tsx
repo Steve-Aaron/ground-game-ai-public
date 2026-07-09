@@ -1,0 +1,270 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { Camera, ImageIcon, Upload, X } from "lucide-react";
+import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
+import PanelEmpty from "@/components/ui/PanelEmpty";
+import PanelError from "@/components/ui/PanelError";
+import { formatTimeAgo } from "@/lib/format";
+
+// Mirrors LeafletItem in src/app/api/leaflets/route.ts.
+interface LeafletItem {
+  id: string;
+  kind: "leaflet" | "poster" | "social";
+  party: string;
+  notes: string;
+  uploadedBy: string;
+  contentType: string;
+  createdAt: string;
+  imageUrl: string;
+}
+
+const KIND_LABELS: Record<LeafletItem["kind"], string> = {
+  leaflet: "Leaflet",
+  poster: "Poster",
+  social: "Social media",
+};
+
+const PARTIES = [
+  "Reform UK",
+  "Labour",
+  "Conservative",
+  "Liberal Democrats",
+  "Green",
+  "Restore Britain",
+  "Independent",
+  "Other / Unknown",
+];
+
+/** Upload form — collapsed behind a button until needed. */
+function UploadForm({ onUploaded }: { onUploaded: () => void }) {
+  const { slug } = useConstituency();
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [kind, setKind] = useState<LeafletItem["kind"]>("leaflet");
+  const [party, setParty] = useState(PARTIES[0]);
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setNotes("");
+    setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleFile(f: File | null) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(f);
+    setPreviewUrl(f ? URL.createObjectURL(f) : null);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const body = new FormData();
+      body.append("photo", file);
+      body.append("kind", kind);
+      body.append("party", party);
+      body.append("notes", notes);
+      const res = await fetch(withConstituency("/api/leaflets", slug), {
+        method: "POST",
+        body,
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? `Upload failed (${res.status})`);
+      }
+      reset();
+      setOpen(false);
+      onUploaded();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="px-4 py-3 border-b border-border/50">
+        <button
+          data-component="leafletUploadTrigger"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+        >
+          <Camera className="h-3.5 w-3.5" />
+          Upload a photo
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      data-component="leafletUploadForm"
+      onSubmit={submit}
+      className="px-4 py-3 border-b border-border/50 space-y-3"
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[0.611rem] uppercase tracking-wider text-zinc-500">
+          Upload campaign material
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            reset();
+            setOpen(false);
+          }}
+          aria-label="Close upload form"
+          className="text-zinc-500 hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic"
+        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+        className="block w-full text-[0.611rem] text-zinc-400 file:mr-3 file:px-3 file:py-1.5 file:border-0 file:bg-muted file:text-foreground file:text-[0.611rem] file:uppercase file:tracking-wider hover:file:bg-muted/70"
+      />
+
+      {previewUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={previewUrl}
+          alt="Upload preview"
+          className="max-h-40 rounded border border-border object-contain"
+        />
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value as LeafletItem["kind"])}
+          aria-label="Material type"
+          className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
+        >
+          {Object.entries(KIND_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={party}
+          onChange={(e) => setParty(e.target.value)}
+          aria-label="Party"
+          className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
+        >
+          {PARTIES.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Notes — where you saw it, key claims made…"
+        maxLength={500}
+        rows={2}
+        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
+      />
+
+      {error ? <p className="text-[0.611rem] text-red-400">{error}</p> : null}
+
+      <button
+        type="submit"
+        disabled={!file || submitting}
+        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Upload className="h-3.5 w-3.5" />
+        {submitting ? "Uploading…" : "Submit"}
+      </button>
+    </form>
+  );
+}
+
+/** Single gallery card. */
+function LeafletCard({ item }: { item: LeafletItem }) {
+  return (
+    <figure
+      data-component="leafletCard"
+      className="border border-border bg-muted/20 overflow-hidden flex flex-col"
+    >
+      <a href={item.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
+        {/* Signed URLs expire hourly, so next/image caching hurts here. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={item.imageUrl}
+          alt={`${KIND_LABELS[item.kind]} — ${item.party}`}
+          loading="lazy"
+          className="w-full h-36 object-cover hover:opacity-90 transition-opacity"
+        />
+      </a>
+      <figcaption className="px-2.5 py-2 space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[0.611rem] font-medium text-foreground truncate">{item.party}</span>
+          <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500 bg-muted px-1.5 py-0.5 shrink-0">
+            {KIND_LABELS[item.kind]}
+          </span>
+        </div>
+        {item.notes ? (
+          <p className="text-[0.611rem] text-zinc-400 line-clamp-2">{item.notes}</p>
+        ) : null}
+        <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
+          {item.uploadedBy} · {formatTimeAgo(item.createdAt)}
+        </p>
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Campaign material panel — electionleaflets.org-style upload and gallery of
+ * leaflets, posters and social media screenshots seen in the constituency.
+ */
+export default function LeafletsPanel() {
+  const { data, loading, error, refetch } = useConstituencyResource<{ items: LeafletItem[] }>(
+    "/api/leaflets"
+  );
+  const items = data?.items ?? [];
+
+  return (
+    <div data-component="leafletsPanel">
+      <UploadForm onUploaded={refetch} />
+      {loading ? (
+        <PanelSkeleton variant="grid" rows={4} />
+      ) : error ? (
+        <PanelError message="Unable to load uploads" onRetry={refetch} />
+      ) : items.length === 0 ? (
+        <PanelEmpty
+          icon={ImageIcon}
+          title="No campaign material yet"
+          description="Photos of leaflets, posters and social media posts seen locally will appear here."
+        />
+      ) : (
+        <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {items.map((item) => (
+            <LeafletCard key={item.id} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
