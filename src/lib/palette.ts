@@ -208,3 +208,33 @@ const WHITE_TEXT_CLASSES = new Set([
   "leaveshare5",
   "cluster_left", "cluster_nat", "cluster_some",
 ]);
+
+/**
+ * Canonical party options for dropdowns (uploads, watch-lists). Single
+ * source so selects can't drift apart.
+ */
+export const PARTY_OPTIONS = [
+  "Reform UK",
+  "Labour",
+  "Conservative",
+  "Liberal Democrats",
+  "Green",
+  "Restore Britain",
+  "SNP",
+  "Independent",
+  "Other",
+] as const;
+
+/**
+ * Party legend entries for map choropleths — palette-driven so the map can
+ * never disagree with the rest of the platform. Hexes (not CSS vars)
+ * because maplibre paint expressions can't resolve variables.
+ */
+export const PARTY_MAP_LEGEND: Array<{ party: string; color: string }> = [
+  { party: "CON", color: partyColor("CON") },
+  { party: "LAB", color: partyColor("LAB") },
+  { party: "Reform", color: partyColor("Reform") },
+  { party: "LIB", color: partyColor("LIB") },
+  { party: "Green", color: partyColor("Green") },
+  { party: "Other", color: "#666666" },
+];

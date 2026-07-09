@@ -94,7 +94,7 @@ export default function HousePricesPanel() {
   const priceMax = allPrices.length > 0 ? Math.max(...allPrices) : 0;
 
   return (
-    <div className="bg-background border border-border rounded-2xl p-4 space-y-4">
+    <div data-component="housePricesPanel" className="bg-background border border-border rounded-2xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-200">House Prices</h3>

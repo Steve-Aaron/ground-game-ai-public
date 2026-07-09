@@ -56,7 +56,7 @@ export default function WardTable() {
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div data-component="wardTable" className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border text-zinc-500">

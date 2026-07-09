@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface Issue {
@@ -16,30 +16,21 @@ interface Issue {
   url?: string;
 }
 
-export default function FixMyStreet() {
-  const { slug } = useConstituency();
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("all");
+interface IssuesResponse {
+  issues?: Issue[];
+}
 
-  useEffect(() => {
-    if (!slug) return; // auth still loading — effect re-runs when slug resolves
-    async function fetchIssues() {
-      try {
-        const res = await fetch(withConstituency("/api/fixmystreet", slug));
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data = await res.json();
-        setIssues(data.issues || []);
-      } catch {
-        // Fall back to mock data
-        setIssues(getMockIssues());
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchIssues();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+// Module-level so the reference is stable across renders (the hook keys its
+// fetch callback on `fallback`).
+const MOCK_FALLBACK: IssuesResponse = { issues: getMockIssues() };
+
+export default function FixMyStreet() {
+  const { data, loading } = useConstituencyResource<IssuesResponse>(
+    "/api/fixmystreet",
+    { fallback: MOCK_FALLBACK }
+  );
+  const issues = data?.issues ?? [];
+  const [filter, setFilter] = useState<string>("all");
 
   const categories = ["all", ...Array.from(new Set(issues.map((i) => i.category)))];
   const filtered = filter === "all" ? issues : issues.filter((i) => i.category === filter);
@@ -60,7 +51,7 @@ export default function FixMyStreet() {
   }
 
   return (
-    <div>
+    <div data-component="fixMyStreet">
       <div className="px-4 py-2 border-b border-border/50 flex gap-1 overflow-x-auto">
         {categories.slice(0, 6).map((cat) => (
           <button

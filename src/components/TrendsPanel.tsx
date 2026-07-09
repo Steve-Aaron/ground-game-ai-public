@@ -326,7 +326,7 @@ export default function TrendsPanel() {
   // ── Rendered panel ────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5 p-1">
+    <div data-component="trendsPanel" className="space-y-5 p-1">
       {/* Section: 90-day time-series chart */}
       <div className="px-3">
         <div className="flex items-center gap-2 mb-3">

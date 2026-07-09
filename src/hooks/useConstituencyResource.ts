@@ -44,6 +44,11 @@ export function useConstituencyResource<T>(
   const { fallback, errorMessage = "Unable to load data", skip = false } = options;
   const { slug } = useConstituency();
 
+  // Fallback objects are often created inline at call sites; holding the
+  // first value in a ref keeps `run`'s identity stable so a new object each
+  // render can't re-trigger the fetch effect (silent refetch loop).
+  const fallbackRef = useRef(fallback);
+
   const [data, setData] = useState<T | null>(fallback ?? null);
   const [loading, setLoading] = useState(!skip);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +78,11 @@ export function useConstituencyResource<T>(
     } catch {
       if (requestId !== requestIdRef.current) return; // stale
       setError(errorMessage);
-      if (fallback !== undefined) setData(fallback);
+      if (fallbackRef.current !== undefined) setData(fallbackRef.current);
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [path, slug, errorMessage, fallback, skip]);
+  }, [path, slug, errorMessage, skip]);
 
   useEffect(() => {
     run();

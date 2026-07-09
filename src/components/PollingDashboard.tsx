@@ -241,7 +241,7 @@ export default function PollingDashboard() {
   if (!data) return <div className="p-4 text-xs text-zinc-600">Unable to load polling data</div>;
 
   return (
-    <div>
+    <div data-component="pollingDashboard">
       {/* Section tabs */}
       <div className="flex border-b border-border">
         {sections.map((s) => (

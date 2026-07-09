@@ -9,6 +9,7 @@ import PanelEmpty from "./ui/PanelEmpty";
 import PanelError from "./ui/PanelError";
 import PanelSkeleton from "./ui/PanelSkeleton";
 import { formatTimeAgo } from "@/lib/format";
+import { PARTY_OPTIONS } from "@/lib/palette";
 
 interface OpponentPost {
   text: string;
@@ -45,17 +46,7 @@ interface OppositionPerson {
   role: string;
 }
 
-const PARTY_OPTIONS = [
-  "Reform UK",
-  "Labour",
-  "Conservative",
-  "Liberal Democrats",
-  "Green",
-  "Restore Britain",
-  "SNP",
-  "Independent",
-  "Other",
-];
+
 
 const ACTIVITY_INDICATORS: Record<string, { dot: string; label: string }> = {
   high: { dot: "🔴", label: "High" },
@@ -153,7 +144,7 @@ function PeopleManager({ onChanged }: { onChanged: () => void }) {
   const { slug } = useConstituency();
   const [people, setPeople] = useState<OppositionPerson[]>([]);
   const [name, setName] = useState("");
-  const [party, setParty] = useState(PARTY_OPTIONS[0]);
+  const [party, setParty] = useState<string>(PARTY_OPTIONS[0]);
   const [handle, setHandle] = useState("");
   const [role, setRole] = useState("");
   const [busy, setBusy] = useState(false);

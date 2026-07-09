@@ -147,7 +147,7 @@ export default function ActivityCharts() {
   }
 
   return (
-    <div>
+    <div data-component="activityCharts">
       {/* Tab bar */}
       <div className="flex border-b border-border">
         {tabs.map((t) => (

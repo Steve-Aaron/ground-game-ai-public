@@ -54,7 +54,7 @@ export default function PetitionsPanel() {
   const maxSalience = chartPetitions.length > 0 ? chartPetitions[0].salience : 1;
 
   return (
-    <div className="space-y-4">
+    <div data-component="petitionsPanel" className="space-y-4">
       {/* Summary stats */}
       <StatGrid
         cols={2}

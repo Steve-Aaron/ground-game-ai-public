@@ -14,6 +14,7 @@ export default function ThemeToggle() {
 
   return (
     <button
+      data-component="themeToggle"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
       className="text-zinc-400 hover:text-foreground transition-colors"
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}

@@ -101,7 +101,7 @@ export default function EmploymentPanel() {
   }
 
   return (
-    <div className="bg-background border border-border rounded-2xl p-4 space-y-4">
+    <div data-component="employmentPanel" className="bg-background border border-border rounded-2xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-200">Employment &amp; Economy</h3>

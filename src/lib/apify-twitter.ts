@@ -61,7 +61,10 @@ interface ApifyTweet {
     profile_image_url_https?: string;
     followers?: number;
     followersCount?: number;
+    isVerified?: boolean;
+    isBlueVerified?: boolean;
   };
+  user?: { name?: string; screen_name?: string; verified?: boolean };
   extendedEntities?: { media?: ApifyMedia[] };
   extended_entities?: { media?: ApifyMedia[] };
   entities?: { media?: ApifyMedia[] };
@@ -145,4 +148,48 @@ export async function fetchTwitterProfile(
     followers: author?.followers ?? author?.followersCount ?? null,
     posts: valid.slice(0, maxItems).map((t) => mapTweet(t, handle)),
   };
+}
+
+export interface SearchTweet extends Tweet {
+  author: { name: string; handle: string; verified: boolean };
+}
+
+/**
+ * Search X for a query (mentions monitoring). Same actor as
+ * fetchTwitterProfile; each result carries its own author.
+ */
+export async function searchTweets(
+  query: string,
+  maxItems: number,
+  token: string
+): Promise<SearchTweet[]> {
+  const res = await fetch(
+    `${APIFY_BASE}/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${token}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ searchTerms: [query], maxItems, sort: "Latest" }),
+    }
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Apify search returned ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const items = (await res.json()) as ApifyTweet[];
+  return items
+    .filter((t) => (t.full_text || t.text || "").length > 10)
+    .slice(0, maxItems)
+    .map((t) => {
+      const handle = t.author?.userName ?? t.author?.screen_name ?? t.user?.screen_name ?? "";
+      return {
+        ...mapTweet(t, handle || "i"),
+        author: {
+          name: t.author?.name ?? t.user?.name ?? "Unknown",
+          handle,
+          verified:
+            t.author?.isVerified ?? t.author?.isBlueVerified ?? t.user?.verified ?? false,
+        },
+      };
+    });
 }

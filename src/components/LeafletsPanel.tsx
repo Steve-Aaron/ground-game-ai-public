@@ -9,6 +9,8 @@ import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
 import PanelError from "@/components/ui/PanelError";
 import { formatGbDate, formatTimeAgo } from "@/lib/format";
+import { LEAFLET_CATEGORIES } from "@/lib/leaflet-categories";
+import { PARTY_OPTIONS } from "@/lib/palette";
 
 // Mirrors LeafletItem in src/app/api/leaflets/route.ts.
 interface LeafletItem {
@@ -34,31 +36,9 @@ const KIND_LABELS: Record<LeafletItem["kind"], string> = {
   social: "Social media",
 };
 
-const PARTIES = [
-  "Reform UK",
-  "Labour",
-  "Conservative",
-  "Liberal Democrats",
-  "Green",
-  "Restore Britain",
-  "Independent",
-  "Other / Unknown",
-];
 
-// Mirrored in src/app/api/leaflets/route.ts — keep the two lists in sync.
-const CATEGORIES = [
-  "NHS & Health",
-  "Immigration",
-  "Economy & Cost of Living",
-  "Crime & Policing",
-  "Housing & Planning",
-  "Environment",
-  "Education",
-  "Local Services",
-  "Candidate Promotion",
-  "Attack / Negative",
-  "Other",
-];
+
+
 
 /** Upload form — collapsed behind a button until needed. */
 function UploadForm({ onUploaded }: { onUploaded: () => void }) {
@@ -67,8 +47,8 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [kind, setKind] = useState<LeafletItem["kind"]>("leaflet");
-  const [party, setParty] = useState(PARTIES[0]);
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [party, setParty] = useState<string>(PARTY_OPTIONS[0]);
+  const [category, setCategory] = useState<string>(LEAFLET_CATEGORIES[0]);
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState("");
   const [seenAt, setSeenAt] = useState(() => new Date().toISOString().slice(0, 10));
@@ -212,7 +192,7 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
           aria-label="Party"
           className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
         >
-          {PARTIES.map((p) => (
+          {PARTY_OPTIONS.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
@@ -226,7 +206,7 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
         aria-label="Content category"
         className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
       >
-        {CATEGORIES.map((c) => (
+        {LEAFLET_CATEGORIES.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>

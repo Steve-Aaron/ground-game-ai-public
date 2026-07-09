@@ -70,7 +70,7 @@ export default function EPCPanel() {
   const maxPct = Math.max(...bands.map((b) => b.percentage), 1);
 
   return (
-    <div className="space-y-4">
+    <div data-component="epcPanel" className="space-y-4">
       {/* Headline stats */}
       <StatGrid
         cols={2}

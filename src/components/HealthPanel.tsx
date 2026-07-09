@@ -124,7 +124,7 @@ export default function HealthPanel() {
   data.indicators.forEach((ind) => counts[ind.significance]++);
 
   return (
-    <div className="p-4 space-y-3">
+    <div data-component="healthPanel" className="p-4 space-y-3">
       {/* Summary badges */}
       <div className="flex items-center gap-2 flex-wrap">
         {counts.better > 0 && (

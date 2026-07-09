@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { adminBucket, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { adminBucket } from "@/lib/firebase-admin";
 import { requireConstituencyAccess } from "@/lib/guards";
+import { saveImage, signedImageUrl, validateImage } from "@/lib/image-upload";
+import { LEAFLET_CATEGORIES, type LeafletCategory } from "@/lib/leaflet-categories";
 
 export const dynamic = "force-dynamic";
 
@@ -14,34 +17,10 @@ export const dynamic = "force-dynamic";
 // to be public.
 
 const COLLECTION = "leaflets";
-const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8MB
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/heic": "heic",
-};
 const KINDS = ["leaflet", "poster", "social"] as const;
 type LeafletKind = (typeof KINDS)[number];
 
-// Manual categorisation of what the content is about. Mirrored in
-// LeafletsPanel.tsx — keep the two lists in sync.
-const CATEGORIES = [
-  "NHS & Health",
-  "Immigration",
-  "Economy & Cost of Living",
-  "Crime & Policing",
-  "Housing & Planning",
-  "Environment",
-  "Education",
-  "Local Services",
-  "Candidate Promotion",
-  "Attack / Negative",
-  "Other",
-] as const;
-type LeafletCategory = (typeof CATEGORIES)[number];
 
-const SIGNED_URL_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 interface LeafletDoc {
   constituencySlug: string;
@@ -87,13 +66,10 @@ export async function GET(request: Request) {
     )
     .slice(0, 100);
 
-  const expires = Date.now() + SIGNED_URL_TTL_MS;
   const items: LeafletItem[] = await Promise.all(
     docs.map(async (doc) => {
       const data = doc.data() as LeafletDoc;
-      const [imageUrl] = await adminBucket()
-        .file(data.storagePath)
-        .getSignedUrl({ action: "read", expires });
+      const imageUrl = await signedImageUrl(data.storagePath);
       return {
         id: doc.id,
         constituencySlug: data.constituencySlug,
@@ -133,15 +109,9 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No photo attached" }, { status: 400 });
   }
-  if (file.size > MAX_FILE_BYTES) {
-    return NextResponse.json({ error: "Photo too large (max 8MB)" }, { status: 400 });
-  }
-  const ext = ALLOWED_TYPES[file.type];
-  if (!ext) {
-    return NextResponse.json(
-      { error: "Unsupported file type — use JPEG, PNG, WebP or HEIC" },
-      { status: 400 }
-    );
+  const validated = validateImage(file);
+  if ("error" in validated) {
+    return NextResponse.json({ error: validated.error }, { status: 400 });
   }
 
   const kindRaw = String(form.get("kind") ?? "leaflet");
@@ -150,7 +120,7 @@ export async function POST(request: Request) {
     : "leaflet";
   const party = String(form.get("party") ?? "Unknown").slice(0, 60);
   const categoryRaw = String(form.get("category") ?? "Other");
-  const category: LeafletCategory = (CATEGORIES as readonly string[]).includes(categoryRaw)
+  const category: LeafletCategory = (LEAFLET_CATEGORIES as readonly string[]).includes(categoryRaw)
     ? (categoryRaw as LeafletCategory)
     : "Other";
   const summary = String(form.get("summary") ?? "").slice(0, 1000);
@@ -169,14 +139,7 @@ export async function POST(request: Request) {
       : today;
 
   const id = randomUUID();
-  const storagePath = `leaflets/${slug}/${id}.${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  await adminBucket().file(storagePath).save(buffer, {
-    contentType: file.type,
-    resumable: false,
-    metadata: { cacheControl: "private, max-age=3600" },
-  });
+  const storagePath = await saveImage(file, `leaflets/${slug}`, validated.ext);
 
   const doc: LeafletDoc = {
     constituencySlug: slug,

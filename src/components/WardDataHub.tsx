@@ -232,7 +232,7 @@ export default function WardDataHub() {
   ];
 
   return (
-    <div className="p-3 space-y-3">
+    <div data-component="wardDataHub" className="p-3 space-y-3">
       {/* ── SUMMARY TABLE ──────────────────────────────────── */}
       <div className="overflow-x-auto rounded-xl border border-border">
         <DataTable

@@ -139,7 +139,7 @@ export default function CQCPanel() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div data-component="cqcPanel" className="space-y-4">
       {/* Summary cards */}
       <StatGrid
         cols={4}

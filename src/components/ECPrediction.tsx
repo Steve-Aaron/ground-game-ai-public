@@ -3,17 +3,12 @@
 import { useEffect, useState } from "react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { partyColor } from "@/lib/palette";
+import type { ConstituencyPrediction as ECConstituencyData } from "@/app/api/electoral-calculus/route";
 import DataTable, { type DataTableColumn } from "./ui/DataTable";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelError from "@/components/ui/PanelError";
 import { getFullData } from "@/data";
 
-interface ECConstituencyData {
-  prediction: string;
-  predicted: Record<string, { share: number }>;
-  winningChances: Record<string, number>;
-  wards: Array<{ ward: string; district: string; electorate: number; winner2024: string; predictedWinner: string }>;
-}
 
 // Convert live EC constituency data to the shape used by ecPrediction
 function toLiveEcPrediction(ec: ECConstituencyData) {
@@ -149,7 +144,7 @@ export default function ECPrediction() {
   const swings = wards.filter(([, d]) => d.winner2024 !== d.predictedWinner);
 
   return (
-    <div className="space-y-4">
+    <div data-component="ecPrediction" className="space-y-4">
       {byElection ? <ByElectionBanner note={byElection.note} date={byElection.date} /> : null}
       {/* Headline prediction */}
       <div className="bg-muted/30 rounded-lg p-3">

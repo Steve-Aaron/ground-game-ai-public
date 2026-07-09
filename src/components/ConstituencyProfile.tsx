@@ -36,7 +36,7 @@ export default function ConstituencyProfile() {
   ];
 
   return (
-    <div className="p-4">
+    <div data-component="constituencyProfile" className="p-4">
       <div className="grid grid-cols-2 gap-3">
         {stats.map((s) => (
           <div key={s.label} className="bg-muted/40 rounded-lg p-3">

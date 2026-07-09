@@ -24,7 +24,7 @@ interface WardPrediction {
   predictedWinner: string;
 }
 
-interface ConstituencyPrediction {
+export interface ConstituencyPrediction {
   name: string;
   code: string;
   mp: string;
@@ -41,7 +41,7 @@ interface ConstituencyPrediction {
   scrapedAt: string;
 }
 
-interface IndicatorRow {
+export interface IndicatorRow {
   name: string;
   seat: string;
   area: string;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { searchTweets } from "@/lib/apify-twitter";
 import { getFullData } from "@/data";
 import { requireConstituencyAccess } from "@/lib/guards";
 
@@ -162,100 +163,27 @@ async function fetchFromXApi(mpName: string, mpHandle: string | null): Promise<S
 
 async function fetchFromApify(mpName: string, mpHandle: string | null): Promise<SocialMention[]> {
   const token = process.env.APIFY_API_TOKEN;
+  if (!token) return [];
 
-  // If MP has no Twitter handle, fall back to name-only search across all
-  // three actor schemas.
-  const combinedQuery = mpHandle ? `@${mpHandle} OR "${mpName}"` : `"${mpName}"`;
-  const searchTermsForQuacker = mpHandle ? [`@${mpHandle}`, mpName] : [mpName];
-  const searchTermsForApify = [combinedQuery];
+  // Handle + name search when the MP has a handle, name-only otherwise.
+  const query = mpHandle ? `@${mpHandle} OR "${mpName}"` : `"${mpName}"`;
 
-  // Try multiple actor configurations — different actors have different input schemas
-  const actorConfigs = [
-    {
-      actor: "quacker/twitter-scraper",
-      input: {
-        searchTerms: searchTermsForQuacker,
-        maxTweets: 20,
-        sort: "Latest",
-      },
-    },
-    {
-      actor: "apidojo/tweet-scraper",
-      input: {
-        startUrls: [{ url: `https://x.com/search?q=${encodeURIComponent(combinedQuery)}&src=typed_query&f=live` }],
-        maxItems: 20,
-        sort: "Latest",
-      },
-    },
-    {
-      actor: "apify/twitter-scraper",
-      input: {
-        searchTerms: searchTermsForApify,
-        maxTweets: 20,
-        tweetLanguage: "en",
-      },
-    },
-  ];
-
-  for (const config of actorConfigs) {
-    try {
-      console.log(`[mentions] Trying Apify actor: ${config.actor}`);
-      // Use run-sync with a timeout — Vercel functions have limited execution time
-      const res = await fetch(
-        `https://api.apify.com/v2/acts/${config.actor}/run-sync-get-dataset-items?token=${token}&timeout=20`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(config.input),
-          signal: AbortSignal.timeout(22000), // 22s client timeout
-        }
-      );
-
-      console.log(`[mentions] ${config.actor} responded: ${res.status} ${res.statusText}`);
-      if (!res.ok) continue;
-
-      const tweets = await res.json();
-      const validTweets = (tweets || []).filter((t: {
-        full_text?: string;
-        text?: string;
-      }) => {
-        const text = t.full_text || t.text || "";
-        return text.length > 10;
-      });
-
-      if (validTweets.length === 0) continue;
-
-      return validTweets.slice(0, 20).map((t: {
-        full_text?: string;
-        text?: string;
-        user?: { name: string; screen_name: string; verified: boolean };
-        author?: { userName?: string; name?: string; isVerified?: boolean };
-        id_str?: string;
-        id?: string;
-        created_at?: string;
-        createdAt?: string;
-        favorite_count?: number;
-        favoriteCount?: number;
-        retweet_count?: number;
-        retweetCount?: number;
-        tweetUrl?: string;
-        url?: string;
-      }) => ({
-        text: t.full_text || t.text || "",
-        author: t.user?.name || t.author?.name || "Unknown",
-        authorHandle: t.user?.screen_name || t.author?.userName || "",
-        url: t.tweetUrl || t.url || `https://x.com/${t.user?.screen_name || t.author?.userName || "i"}/status/${t.id_str || t.id || ""}`,
-        date: t.created_at || t.createdAt || new Date().toISOString(),
-        platform: "x" as const,
-        likes: t.favorite_count || t.favoriteCount || 0,
-        retweets: t.retweet_count || t.retweetCount || 0,
-        isVerified: t.user?.verified || t.author?.isVerified || false,
-      }));
-    } catch {
-      continue;
-    }
+  try {
+    const tweets = await searchTweets(query, 20, token);
+    return tweets.map((t) => ({
+      text: t.text,
+      author: t.author.name,
+      authorHandle: t.author.handle,
+      url: t.url,
+      date: t.date || new Date().toISOString(),
+      platform: "x" as const,
+      likes: t.likes,
+      retweets: t.retweets,
+      isVerified: t.author.verified,
+    }));
+  } catch (err) {
+    console.error("[mentions] Apify search failed:", err);
+    return [];
   }
-
-  return [];
 }
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Users,
   Home,
@@ -9,7 +8,7 @@ import {
   Heart,
   AlertTriangle,
 } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface SectionRow {
@@ -193,28 +192,9 @@ function CategoryCard({
 }
 
 export default function Demographics() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<CLData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!slug) return; // auth still loading — effect re-runs when slug resolves
-    setLoading(true);
-    setData(null);
-    setError(null);
-
-    fetch(withConstituency("/api/commons-library", slug))
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: CLData) => setData(json))
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load")
-      )
-      .finally(() => setLoading(false));
-  }, [slug]);
+  const { data, loading, error } = useConstituencyResource<CLData>(
+    "/api/commons-library"
+  );
 
   if (loading) {
     return <PanelSkeleton variant="grid" rows={6} />;
@@ -235,7 +215,7 @@ export default function Demographics() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div data-component="demographics" className="p-4 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {DEMO_KEYS.map((key) => {
           const secs = sections![key];

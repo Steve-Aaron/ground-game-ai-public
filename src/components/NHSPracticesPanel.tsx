@@ -41,7 +41,7 @@ export default function NHSPracticesPanel() {
 
   return (
     <Panel title="NHS facilities" dataComponent="nhsPractices" icon={<Stethoscope className="w-3.5 h-3.5" />}>
-      <div data-component="NHSPracticesPanel" className="p-3 space-y-3">
+      <div data-component="nhsPracticesPanel" className="p-3 space-y-3">
         {loading && <PanelSkeleton variant="list" rows={4} className="p-0" />}
         {error && <div className="text-[0.65rem] text-red-400">Could not load: {error}</div>}
         {data && (
@@ -54,7 +54,7 @@ export default function NHSPracticesPanel() {
                   <button
                     key={t}
                     type="button"
-                    data-component="NHSPracticesPanel.TypeChip"
+                    data-component="nhsPracticeTypeChip"
                     onClick={() => setActiveType(t)}
                     className={`text-left border ${meta.ring} ${active ? "bg-zinc-800/60" : "bg-transparent"} px-2 py-1.5 hover:bg-zinc-800/40 transition`}
                   >
@@ -70,7 +70,7 @@ export default function NHSPracticesPanel() {
               })}
             </div>
 
-            <ul data-component="NHSPracticesPanel.List" className="divide-y divide-[#2a2a2a] border border-[#2a2a2a]">
+            <ul data-component="nhsPracticesList" className="divide-y divide-[#2a2a2a] border border-[#2a2a2a]">
               {visible.length === 0 && (
                 <li className="px-2 py-1.5 text-[0.65rem] text-zinc-500">None recorded</li>
               )}

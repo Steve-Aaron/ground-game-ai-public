@@ -8,7 +8,7 @@ import { constituencyGeo, wardData, wardElectoralCalc as fallbackWardElectoralCa
 import { Layers, ChevronDown, ChevronUp } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData, WARD_DEPRIVATION } from "@/data";
-import { partyColor as partyColorOf } from "@/lib/palette";
+import { partyColor as partyColorOf, PARTY_MAP_LEGEND } from "@/lib/palette";
 
 // Layer definitions — World Monitor style
 interface LayerDef {
@@ -33,16 +33,8 @@ const LAYER_DEFS: LayerDef[] = [
   { id: "ward-labels", label: "Ward Names", description: "Ward name labels", default: true },
 ];
 
-// Legend entries for the winner/prediction choropleths. Mirrors the
-// `partyColourBy` match expression used in the layer paint.
-const PARTY_LEGEND = [
-  { party: "CON", color: "#0087DC" },
-  { party: "LAB", color: "#DC241f" },
-  { party: "Reform", color: "#12B6CF" },
-  { party: "LIB", color: "#FAA61A" },
-  { party: "Green", color: "#6AB023" },
-  { party: "Other", color: "#666666" },
-];
+// Legend + paint colours come from the canonical palette (PARTY_MAP_LEGEND)
+// so the map always matches the rest of the platform.
 
 interface BoundaryFeature {
   type: "Feature";
@@ -305,16 +297,14 @@ export default function ConstituencyMap() {
         // Prediction layers. Driven by per-ward EC data attached during
         // enrichment (`winner2024` / `predictedWinner`). Both layers use the
         // same colour scheme so swaps between them are visually consistent.
-        // NOTE: keep in sync with the module-level PARTY_LEGEND used by the map legend.
-        const partyColourBy = (field: string): maplibregl.ExpressionSpecification => [
-          "match", ["get", field],
-          "CON", "#0087DC",
-          "LAB", "#DC241f",
-          "Reform", "#12B6CF",
-          "LIB", "#FAA61A",
-          "Green", "#6AB023",
-          "#666666",
-        ];
+        // Palette-driven: same colours as PARTY_MAP_LEGEND / the platform.
+        // (Cast needed — TS can't prove a spread satisfies the match tuple.)
+        const partyColourBy = (field: string): maplibregl.ExpressionSpecification =>
+          [
+            "match", ["get", field],
+            ...PARTY_MAP_LEGEND.filter((pl) => pl.party !== "Other").flatMap((pl) => [pl.party, pl.color]),
+            "#666666",
+          ] as unknown as maplibregl.ExpressionSpecification;
         const predColorExpr = partyColourBy("predictedWinner");
 
         // === LAYER: Ward 2024 Vote Choropleth ===
@@ -431,11 +421,11 @@ export default function ConstituencyMap() {
               ${props.conVote ? `
               <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">2024 Vote Share</div>
               <div style="display: flex; flex-direction: column; gap: 3px; font-size: 12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#0087DC;">■ CON</span><strong style="color:#e2e8f0;">${props.conVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#12B6CF;">■ REF</span><strong style="color:#e2e8f0;">${props.refVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#DC241f;">■ LAB</span><strong style="color:#e2e8f0;">${props.labVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#FAA61A;">■ LD</span><strong style="color:#e2e8f0;">${props.ldVote}%</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#6AB023;">■ GRN</span><strong style="color:#e2e8f0;">${props.grnVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:${partyColorOf('CON')};">■ CON</span><strong style="color:#e2e8f0;">${props.conVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:${partyColorOf('Reform')};">■ REF</span><strong style="color:#e2e8f0;">${props.refVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:${partyColorOf('LAB')};">■ LAB</span><strong style="color:#e2e8f0;">${props.labVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:${partyColorOf('LIB')};">■ LD</span><strong style="color:#e2e8f0;">${props.ldVote}%</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:${partyColorOf('Green')};">■ GRN</span><strong style="color:#e2e8f0;">${props.grnVote}%</strong></div>
               </div>` : ""}
             </div>
           `;
@@ -1193,7 +1183,7 @@ export default function ConstituencyMap() {
     : null;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "500px" }}>
+    <div data-component="constituencyMapRoot" style={{ position: "relative", width: "100%", height: "100%", minHeight: "500px" }}>
       <div ref={mapContainer} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }} />
 
       {/* Layer Toggle Panel — World Monitor style */}
@@ -1330,7 +1320,7 @@ export default function ConstituencyMap() {
                 {activeChoropleth === "vote" ? "2024 Ward Winner" : "MRP Predicted Winner"}
               </div>
               <div className="space-y-1">
-                {PARTY_LEGEND.map((p) => (
+                {PARTY_MAP_LEGEND.map((p) => (
                   <div key={p.party} className="flex items-center gap-1.5">
                     <div className="h-3 w-4 rounded-sm" style={{ background: p.color }} />
                     <span className="text-[11px] text-foreground">{p.party}</span>

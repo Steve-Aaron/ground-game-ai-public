@@ -18,7 +18,7 @@ import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
 import PanelError from "@/components/ui/PanelError";
-import { formatTimeAgoShort } from "@/lib/format";
+import { formatCompactNumber, formatTimeAgoShort } from "@/lib/format";
 
 // Mirrors src/lib/apify-twitter.ts shapes via the /api/social-feed response.
 interface TweetMedia {
@@ -56,13 +56,6 @@ interface TrackedAccount {
 }
 
 const engagement = (t: Tweet) => t.likes + t.retweets * 2 + t.replies;
-
-function formatCount(n: number | null): string {
-  if (n === null) return "—";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
 
 /** Manage the tracked-handle list (max enforced server-side). */
 function AccountManager({ onChanged }: { onChanged: () => void }) {
@@ -248,16 +241,16 @@ function ProfileAnalytics({ profile }: { profile: SocialProfile }) {
             <BadgeCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />
           </a>
           <p className="text-[0.611rem] text-zinc-500">
-            @{profile.handle} · {formatCount(profile.followers)} followers
+            @{profile.handle} · {formatCompactNumber(profile.followers)} followers
           </p>
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 mt-3">
         {[
           { label: "Posts shown", value: String(stats.posts) },
-          { label: "Avg likes", value: formatCount(stats.avgLikes) },
-          { label: "Avg reposts", value: formatCount(stats.avgRts) },
-          { label: "Views (total)", value: stats.totalViews > 0 ? formatCount(stats.totalViews) : "—" },
+          { label: "Avg likes", value: formatCompactNumber(stats.avgLikes) },
+          { label: "Avg reposts", value: formatCompactNumber(stats.avgRts) },
+          { label: "Views (total)", value: stats.totalViews > 0 ? formatCompactNumber(stats.totalViews) : "—" },
         ].map((s) => (
           <div key={s.label} className="bg-muted/30 rounded-lg px-2 py-1.5 text-center">
             <div className="text-xs font-bold text-foreground">{s.value}</div>
@@ -347,10 +340,10 @@ function TweetCard({
 
           {/* Metrics */}
           <div className="flex items-center gap-5 mt-2 text-[0.611rem] text-zinc-500">
-            <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{formatCount(tweet.replies)}</span>
-            <span className="flex items-center gap-1"><Repeat2 className="h-3.5 w-3.5" />{formatCount(tweet.retweets)}</span>
-            <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{formatCount(tweet.likes)}</span>
-            <span className="flex items-center gap-1"><BarChart2 className="h-3 w-3" />{formatCount(tweet.views)}</span>
+            <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{formatCompactNumber(tweet.replies)}</span>
+            <span className="flex items-center gap-1"><Repeat2 className="h-3.5 w-3.5" />{formatCompactNumber(tweet.retweets)}</span>
+            <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{formatCompactNumber(tweet.likes)}</span>
+            <span className="flex items-center gap-1"><BarChart2 className="h-3 w-3" />{formatCompactNumber(tweet.views)}</span>
           </div>
 
           {/* Relative performance vs this account's other tweets */}

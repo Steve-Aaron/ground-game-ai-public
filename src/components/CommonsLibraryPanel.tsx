@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import SectionLabel from "./ui/SectionLabel";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
@@ -141,18 +140,12 @@ function Delta({ local, national, invert = false }: { local: string; national: s
 }
 
 export default function CommonsLibraryPanel() {
-  const { slug } = useConstituency();
-  const [data, setData] = useState<CommonsLibraryData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!slug) return; // auth still loading — effect re-runs when slug resolves
-    fetch(withConstituency("/api/commons-library", slug))
-      .then((res) => res.json())
-      .then((d: CommonsLibraryData) => setData(d))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
+  // fallback: null reproduces the previous catch handler (data reset to null
+  // on error) — hence the T | null type parameter.
+  const { data, loading } = useConstituencyResource<CommonsLibraryData | null>(
+    "/api/commons-library",
+    { fallback: null }
+  );
 
   if (loading) {
     return <PanelSkeleton variant="grid" rows={4} />;
@@ -238,7 +231,7 @@ export default function CommonsLibraryPanel() {
   const broadband = extractPct(getRowVal(transport, "broadband") || "95.2%");
 
   return (
-    <div className="space-y-5">
+    <div data-component="commonsLibraryPanel" className="space-y-5">
       {/* ── Hero Stats Row ── */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-muted rounded-xl p-3">

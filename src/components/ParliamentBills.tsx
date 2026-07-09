@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search, ExternalLink, ThumbsUp, ThumbsDown } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "./ui/PanelSkeleton";
 import { formatGbDate } from "@/lib/format";
 
@@ -54,29 +54,25 @@ function classifyStage(stage: string): string {
   return "other";
 }
 
+interface VotesResponse {
+  votes?: Vote[];
+}
+
+// Module-level so the reference is stable across renders (the hook keys its
+// fetch callback on `fallback`). Matches the old catch handler: votes reset
+// to [] on error.
+const EMPTY_VOTES: VotesResponse = { votes: [] };
+
 export default function ParliamentBills() {
-  const { slug } = useConstituency();
   const [tab, setTab] = useState<Tab>("votes");
-  const [votes, setVotes] = useState<Vote[]>([]);
+  const { data, loading } = useConstituencyResource<VotesResponse>(
+    "/api/parliament?type=votes",
+    { fallback: EMPTY_VOTES }
+  );
+  const votes = data?.votes ?? [];
   const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
-
-  useEffect(() => {
-    fetchVotes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-
-  async function fetchVotes() {
-    try {
-      setLoading(true);
-      const res = await fetch(withConstituency("/api/parliament?type=votes", slug));
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setVotes(data.votes || []);
-    } catch { setVotes([]); } finally { setLoading(false); }
-  }
 
   async function fetchBills(query?: string) {
     try {
@@ -88,7 +84,7 @@ export default function ParliamentBills() {
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       setBills(data.bills || []);
-    } catch { setBills([]); } finally { setSearching(false); setLoading(false); }
+    } catch { setBills([]); } finally { setSearching(false); }
   }
 
   function handleTabChange(newTab: Tab) {
@@ -113,7 +109,7 @@ export default function ParliamentBills() {
   });
 
   return (
-    <div>
+    <div data-component="parliamentBills">
       {/* Tabs */}
       <div className="flex border-b border-border">
         <button

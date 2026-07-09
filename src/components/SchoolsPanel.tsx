@@ -68,7 +68,7 @@ export default function SchoolsPanel() {
   const ofstedTotal = summary.outstanding + summary.good + summary.requiresImprovement + summary.inadequate;
 
   return (
-    <div>
+    <div data-component="schoolsPanel">
       {/* Summary stats */}
       <div className="px-3 py-2.5 border-b border-border/50">
         <div className="grid grid-cols-3 gap-2 mb-2.5">

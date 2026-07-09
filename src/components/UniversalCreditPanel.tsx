@@ -59,7 +59,7 @@ export default function UniversalCreditPanel() {
   const trendValues = trend.map((t) => t.count).filter((v) => v > 0);
 
   return (
-    <div className="space-y-4">
+    <div data-component="universalCreditPanel" className="space-y-4">
       {/* Headline figures */}
       <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
         <div>

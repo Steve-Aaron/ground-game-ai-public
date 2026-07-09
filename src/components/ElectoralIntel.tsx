@@ -8,6 +8,7 @@ import {
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
 import { ecIndicatorStyle, partyColor, partyLabel } from "@/lib/palette";
+import type { ConstituencyPrediction as ECConstituencyData } from "@/app/api/electoral-calculus/route";
 
 type View = "results" | "prediction" | "wards";
 
@@ -93,23 +94,6 @@ function deriveResults(slug: string): DerivedResults | null {
   };
 }
 
-interface IndicatorRow {
-  name: string;
-  seat: string;
-  area: string;
-  gb: string;
-  seatClass: string;
-  areaClass: string;
-  gbClass: string;
-}
-
-interface ECConstituencyData {
-  indicators?: { areaName: string; rows: IndicatorRow[] } | null;
-  prediction: string;
-  predicted: Record<string, { share: number }>;
-  winningChances: Record<string, number>;
-  wards: Array<{ ward: string; district: string; electorate: number; winner2024: string; predictedWinner: string }>;
-}
 
 // Convert live EC constituency data to the shape used by ecPrediction
 function toLiveEcPrediction(ec: ECConstituencyData) {
@@ -219,7 +203,7 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
   for (const [, d] of wards) wardCounts[d.predictedWinner] = (wardCounts[d.predictedWinner] || 0) + 1;
 
   return (
-    <div>
+    <div data-component="electoralIntel">
       {/* View tabs */}
       <div className="flex border-b border-border">
         {tabs.map((t) => (

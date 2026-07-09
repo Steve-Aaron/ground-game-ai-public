@@ -52,7 +52,7 @@ export default function ElectionResults() {
     .sort((a, b) => b.share - a.share);
 
   return (
-    <div className="p-4 space-y-4">
+    <div data-component="electionResults" className="p-4 space-y-4">
       <div className="flex items-center justify-between text-xs text-zinc-500">
         <span>General Election 2024</span>
         <span>Turnout: {r.turnoutPct}%</span>

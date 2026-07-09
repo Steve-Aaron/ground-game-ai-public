@@ -66,9 +66,12 @@ export function formatGbDate(dateStr: string): string {
 }
 
 /**
- * Compact integer formatter, e.g. 1500 → '1.5k', 250 → '250'.
+ * Compact integer formatter, e.g. 2300000 → '2.3M', 1500 → '1.5k',
+ * 250 → '250'. Null-tolerant: null → '—' (missing metric).
  */
-export function formatCompactNumber(n: number): string {
+export function formatCompactNumber(n: number | null): string {
+  if (n === null) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(n);
 }
