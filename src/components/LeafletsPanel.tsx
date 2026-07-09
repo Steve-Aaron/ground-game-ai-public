@@ -14,6 +14,8 @@ interface LeafletItem {
   id: string;
   kind: "leaflet" | "poster" | "social";
   party: string;
+  category: string;
+  summary: string;
   notes: string;
   uploadedBy: string;
   contentType: string;
@@ -38,6 +40,21 @@ const PARTIES = [
   "Other / Unknown",
 ];
 
+// Mirrored in src/app/api/leaflets/route.ts — keep the two lists in sync.
+const CATEGORIES = [
+  "NHS & Health",
+  "Immigration",
+  "Economy & Cost of Living",
+  "Crime & Policing",
+  "Housing & Planning",
+  "Environment",
+  "Education",
+  "Local Services",
+  "Candidate Promotion",
+  "Attack / Negative",
+  "Other",
+];
+
 /** Upload form — collapsed behind a button until needed. */
 function UploadForm({ onUploaded }: { onUploaded: () => void }) {
   const { slug } = useConstituency();
@@ -46,6 +63,8 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [kind, setKind] = useState<LeafletItem["kind"]>("leaflet");
   const [party, setParty] = useState(PARTIES[0]);
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +74,7 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
+    setSummary("");
     setNotes("");
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -76,6 +96,8 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
       body.append("photo", file);
       body.append("kind", kind);
       body.append("party", party);
+      body.append("category", category);
+      body.append("summary", summary);
       body.append("notes", notes);
       const res = await fetch(withConstituency("/api/leaflets", slug), {
         method: "POST",
@@ -177,10 +199,32 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
         </select>
       </div>
 
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        aria-label="Content category"
+        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
+      >
+        {CATEGORIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+
+      <textarea
+        value={summary}
+        onChange={(e) => setSummary(e.target.value)}
+        placeholder="Summary — what does the content say or claim?"
+        maxLength={1000}
+        rows={3}
+        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
+      />
+
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Notes — where you saw it, key claims made…"
+        placeholder="Notes — where and when you saw it…"
         maxLength={500}
         rows={2}
         className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
@@ -224,8 +268,14 @@ function LeafletCard({ item }: { item: LeafletItem }) {
             {KIND_LABELS[item.kind]}
           </span>
         </div>
+        <span className="inline-block text-[0.5rem] uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5">
+          {item.category}
+        </span>
+        {item.summary ? (
+          <p className="text-[0.611rem] text-zinc-300 line-clamp-3">{item.summary}</p>
+        ) : null}
         {item.notes ? (
-          <p className="text-[0.611rem] text-zinc-400 line-clamp-2">{item.notes}</p>
+          <p className="text-[0.611rem] text-zinc-500 line-clamp-2">{item.notes}</p>
         ) : null}
         <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
           {item.uploadedBy} · {formatTimeAgo(item.createdAt)}

@@ -24,12 +24,32 @@ const ALLOWED_TYPES: Record<string, string> = {
 const KINDS = ["leaflet", "poster", "social"] as const;
 type LeafletKind = (typeof KINDS)[number];
 
+// Manual categorisation of what the content is about. Mirrored in
+// LeafletsPanel.tsx — keep the two lists in sync.
+const CATEGORIES = [
+  "NHS & Health",
+  "Immigration",
+  "Economy & Cost of Living",
+  "Crime & Policing",
+  "Housing & Planning",
+  "Environment",
+  "Education",
+  "Local Services",
+  "Candidate Promotion",
+  "Attack / Negative",
+  "Other",
+] as const;
+type LeafletCategory = (typeof CATEGORIES)[number];
+
 const SIGNED_URL_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 interface LeafletDoc {
   constituencySlug: string;
   kind: LeafletKind;
   party: string;
+  category: LeafletCategory;
+  /** Manual summary of what the content contains/claims. */
+  summary: string;
   notes: string;
   uploadedBy: string;
   storagePath: string;
@@ -73,6 +93,8 @@ export async function GET(request: Request) {
         constituencySlug: data.constituencySlug,
         kind: data.kind,
         party: data.party,
+        category: data.category ?? "Other",
+        summary: data.summary ?? "",
         notes: data.notes,
         uploadedBy: data.uploadedBy,
         contentType: data.contentType,
@@ -111,6 +133,11 @@ export async function POST(request: Request) {
     ? (kindRaw as LeafletKind)
     : "leaflet";
   const party = String(form.get("party") ?? "Unknown").slice(0, 60);
+  const categoryRaw = String(form.get("category") ?? "Other");
+  const category: LeafletCategory = (CATEGORIES as readonly string[]).includes(categoryRaw)
+    ? (categoryRaw as LeafletCategory)
+    : "Other";
+  const summary = String(form.get("summary") ?? "").slice(0, 1000);
   const notes = String(form.get("notes") ?? "").slice(0, 500);
 
   const id = randomUUID();
@@ -127,6 +154,8 @@ export async function POST(request: Request) {
     constituencySlug: slug,
     kind,
     party,
+    category,
+    summary,
     notes,
     uploadedBy: session.email,
     storagePath,

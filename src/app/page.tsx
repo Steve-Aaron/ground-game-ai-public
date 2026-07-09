@@ -595,15 +595,18 @@ function Dashboard() {
                 <LiveFeeds />
               </Panel>
 
-              {/* Campaign material — user-uploaded leaflets, posters, social posts */}
+            </div>
+          )}
+
+          {activeTab === "material" && (
+            <div className="grid grid-cols-1 gap-2 lg:gap-3">
               <Panel
                 title="Campaign Material"
                 dataComponent="campaignMaterial"
                 icon={<Camera className="h-3.5 w-3.5" />}
-                className="lg:col-span-12"
                 headerAction={
                   <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
-                    Seen locally
+                    Leaflets · posters · social posts seen locally
                   </span>
                 }
               >
