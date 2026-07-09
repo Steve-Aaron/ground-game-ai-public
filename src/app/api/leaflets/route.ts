@@ -70,6 +70,7 @@ export async function GET(request: Request) {
   // No orderBy: where + orderBy on different fields needs a Firestore
   // composite index. Sort in code instead — per-constituency volumes are
   // small (capped at 500 fetched, 100 returned).
+  try {
   const snap = await adminDb()
     .collection(COLLECTION)
     .where("constituencySlug", "==", slug)
@@ -105,6 +106,13 @@ export async function GET(request: Request) {
   );
 
   return NextResponse.json({ items });
+  } catch (err) {
+    console.error("Leaflet list failed:", err);
+    return NextResponse.json(
+      { error: `Listing failed: ${(err as Error).message}` },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -112,6 +120,7 @@ export async function POST(request: Request) {
   if (guard instanceof NextResponse) return guard;
   const { session, slug } = guard;
 
+  try {
   const form = await request.formData();
   const file = form.get("photo");
   if (!(file instanceof File)) {
@@ -165,4 +174,20 @@ export async function POST(request: Request) {
   await adminDb().collection(COLLECTION).doc(id).set(doc);
 
   return NextResponse.json({ ok: true, id }, { status: 201 });
+  } catch (err) {
+    console.error("Leaflet upload failed:", err);
+    const message = (err as Error).message ?? "";
+    // Most common setup gap: Firebase Storage never enabled on the project,
+    // so the default bucket doesn't exist. Surface an actionable message.
+    if (message.includes("bucket does not exist")) {
+      return NextResponse.json(
+        {
+          error:
+            "Firebase Storage is not enabled for this project. In the Firebase console: Build → Storage → Get started, then retry.",
+        },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });
+  }
 }
