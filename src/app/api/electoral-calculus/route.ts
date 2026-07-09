@@ -311,19 +311,22 @@ function formatPartyName(key: string): string {
   const names: Record<string, string> = {
     reform: "Reform UK", lab: "Labour", con: "Conservative",
     ld: "Lib Dems", green: "Green", snp: "SNP",
+    restore: "Restore Britain", plaid: "Plaid Cymru",
   };
   return names[key] || key;
 }
 
 function getFallbackNationalProjection(): NationalProjection {
-  // Based on Electoral Calculus March 2026 MRP projection
+  // Based on the Electoral Calculus / PLMR MRP poll published 8 July 2026
+  // (fieldwork 23-30 June 2026, n=5,545, with-tactical-voting figures).
+  // https://www.electoralcalculus.co.uk/blogs/ec_vipoll_20260708.html
   return {
-    seats: { reform: 308, lab: 75, con: 73, ld: 66, green: 56, snp: 44, other: 28 },
-    voteShare: { reform: 27.5, con: 24.0, lab: 22.5, ld: 10.5, green: 8.0, snp: 2.5 },
-    outcome: "Hung Parliament — Reform UK Largest",
-    majority: -17,
-    largestParty: "reform",
-    lastUpdated: "2026-03-01T00:00:00Z",
+    seats: { lab: 217, con: 151, reform: 127, ld: 72, green: 30, snp: 28, other: 7 },
+    voteShare: { lab: 22.0, reform: 22.0, con: 20.0, ld: 11.0, green: 10.0, restore: 7.0, snp: 3.0 },
+    outcome: "Hung Parliament — Labour Largest",
+    majority: 217 - 325,
+    largestParty: "lab",
+    lastUpdated: "2026-07-08T00:00:00Z",
     source: "Electoral Calculus MRP (cached fallback)",
     scrapedAt: new Date().toISOString(),
   };
