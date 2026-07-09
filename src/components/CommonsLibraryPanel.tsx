@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import SectionLabel from "./ui/SectionLabel";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface SectionData {
   heading: string;
@@ -154,17 +155,7 @@ export default function CommonsLibraryPanel() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="animate-pulse space-y-4">
-        <div className="flex gap-4 justify-center">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-20 h-20 bg-muted rounded-full" />
-          ))}
-        </div>
-        <div className="h-24 bg-muted rounded-xl" />
-        <div className="h-24 bg-muted rounded-xl" />
-      </div>
-    );
+    return <PanelSkeleton variant="grid" rows={4} />;
   }
 
   if (!data || data.sectionCount === 0) {

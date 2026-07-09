@@ -28,6 +28,7 @@ import Headlines from "@/components/Headlines";
 import LiveFeeds from "@/components/LiveFeeds";
 import OppositionTracker from "@/components/OppositionTracker";
 import WardDataHub from "@/components/WardDataHub";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 import MentionsFeed from "@/components/MentionsFeed";
 import ActivityCharts from "@/components/ActivityCharts";
 import PollingDashboard from "@/components/PollingDashboard";
@@ -70,7 +71,7 @@ import {
 export default function DashboardPage() {
   // useSearchParams must be wrapped in Suspense in the App Router.
   return (
-    <Suspense fallback={<div data-component="dashboardSuspenseFallback" className="min-h-screen bg-background" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Dashboard />
     </Suspense>
   );
@@ -122,14 +123,7 @@ function Dashboard() {
   // No constituencies assigned → render a clean empty state instead of broken
   // panels that all 401/403. Loading also shows a placeholder.
   if (loading) {
-    return (
-      <div
-        data-component="dashboardLoading"
-        className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-zinc-600 text-xs uppercase tracking-wider"
-      >
-        Loading…
-      </div>
-    );
+    return <PageSkeleton />;
   }
   if (options.length === 0) {
     return (

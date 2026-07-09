@@ -13,6 +13,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 type Tab = "mentions" | "parliament" | "votes";
 
@@ -142,18 +143,7 @@ export default function ActivityCharts() {
   ];
 
   if (loading) {
-    return (
-      <div className="p-4">
-        <div className="animate-pulse space-y-3">
-          <div className="flex gap-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-6 w-28 bg-muted rounded" />
-            ))}
-          </div>
-          <div className="h-48 bg-muted/50 rounded" />
-        </div>
-      </div>
-    );
+    return <PanelSkeleton variant="chart" rows={2} />;
   }
 
   return (

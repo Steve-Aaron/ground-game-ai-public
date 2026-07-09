@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { partyColor } from "@/lib/palette";
 import DataTable, { type DataTableColumn } from "./ui/DataTable";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface ECConstituencyData {
   prediction: string;
@@ -87,14 +88,7 @@ export default function ECPrediction() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        <div className="text-xs text-zinc-500">Loading MRP prediction...</div>
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-12 bg-muted/50 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
+    return <PanelSkeleton variant="list" rows={3} />;
   }
 
   if (!pred) {

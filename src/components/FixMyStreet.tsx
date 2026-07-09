@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface Issue {
   id: number | string;
@@ -55,16 +56,7 @@ export default function FixMyStreet() {
   };
 
   if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="animate-pulse space-y-2">
-            <div className="h-3 bg-muted rounded w-3/4" />
-            <div className="h-2.5 bg-muted/50 rounded w-1/2" />
-          </div>
-        ))}
-      </div>
-    );
+    return <PanelSkeleton variant="list" rows={4} />;
   }
 
   return (

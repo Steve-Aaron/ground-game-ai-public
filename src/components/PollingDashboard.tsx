@@ -20,6 +20,7 @@ import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
 import { partyColor } from "@/lib/palette";
 import SectionLabel from "./ui/SectionLabel";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 // Polling dashboard uses lower-case party keys; map them through the shared
 // palette so colours stay in sync with the rest of the platform.
@@ -234,21 +235,7 @@ export default function PollingDashboard() {
   ];
 
   if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        <div className="animate-pulse flex gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-7 w-24 bg-muted rounded" />
-          ))}
-        </div>
-        <div className="animate-pulse h-64 bg-muted/50 rounded" />
-        <div className="animate-pulse grid grid-cols-5 gap-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-20 bg-muted/30 rounded" />
-          ))}
-        </div>
-      </div>
-    );
+    return <PanelSkeleton variant="chart" rows={3} />;
   }
 
   if (!data) return <div className="p-4 text-xs text-zinc-600">Unable to load polling data</div>;

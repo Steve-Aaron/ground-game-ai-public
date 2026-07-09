@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Stethoscope, Pill, Smile, ExternalLink } from "lucide-react";
 import Panel from "@/components/Panel";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 // NHS facility list for the active constituency. Sourced from /api/nhs-practices,
 // which de-duplicates GP practices, pharmacies and dental practices across all
@@ -41,7 +42,7 @@ export default function NHSPracticesPanel() {
   return (
     <Panel title="NHS facilities" dataComponent="nhsPractices" icon={<Stethoscope className="w-3.5 h-3.5" />}>
       <div data-component="NHSPracticesPanel" className="p-3 space-y-3">
-        {loading && <div className="text-[0.65rem] text-zinc-500">Loading NHS ODS...</div>}
+        {loading && <PanelSkeleton variant="list" rows={4} className="p-0" />}
         {error && <div className="text-[0.65rem] text-red-400">Could not load: {error}</div>}
         {data && (
           <>

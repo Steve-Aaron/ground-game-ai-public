@@ -10,6 +10,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface SectionRow {
   Measure: string;
@@ -216,13 +217,7 @@ export default function Demographics() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-44 bg-muted/40 rounded-xl animate-pulse" />
-        ))}
-      </div>
-    );
+    return <PanelSkeleton variant="grid" rows={6} />;
   }
 
   const sections = data?.sections ?? null;
