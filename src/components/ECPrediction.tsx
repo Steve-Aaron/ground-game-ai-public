@@ -5,6 +5,8 @@ import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { partyColor } from "@/lib/palette";
 import DataTable, { type DataTableColumn } from "./ui/DataTable";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
+import PanelError from "@/components/ui/PanelError";
+import { getFullData } from "@/data";
 
 interface ECConstituencyData {
   prediction: string;
@@ -45,6 +47,23 @@ function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { el
   return result;
 }
 
+
+/** Banner for a pending by-election. EC seat pages only carry the GE-cycle
+ * MRP, so by-election status comes from our own constituency data. */
+function ByElectionBanner({ note, date }: { note: string; date?: string }) {
+  return (
+    <div
+      data-component="byElectionBanner"
+      className="border border-amber-500/40 bg-amber-500/10 px-3 py-2"
+    >
+      <p className="text-[0.611rem] uppercase tracking-wider text-amber-400 font-semibold mb-0.5">
+        By-election {date ? `— ${date}` : "pending"}
+      </p>
+      <p className="text-[0.611rem] text-zinc-400">{note}</p>
+    </div>
+  );
+}
+
 export default function ECPrediction() {
   const { slug } = useConstituency();
   const [pred, setPred] = useState<{
@@ -57,16 +76,26 @@ export default function ECPrediction() {
     Record<string, { electorate: number; winner2024: string; predictedWinner: string }>
   >({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setPred(null);
+    setError(null);
     setWardElectoralCalc({});
 
     async function fetchLiveEC() {
       try {
         const res = await fetch(withConstituency("/api/electoral-calculus?type=seat", slug));
-        if (!res.ok) return;
+        if (!res.ok) {
+          // Surface WHY the scrape failed (seat-name mismatch, EC blocking
+          // the server, etc.) instead of a silent generic empty state.
+          const body = (await res.json().catch(() => null)) as
+            | { message?: string; error?: string; detail?: string }
+            | null;
+          setError(body?.message ?? body?.detail ?? body?.error ?? `Request failed (${res.status})`);
+          return;
+        }
         const data: ECConstituencyData = await res.json();
         if (data.prediction && Object.keys(data.predicted).length > 0) {
           setPred(toLiveEcPrediction(data));
@@ -77,8 +106,8 @@ export default function ECPrediction() {
             setWardElectoralCalc(liveWards);
           }
         }
-      } catch {
-        // leave as null — caller renders empty state
+      } catch (err) {
+        setError((err as Error).message || "Unable to reach Electoral Calculus");
       } finally {
         setLoading(false);
       }
@@ -87,14 +116,23 @@ export default function ECPrediction() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
+  const byElection = getFullData(slug)?.constituency.byElection;
+
   if (loading) {
     return <PanelSkeleton variant="list" rows={3} />;
   }
 
   if (!pred) {
     return (
-      <div className="p-4 text-xs text-zinc-500">
-        Electoral Calculus prediction not available for this constituency.
+      <div className="p-4 space-y-3">
+        {byElection ? <ByElectionBanner note={byElection.note} date={byElection.date} /> : null}
+        {error ? (
+          <PanelError message={error} />
+        ) : (
+          <p className="text-xs text-zinc-500">
+            Electoral Calculus prediction not available for this constituency.
+          </p>
+        )}
       </div>
     );
   }
@@ -112,6 +150,7 @@ export default function ECPrediction() {
 
   return (
     <div className="space-y-4">
+      {byElection ? <ByElectionBanner note={byElection.note} date={byElection.date} /> : null}
       {/* Headline prediction */}
       <div className="bg-muted/30 rounded-lg p-3">
         <div className="text-xs text-zinc-500 mb-1">Constituency Prediction</div>

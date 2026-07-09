@@ -27,6 +27,12 @@ export interface Constituency {
   // 400 when missing.
   wpca24Code?: string;
   population?: number;
+  /**
+   * Upcoming by-election, if one is pending. Set manually — Electoral
+   * Calculus does not publish per-by-election predictions (their seat pages
+   * carry the general-election-cycle MRP only), so this cannot be scraped.
+   */
+  byElection?: { date?: string; note: string };
 }
 
 export const CONSTITUENCIES: Constituency[] = [
@@ -150,7 +156,7 @@ export const CONSTITUENCIES: Constituency[] = [
   // he intends to re-contest; Labour, Con, LD, Green and Restore Britain have
   // said they will not stand. memberId retained so Hansard/TWFY history still
   // resolves. Update `mp` once the by-election result is declared.
-  { name: "Clacton", slug: "clacton", onsCode: "E14001174", mp: "Nigel Farage (resigned — by-election pending)", party: "Reform UK", memberId: 5091, constituencyId: 3989, region: "East of England", county: "Essex", electorate: 78703, results2024: { con: 12820, lab: 7448, ld: 2016, reform: 21225, green: 1935, conShare: 27.9, labShare: 16.2, ldShare: 4.4, reformShare: 46.2, greenShare: 4.2, totalVotes: 45958, turnoutPct: 58.4, winner: "Reform", majority: 8405 }, wpca24Code: "721420400", population: 98187 },
+  { name: "Clacton", slug: "clacton", onsCode: "E14001174", mp: "Nigel Farage (resigned — by-election pending)", party: "Reform UK", memberId: 5091, constituencyId: 3989, region: "East of England", county: "Essex", electorate: 78703, results2024: { con: 12820, lab: 7448, ld: 2016, reform: 21225, green: 1935, conShare: 27.9, labShare: 16.2, ldShare: 4.4, reformShare: 46.2, greenShare: 4.2, totalVotes: 45958, turnoutPct: 58.4, winner: "Reform", majority: 8405 }, wpca24Code: "721420400", population: 98187, byElection: { note: "By-election pending — Nigel Farage resigned 7 July 2026 and intends to re-contest. Labour, Con, LD, Green and Restore Britain are not standing." } },
   { name: "Clapham and Brixton Hill", slug: "clapham-and-brixton-hill", onsCode: "E14001175", mp: "Bell Ribeiro-Addy", party: "Labour", memberId: 4764, constituencyId: 3990, region: "London", county: "Lambeth", electorate: 74435, results2024: { con: 4360, lab: 24166, ld: 6161, reform: 1758, green: 5768, conShare: 10.2, labShare: 56.5, ldShare: 14.4, reformShare: 4.1, greenShare: 13.5, totalVotes: 42741, turnoutPct: 57.4, winner: "Lab", majority: 18005 }, wpca24Code: "721420401" },
   { name: "Colchester", slug: "colchester", onsCode: "E14001176", mp: "Pam Cox", party: "Labour", memberId: 5042, constituencyId: 3991, region: "East of England", county: "Essex", electorate: 78662, results2024: { con: 10554, lab: 18804, ld: 6393, reform: 6664, green: 2414, conShare: 23.5, labShare: 41.9, ldShare: 14.2, reformShare: 14.8, greenShare: 5.4, totalVotes: 44903, turnoutPct: 57.1, winner: "Lab", majority: 8250 }, wpca24Code: "721420402" },
   { name: "Colne Valley", slug: "colne-valley", onsCode: "E14001177", mp: "Paul Davies", party: "Labour", memberId: 5317, constituencyId: 3992, region: "Yorkshire and the Humber", county: "West Yorkshire", electorate: 72638, results2024: { con: 14007, lab: 18970, ld: 2007, reform: 7298, green: 3480, conShare: 30.3, labShare: 41, ldShare: 4.3, reformShare: 15.8, greenShare: 7.5, totalVotes: 46221, turnoutPct: 63.6, winner: "Lab", majority: 4963 }, wpca24Code: "721420403" },

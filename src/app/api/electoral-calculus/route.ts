@@ -452,9 +452,12 @@ function parseConstituency(html: string, seatName: string): ConstituencyPredicti
     // Grab a generous section after the header (enough to capture all party rows)
     const chanceSection = html.substring(chanceStart, chanceStart + 3000);
 
-    // Find all party-class TDs with percentages nearby
-    // Pattern: <TD class=PARTY>PARTYNAME<TD> ... NN%
-    const chancePattern = /<TD\s+class\s*=\s*["']?(\w+)["']?[^>]*>[^<]*<[\s\S]*?(\d+)%/gi;
+    // Each chance row is: <TR><TD class=PARTY>Label</TD><TD><TABLE>…bar…NN%
+    // The bar is a nested single-row table, so the pattern must anchor at the
+    // row's label cell and take the first percentage inside that row —
+    // a free-floating "class + %" pattern pairs labels with the wrong bars.
+    const chancePattern =
+      /<TR[^>]*>\s*<TD\s+class\s*=\s*["']?(\w+)["']?[^>]*>[^<]*<\/TD>\s*<TD[^>]*>\s*<TABLE[\s\S]*?(\d+)%/gi;
     let chanceMatch;
     while ((chanceMatch = chancePattern.exec(chanceSection)) !== null) {
       const cls = chanceMatch[1].toLowerCase();
