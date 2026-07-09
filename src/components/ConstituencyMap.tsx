@@ -20,7 +20,7 @@ interface LayerDef {
 
 const LAYER_DEFS: LayerDef[] = [
   { id: "boundary", label: "Boundary", description: "Constituency outline", default: true },
-  { id: "wards-vote", label: "2024 Vote Share", description: "Ward-level CON vote choropleth", default: true },
+  { id: "wards-vote", label: "2024 Ward Winner", description: "Ward-level 2024 winning party", default: true },
   { id: "wards-prediction", label: "MRP Prediction", description: "EC predicted winner per ward", default: false },
   { id: "wards-deprivation", label: "Deprivation", description: "Ward deprivation levels", default: false },
   { id: "police", label: "Police Areas", description: "Force tint + local policing team outlines", default: false },
@@ -31,6 +31,17 @@ const LAYER_DEFS: LayerDef[] = [
   { id: "floods", label: "Flood Monitoring", description: "EA flood stations & alerts", default: false },
   { id: "census", label: "Census Overlay", description: "ONS Census 2021 data", default: false },
   { id: "ward-labels", label: "Ward Names", description: "Ward name labels", default: true },
+];
+
+// Legend entries for the winner/prediction choropleths. Mirrors the
+// `partyColourBy` match expression used in the layer paint.
+const PARTY_LEGEND = [
+  { party: "CON", color: "#0087DC" },
+  { party: "LAB", color: "#DC241f" },
+  { party: "Reform", color: "#12B6CF" },
+  { party: "LIB", color: "#FAA61A" },
+  { party: "Green", color: "#6AB023" },
+  { party: "Other", color: "#666666" },
 ];
 
 interface BoundaryFeature {
@@ -294,6 +305,7 @@ export default function ConstituencyMap() {
         // Prediction layers. Driven by per-ward EC data attached during
         // enrichment (`winner2024` / `predictedWinner`). Both layers use the
         // same colour scheme so swaps between them are visually consistent.
+        // NOTE: keep in sync with the module-level PARTY_LEGEND used by the map legend.
         const partyColourBy = (field: string): maplibregl.ExpressionSpecification => [
           "match", ["get", field],
           "CON", "#0087DC",
@@ -1312,30 +1324,13 @@ export default function ConstituencyMap() {
       {/* Dynamic Legend */}
       {activeChoropleth && (
         <div className="absolute bottom-3 right-3 bg-card/95 backdrop-blur rounded-lg p-3 border border-border z-10">
-          {activeChoropleth === "vote" && (
+          {(activeChoropleth === "vote" || activeChoropleth === "prediction") && (
             <>
-              <div className="text-xs text-foreground mb-2 font-medium">CON Vote Share (2024)</div>
-              <div className="flex items-center gap-0.5">
-                <div className="h-3 w-5 rounded-sm" style={{ background: "#e74c3c" }} />
-                <div className="h-3 w-5 rounded-sm" style={{ background: "#f39c12" }} />
-                <div className="h-3 w-5 rounded-sm" style={{ background: "#3498db" }} />
-                <div className="h-3 w-5 rounded-sm" style={{ background: "#2471a3" }} />
-                <div className="h-3 w-5 rounded-sm" style={{ background: "#1a5276" }} />
+              <div className="text-xs text-foreground mb-2 font-medium">
+                {activeChoropleth === "vote" ? "2024 Ward Winner" : "MRP Predicted Winner"}
               </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                <span>30%</span><span>40%</span><span>50%</span>
-              </div>
-            </>
-          )}
-          {activeChoropleth === "prediction" && (
-            <>
-              <div className="text-xs text-foreground mb-2 font-medium">MRP Predicted Winner</div>
               <div className="space-y-1">
-                {[
-                  { party: "CON", color: "#0087DC" },
-                  { party: "Reform", color: "#12B6CF" },
-                  { party: "LAB", color: "#DC241f" },
-                ].map((p) => (
+                {PARTY_LEGEND.map((p) => (
                   <div key={p.party} className="flex items-center gap-1.5">
                     <div className="h-3 w-4 rounded-sm" style={{ background: p.color }} />
                     <span className="text-[11px] text-foreground">{p.party}</span>
