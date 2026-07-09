@@ -30,6 +30,7 @@ import OppositionTracker from "@/components/OppositionTracker";
 import WardDataHub from "@/components/WardDataHub";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import LeafletsPanel from "@/components/LeafletsPanel";
+import SocialTrackerPanel from "@/components/SocialTrackerPanel";
 import MentionsFeed from "@/components/MentionsFeed";
 import ActivityCharts from "@/components/ActivityCharts";
 import PollingDashboard from "@/components/PollingDashboard";
@@ -254,6 +255,21 @@ function Dashboard() {
                 }
               >
                 <OppositionTracker />
+              </Panel>
+
+              {/* Social Media Tracker — user-curated X accounts */}
+              <Panel
+                title="Social Media Tracker"
+                dataComponent="socialTracker"
+                icon={<AtSign className="h-3.5 w-3.5" />}
+                className="lg:col-span-6"
+                headerAction={
+                  <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
+                    Up to 5 accounts
+                  </span>
+                }
+              >
+                <SocialTrackerPanel />
               </Panel>
 
               {/* Activity Charts — time-series graphs */}

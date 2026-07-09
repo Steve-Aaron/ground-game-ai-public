@@ -106,7 +106,7 @@ const BRAINTREE_CANDIDATES: BraintreeCandidate[] = [
   },
 ];
 
-const APIFY_ACTOR = "apidojo/twitter-scraper-lite";
+const APIFY_ACTOR = "apidojo~twitter-scraper-lite";
 const APIFY_BASE = "https://api.apify.com/v2/acts";
 
 async function fetchFromApify(candidates: BraintreeCandidate[]): Promise<Opponent[]> {
