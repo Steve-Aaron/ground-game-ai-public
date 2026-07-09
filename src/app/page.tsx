@@ -100,6 +100,7 @@ function Dashboard() {
 
   useEffect(() => {
     setDataCachedAt(null);
+    if (!constituencySlug) return;
     fetch(withConstituency("/api/employment", constituencySlug))
       .then(r => r.json())
       .then((d: { _cachedAt?: number }) => { if (d._cachedAt) setDataCachedAt(d._cachedAt); })

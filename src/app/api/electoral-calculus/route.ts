@@ -94,7 +94,7 @@ export async function GET(request: Request) {
   // exact EC name. Full override map is in src/data/ec-name-overrides.ts.
 
   const explicitSeat = searchParams.get("seat");
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
 
   let ecSeatName: string;
   if (explicitSeat) {

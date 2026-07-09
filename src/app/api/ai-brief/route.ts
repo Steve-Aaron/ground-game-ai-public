@@ -415,7 +415,7 @@ export async function GET(request: Request) {
   // through. Server-to-server fetch() does NOT auto-attach incoming cookies.
   const cookieHeader = request.headers.get("cookie") ?? "";
 
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {

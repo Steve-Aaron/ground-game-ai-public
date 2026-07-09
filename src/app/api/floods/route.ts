@@ -139,7 +139,7 @@ export async function GET(request: Request) {
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "1";
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {

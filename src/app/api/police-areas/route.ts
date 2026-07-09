@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
   if (__guard instanceof NextResponse) return __guard;
 
   const { searchParams } = new URL(request.url);
-  const slug = searchParams.get("constituency") || "braintree";
+  const slug = searchParams.get("constituency") ?? "";
   const constituencyData = getFullData(slug);
   if (!constituencyData) {
     return NextResponse.json({ error: "Invalid constituency slug" }, { status: 400 });

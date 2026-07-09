@@ -198,6 +198,7 @@ export default function Demographics() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!slug) return; // auth still loading — effect re-runs when slug resolves
     setLoading(true);
     setData(null);
     setError(null);

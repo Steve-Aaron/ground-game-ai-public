@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   // Get constituency from query param, default to braintree
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const constituencyData = getFullData(constituencySlug);
 
   // Validate constituency exists (and has MP data populated)

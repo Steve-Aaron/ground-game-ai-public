@@ -148,6 +148,7 @@ export default function ElectoralIntel() {
   const [dataSource, setDataSource] = useState<"fallback" | "live">("fallback");
 
   useEffect(() => {
+    if (!slug) return; // auth still loading — effect re-runs when slug resolves
     async function fetchLiveEC() {
       try {
         const res = await fetch(withConstituency("/api/electoral-calculus?type=seat", slug));

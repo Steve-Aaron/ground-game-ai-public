@@ -152,6 +152,7 @@ export default function ConstituencyMap() {
 
   // Initialize map
   useEffect(() => {
+    if (!slug) return; // auth still loading — effect re-runs when slug resolves
     if (!mapContainer.current) return;
     if (map.current) {
       // Tear down on slug change so we can re-init with new constituency data

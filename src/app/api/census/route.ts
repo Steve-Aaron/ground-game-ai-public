@@ -333,7 +333,7 @@ export async function GET(request: Request) {
 
   // Multi-constituency lookup. Placed after the `?topic=list` and topic
   // validation branches so the meta endpoint doesn't require a constituency.
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const force = searchParams.get("force") === "1";
   const constituencyData = getFullData(constituencySlug);
 

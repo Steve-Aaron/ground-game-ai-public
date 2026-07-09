@@ -234,7 +234,7 @@ export async function GET(request: Request) {
   const __guard = await requireUser(request);
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const force = searchParams.get("force") === "1";
 
   const fullData = getFullData(constituencySlug);

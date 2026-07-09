@@ -42,6 +42,10 @@ export default function AIBrief() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // Slug is "" while auth is loading — without this guard the request
+    // fires slug-less and previously rendered the default constituency's
+    // brief. The effect re-runs once the real slug resolves.
+    if (!slug) return;
     fetchBriefStream(false);
     return () => {
       abortRef.current?.abort();

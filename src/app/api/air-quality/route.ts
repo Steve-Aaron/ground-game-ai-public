@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   const __guard = await requireConstituencyAccess(request);
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData || !constituencyData.geo) {

@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "speeches"; // speeches | questions
 
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
   const constituencyData = getFullData(constituencySlug);
 
   if (!constituencyData) {

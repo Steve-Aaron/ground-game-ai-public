@@ -145,6 +145,7 @@ export default function CommonsLibraryPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!slug) return; // auth still loading — effect re-runs when slug resolves
     fetch(withConstituency("/api/commons-library", slug))
       .then((res) => res.json())
       .then((d: CommonsLibraryData) => setData(d))

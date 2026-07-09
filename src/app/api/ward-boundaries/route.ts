@@ -33,7 +33,7 @@ function loadAllWards(): WardFeatureCollection {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
 
   const fullData = getFullData(constituencySlug);
   if (!fullData) {

@@ -66,6 +66,7 @@ export default function ActivityCharts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!slug) return; // auth still loading — effect re-runs when slug resolves
     async function fetchData() {
       setLoading(true);
       try {

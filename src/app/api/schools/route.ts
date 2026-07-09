@@ -76,7 +76,7 @@ export async function GET(request: Request) {
   const __guard = await requireConstituencyAccess(request);
   if (__guard instanceof NextResponse) return __guard;
   const { searchParams } = new URL(request.url);
-  const constituencySlug = searchParams.get("constituency") || "braintree";
+  const constituencySlug = searchParams.get("constituency") ?? "";
 
   if (!getFullData(constituencySlug)) {
     return Response.json({ error: "Invalid constituency slug" }, { status: 400 });

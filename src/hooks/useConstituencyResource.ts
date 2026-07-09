@@ -56,6 +56,11 @@ export function useConstituencyResource<T>(
       setLoading(false);
       return;
     }
+    // Slug is "" while the signed-in user is still loading. Don't fire a
+    // slug-less request (the API would 400) — the slug change re-runs this
+    // effect once auth resolves, and `loading` stays true so panels show
+    // their skeletons.
+    if (!slug) return;
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);

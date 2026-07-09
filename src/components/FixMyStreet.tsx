@@ -22,6 +22,7 @@ export default function FixMyStreet() {
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
+    if (!slug) return; // auth still loading — effect re-runs when slug resolves
     async function fetchIssues() {
       try {
         const res = await fetch(withConstituency("/api/fixmystreet", slug));

@@ -39,9 +39,10 @@ export async function requireAdmin(
 
 /**
  * Require an authenticated user AND verify they have access to the
- * constituency in the query string (`?constituency=<slug>`, defaults to
- * "braintree"). Returns the resolved slug alongside the session so the route
- * doesn't have to re-parse it.
+ * constituency in the query string (`?constituency=<slug>`). A missing slug
+ * is a 400 — routes must never silently fall back to a default constituency.
+ * Returns the resolved slug alongside the session so the route doesn't have
+ * to re-parse it.
  *
  * Admins are ALSO scoped per the access model decision — they must have the
  * slug in their allowedConstituencies just like users.
@@ -54,7 +55,13 @@ export async function requireConstituencyAccess(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const url = new URL(request.url);
-  const slug = url.searchParams.get("constituency") || "braintree";
+  const slug = url.searchParams.get("constituency");
+  if (!slug) {
+    return NextResponse.json(
+      { error: "Missing constituency parameter" },
+      { status: 400 }
+    );
+  }
   if (!session.allowedConstituencies.includes(slug)) {
     return NextResponse.json(
       { error: "Forbidden", constituency: slug },
