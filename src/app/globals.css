@@ -170,3 +170,28 @@ html:not(.dark) .text-zinc-400 {
 .animate-login-spinner {
   animation: login-spinner-spin 0.8s linear infinite;
 }
+
+/* ── video.js skin (Ground Game) ──────────────────────────────────────────
+   Applied to players created by src/components/ui/VideoPlayer.tsx */
+.vjs-gg-skin.video-js {
+  font-family: inherit;
+  background-color: #000;
+}
+.vjs-gg-skin .vjs-control-bar {
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(4px);
+}
+.vjs-gg-skin .vjs-play-progress,
+.vjs-gg-skin .vjs-volume-level {
+  background-color: #10b981; /* emerald-500 */
+}
+.vjs-gg-skin .vjs-slider {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+.vjs-gg-skin .vjs-big-play-button {
+  display: none; /* we autoplay muted; the unmute overlay is the CTA */
+}
+.vjs-gg-skin .vjs-live-control,
+.vjs-gg-skin .vjs-seek-to-live-control {
+  color: #f87171; /* red-400 — matches the LIVE badge */
+}

@@ -1,17 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type HlsType from "hls.js";
+import { useEffect, useState } from "react";
 import { ExternalLink, Play, Radio, Tv } from "lucide-react";
+import VideoPlayer from "@/components/ui/VideoPlayer";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
-type ChannelKind = "tv" | "radio";
+type ChannelKind = "hls" | "radio" | "youtube";
 
 interface Channel {
   name: string;
   shortName: string;
   kind: ChannelKind;
-  /** HLS (.m3u8) manifest — the IPTV stream. */
-  streamUrl: string;
+  /** HLS manifest (kind: hls). */
+  streamUrl?: string;
+  /** Endpoint returning { url } — BBC radio URLs rotate (kind: radio). */
+  resolveUrl?: string;
+  /** YouTube video id (kind: youtube). */
+  youtubeVideoId?: string;
   /** Official page, used as fallback when the stream fails. */
   directUrl: string;
   color: string;
@@ -19,28 +24,30 @@ interface Channel {
   description: string;
 }
 
-// IPTV streams (HLS manifests) sourced from
-// https://github.com/Free-TV/IPTV/blob/master/lists/uk.md
-// BBC and Sky streams are geo-fenced to the UK at the CDN. If a stream dies,
-// the player falls back to a card linking to the channel's official page.
+// Stream sources verified July 2026 (see git history for the CORS/geo test
+// results per CDN):
+//  - BBC News/Parliament: official BBC simulcast HLS (UK-only, CORS-open)
+//  - GB News: amagi FAST feed (CORS-open; simplestream blocks CORS)
+//  - Sky News: skycdp HLS now returns 403 (token-protected) and no public
+//    CORS-open HLS exists — YouTube embed is the reliable official source
+//  - Radio 5 Live: BBC pool URLs rotate, resolved live via /api/radio-stream
 const CHANNELS: Channel[] = [
   {
     name: "Sky News",
     shortName: "SKY",
-    kind: "tv",
-    streamUrl:
-      "https://linear021-gb-hls1-prd-ak.cdn.skycdp.com/Content/HLS_001_hd/Live/channel(skynews)/index_mob.m3u8",
+    kind: "youtube",
+    youtubeVideoId: "11Bog8oUYFk",
     directUrl: "https://news.sky.com/watch-live",
     color: "bg-sky-600/20",
     textColor: "text-sky-400",
-    description: "Live IPTV stream (UK)",
+    description: "Official YouTube live stream",
   },
   {
     name: "GB News",
     shortName: "GB",
-    kind: "tv",
+    kind: "hls",
     streamUrl:
-      "https://live-gbnews.simplestreamcdn.com/live5/gbnews/bitrate1.isml/manifest.m3u8",
+      "https://amg01076-lightning-amg01076c7-lg-gb-2019.playouts.now.amagi.tv/playlist/amg01076-lightning-gbnews-lggb/playlist.m3u8",
     directUrl: "https://www.gbnews.com/watch/live",
     color: "bg-red-600/20",
     textColor: "text-red-400",
@@ -49,9 +56,9 @@ const CHANNELS: Channel[] = [
   {
     name: "BBC News",
     shortName: "BBC",
-    kind: "tv",
+    kind: "hls",
     streamUrl:
-      "https://vs-hls-pushb-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/iptv_hd_abr_v1.m3u8",
+      "https://vs-hls-push-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/iptv_hd_abr_v1.m3u8",
     directUrl: "https://www.bbc.co.uk/iplayer/live/bbcnews",
     color: "bg-red-700/20",
     textColor: "text-red-300",
@@ -60,7 +67,7 @@ const CHANNELS: Channel[] = [
   {
     name: "BBC Parliament",
     shortName: "PARL",
-    kind: "tv",
+    kind: "hls",
     streamUrl:
       "https://vs-hls-pushb-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_parliament/pc_hd_abr_v2.m3u8",
     directUrl: "https://www.bbc.co.uk/iplayer/live/bbcparliament",
@@ -72,8 +79,7 @@ const CHANNELS: Channel[] = [
     name: "Radio 5 Live",
     shortName: "R5L",
     kind: "radio",
-    streamUrl:
-      "https://as-hls-ww-live.akamaized.net/pool_904/live/ww/bbc_radio_five_live/bbc_radio_five_live.isml/bbc_radio_five_live-audio%3d96000.norewind.m3u8",
+    resolveUrl: "/api/radio-stream?station=bbc_radio_five_live",
     directUrl: "https://www.bbc.co.uk/sounds/play/live:bbc_radio_five_live",
     color: "bg-yellow-600/20",
     textColor: "text-yellow-400",
@@ -81,115 +87,39 @@ const CHANNELS: Channel[] = [
   },
 ];
 
-// Fatal-error recovery attempts before giving up and showing the fallback.
-const MAX_RECOVERY_ATTEMPTS = 2;
-
-/**
- * HLS player. Plays the stream automatically, muted (browser autoplay policy
- * requires mute; the user can unmute via the native controls). Safari plays
- * HLS natively; other browsers get hls.js (loaded on demand to keep it out
- * of the main bundle).
- */
-function HlsPlayer({
-  channel,
-  onFatalError,
-}: {
-  channel: Channel;
-  onFatalError: () => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+/** Radio needs its HLS URL resolved server-side first. */
+function RadioPlayer({ channel, onFatalError }: { channel: Channel; onFatalError: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    let hls: HlsType | null = null;
     let cancelled = false;
-    let recoveryAttempts = 0;
-
-    const autoplay = () => {
-      video.muted = true; // set before play() so autoplay policy allows it
-      video.play().catch(() => {
-        /* Autoplay rejected — the user can press play via controls. */
+    fetch(channel.resolveUrl!)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { url: string }) => {
+        if (!cancelled) setUrl(d.url);
+      })
+      .catch(() => {
+        if (!cancelled) onFatalError();
       });
-    };
-
-    async function setup() {
-      if (!video) return;
-      // Native HLS (Safari, iOS).
-      if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = channel.streamUrl;
-        autoplay();
-        return;
-      }
-
-      const { default: Hls } = await import("hls.js");
-      if (cancelled || !video) return;
-      if (!Hls.isSupported()) {
-        onFatalError();
-        return;
-      }
-
-      hls = new Hls({ enableWorker: true });
-      hls.loadSource(channel.streamUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, autoplay);
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (!data.fatal || !hls) return;
-        recoveryAttempts += 1;
-        if (recoveryAttempts > MAX_RECOVERY_ATTEMPTS) {
-          hls.destroy();
-          onFatalError();
-          return;
-        }
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hls.startLoad();
-        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          hls.recoverMediaError();
-        } else {
-          hls.destroy();
-          onFatalError();
-        }
-      });
-    }
-
-    setup();
-
     return () => {
       cancelled = true;
-      hls?.destroy();
-      video.removeAttribute("src");
-      video.load();
     };
-  }, [channel, onFatalError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel.resolveUrl]);
 
-  if (channel.kind === "radio") {
-    return (
-      <div data-component="radioPlayer" className="relative w-full bg-black">
-        <div className="flex flex-col items-center justify-center py-8">
-          <div className={`p-3 rounded-full ${channel.color} mb-2`}>
-            <Radio className={`h-6 w-6 ${channel.textColor}`} />
-          </div>
-          <p className="text-xs text-zinc-300 font-medium">{channel.name}</p>
-          <p className="text-[0.556rem] text-zinc-600 uppercase tracking-wider mt-1">
-            Muted — unmute below to listen
-          </p>
-        </div>
-        <video ref={videoRef} muted autoPlay playsInline controls className="w-full h-10" />
-      </div>
-    );
-  }
+  if (!url) return <PanelSkeleton variant="chart" rows={1} />;
+  return <VideoPlayer src={url} kind="radio" title={channel.name} onFatalError={onFatalError} />;
+}
 
+function YouTubeEmbed({ channel }: { channel: Channel }) {
   return (
-    <div data-component="tvPlayer" className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-      <video
-        ref={videoRef}
-        muted
-        autoPlay
-        playsInline
-        controls
+    <div data-component="youtubeEmbed" className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+      <iframe
+        src={`https://www.youtube.com/embed/${channel.youtubeVideoId}?autoplay=1&mute=1&modestbranding=1&rel=0`}
         className="absolute inset-0 w-full h-full bg-black"
-        title={`${channel.name} live stream`}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title={`${channel.name} Live Stream`}
       />
     </div>
   );
@@ -226,12 +156,11 @@ function ChannelFallback({ channel }: { channel: Channel }) {
 
 export default function LiveFeeds() {
   const [activeChannel, setActiveChannel] = useState(0);
-  const [streamFailed, setStreamFailed] = useState<Record<number, boolean>>({});
+  const [streamFailed, setStreamFailed] = useState<Record<string, boolean>>({});
   const channel = CHANNELS[activeChannel];
 
-  const handleFatalError = useCallback(() => {
-    setStreamFailed((prev) => ({ ...prev, [activeChannel]: true }));
-  }, [activeChannel]);
+  const markFailed = (name: string) => () =>
+    setStreamFailed((prev) => ({ ...prev, [name]: true }));
 
   return (
     <div data-component="liveFeeds">
@@ -252,12 +181,22 @@ export default function LiveFeeds() {
         ))}
       </div>
 
-      {/* Player area — keyed by channel so switching fully tears down the stream */}
+      {/* Player area — keyed by channel name so switching fully tears down */}
       <div className="relative">
-        {streamFailed[activeChannel] ? (
+        {streamFailed[channel.name] ? (
           <ChannelFallback channel={channel} />
+        ) : channel.kind === "youtube" ? (
+          <YouTubeEmbed key={channel.name} channel={channel} />
+        ) : channel.kind === "radio" ? (
+          <RadioPlayer key={channel.name} channel={channel} onFatalError={markFailed(channel.name)} />
         ) : (
-          <HlsPlayer key={channel.name} channel={channel} onFatalError={handleFatalError} />
+          <VideoPlayer
+            key={channel.name}
+            src={channel.streamUrl!}
+            kind="tv"
+            title={channel.name}
+            onFatalError={markFailed(channel.name)}
+          />
         )}
       </div>
 
