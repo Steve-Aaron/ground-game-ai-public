@@ -93,7 +93,15 @@ function deriveResults(slug: string): DerivedResults | null {
   };
 }
 
+interface IndicatorRow {
+  name: string;
+  seat: string;
+  area: string;
+  gb: string;
+}
+
 interface ECConstituencyData {
+  indicators?: { areaName: string; rows: IndicatorRow[] } | null;
   prediction: string;
   predicted: Record<string, { share: number }>;
   winningChances: Record<string, number>;
@@ -132,10 +140,16 @@ function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { el
   return result;
 }
 
-export default function ElectoralIntel() {
+/**
+ * showIndicators: render EC's 'Political and Demographic indicators' table
+ * in the MRP view. Enabled on the Political tab only — the map-tab instance
+ * stays compact.
+ */
+export default function ElectoralIntel({ showIndicators = false }: { showIndicators?: boolean }) {
   const { slug } = useConstituency();
   const results2024 = deriveResults(slug);
   const [view, setView] = useState<View>("prediction");
+  const [indicators, setIndicators] = useState<ECConstituencyData["indicators"]>(null);
   const [ecPrediction, setEcPrediction] = useState<{
     prediction: string;
     predicted: Record<string, number>;
@@ -156,6 +170,7 @@ export default function ElectoralIntel() {
         const data: ECConstituencyData = await res.json();
         if (data.prediction && Object.keys(data.predicted).length > 0) {
           setEcPrediction(toLiveEcPrediction(data));
+          setIndicators(data.indicators ?? null);
           setDataSource("live");
         }
         if (data.wards && data.wards.length > 0) {
@@ -285,6 +300,35 @@ export default function ElectoralIntel() {
                 </div>
               ))}
           </div>
+
+          {/* Political & demographic indicators — political tab only */}
+          {showIndicators && indicators && indicators.rows.length > 0 ? (
+            <div data-component="ecIndicators" className="pt-2">
+              <div className="text-[0.611rem] text-zinc-500 font-medium mb-1.5">
+                Political &amp; Demographic Indicators
+              </div>
+              <table className="w-full text-[0.611rem]">
+                <thead>
+                  <tr className="text-zinc-500 uppercase tracking-wider text-[0.5rem]">
+                    <th className="text-left font-medium py-1">Indicator</th>
+                    <th className="text-right font-medium py-1">Seat</th>
+                    <th className="text-right font-medium py-1">{indicators.areaName}</th>
+                    <th className="text-right font-medium py-1">All GB</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {indicators.rows.map((row) => (
+                    <tr key={row.name} className="border-t border-border/40">
+                      <td className="py-1 text-zinc-400">{row.name}</td>
+                      <td className="py-1 text-right text-foreground font-medium">{row.seat}</td>
+                      <td className="py-1 text-right text-zinc-500">{row.area}</td>
+                      <td className="py-1 text-right text-zinc-500">{row.gb}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
 
           <div className="text-[0.556rem] text-zinc-700 text-center">
             Source: Electoral Calculus MRP

@@ -36,7 +36,16 @@ interface ConstituencyPrediction {
   predicted: Record<string, { share: number }>;
   winningChances: Record<string, number>;
   wards: WardPrediction[];
+  /** EC 'Political and Demographic indicators' table (seat vs area vs GB). */
+  indicators: { areaName: string; rows: IndicatorRow[] } | null;
   scrapedAt: string;
+}
+
+interface IndicatorRow {
+  name: string;
+  seat: string;
+  area: string;
+  gb: string;
 }
 
 interface NationalProjection {
@@ -475,6 +484,8 @@ function parseConstituency(html: string, seatName: string): ConstituencyPredicti
   // Extract ward data
   const wards = extractWards(html);
 
+  const indicators = extractIndicators(html);
+
   return {
     name: seatName,
     code: seatCode,
@@ -487,8 +498,42 @@ function parseConstituency(html: string, seatName: string): ConstituencyPredicti
     predicted,
     winningChances,
     wards,
+    indicators,
     scrapedAt: new Date().toISOString(),
   };
+}
+
+// Parse the 'Political and Demographic indicators' table
+// (<TABLE class="seatdemog...">). EC's raw HTML closes <TR> but NOT <TD>/<TH>
+// (verified against the live page), so cells are split on opening tags —
+// the same loose-TD approach the vote-table parser uses.
+function extractIndicators(
+  html: string
+): { areaName: string; rows: IndicatorRow[] } | null {
+  const tableMatch = html.match(
+    /<TABLE\s+class\s*=\s*["']?seatdemog[^>]*>([\s\S]*?)<\/TABLE>/i
+  );
+  if (!tableMatch) return null;
+  const tableHtml = tableMatch[1];
+
+  const rowChunks = tableHtml.match(/<TR[^>]*>[\s\S]*?<\/TR>/gi) ?? [];
+  let areaName = "Area";
+  const rows: IndicatorRow[] = [];
+
+  for (const row of rowChunks) {
+    if (/<TH/i.test(row)) {
+      // Header: Indicator | Seat | AREA_NAME | All GB
+      const ths = row.split(/<TH[^>]*>/i).slice(1).map(strip);
+      if (ths.length >= 4 && ths[2]) areaName = ths[2];
+      continue;
+    }
+    const cells = row.split(/<TD[^>]*>/i).slice(1).map((c) => strip(c.replace(/<\/TR>[\s\S]*/i, "")));
+    if (cells.length >= 4 && cells[0]) {
+      rows.push({ name: cells[0], seat: cells[1], area: cells[2], gb: cells[3] });
+    }
+    if (rows.length >= 30) break;
+  }
+  return rows.length > 0 ? { areaName, rows } : null;
 }
 
 function extractWards(html: string): WardPrediction[] {

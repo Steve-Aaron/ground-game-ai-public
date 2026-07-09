@@ -54,6 +54,11 @@ export default function VideoPlayer({ src, kind, title, onFatalError }: VideoPla
 
     player.on("volumechange", () => setMuted(player.muted() ?? false));
     player.on("error", () => onFatalErrorRef.current?.());
+    // Belt-and-braces autoplay: some ABR streams reject the initial
+    // autoplay attempt before the manifest is parsed — retry when playable.
+    player.on("canplay", () => {
+      if (player.paused()) player.play()?.catch(() => {});
+    });
 
     return () => {
       playerRef.current = null;
@@ -83,17 +88,19 @@ export default function VideoPlayer({ src, kind, title, onFatalError }: VideoPla
 
       {/* Centre unmute overlay — shown while muted; native controls still work */}
       {muted ? (
-        <button
+        <div
           data-component="unmuteOverlay"
-          onClick={unmute}
-          aria-label={`Unmute ${title ?? "stream"}`}
-          className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group"
+          className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
         >
-          <span className="flex items-center gap-2 px-5 py-3 bg-emerald-500/90 text-black text-xs font-bold uppercase tracking-wider group-hover:bg-emerald-400 transition-colors shadow-lg">
+          <button
+            onClick={unmute}
+            aria-label={`Unmute ${title ?? "stream"}`}
+            className="pointer-events-auto flex items-center gap-2 px-5 py-3 bg-emerald-500/90 text-black text-xs font-bold uppercase tracking-wider hover:bg-emerald-400 transition-colors shadow-lg"
+          >
             <Volume2 className="h-4 w-4" />
             Tap to unmute
-          </span>
-        </button>
+          </button>
+        </div>
       ) : null}
     </div>
   );

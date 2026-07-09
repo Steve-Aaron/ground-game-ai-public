@@ -240,7 +240,7 @@ function Dashboard() {
                   <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">EC + Parliament</span>
                 }
               >
-                <ElectoralIntel />
+                <ElectoralIntel showIndicators />
               </Panel>
 
               {/* Opposition Tracker */}
