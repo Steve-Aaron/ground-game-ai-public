@@ -7,7 +7,7 @@ import {
 } from "@/data/braintree";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
-import { partyColor, partyLabel } from "@/lib/palette";
+import { ecIndicatorStyle, partyColor, partyLabel } from "@/lib/palette";
 
 type View = "results" | "prediction" | "wards";
 
@@ -98,6 +98,9 @@ interface IndicatorRow {
   seat: string;
   area: string;
   gb: string;
+  seatClass: string;
+  areaClass: string;
+  gbClass: string;
 }
 
 interface ECConstituencyData {
@@ -145,6 +148,23 @@ function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { el
  * in the MRP view. Enabled on the Political tab only — the map-tab instance
  * stays compact.
  */
+/** Coloured indicator cell, styled like the EC seat page (party colours and
+ * 5-step scale backgrounds via CSS variables — see ecIndicatorStyle). */
+function IndicatorCell({ value, cls, emphasis = false }: { value: string; cls: string; emphasis?: boolean }) {
+  const style = value ? ecIndicatorStyle(cls) : null;
+  return (
+    <td
+      data-ec-class={cls || undefined}
+      className={`py-1 px-1.5 text-center ${emphasis ? "font-semibold" : ""} ${
+        style ? "" : emphasis ? "text-foreground" : "text-zinc-500"
+      }`}
+      style={style ?? undefined}
+    >
+      {value}
+    </td>
+  );
+}
+
 export default function ElectoralIntel({ showIndicators = false }: { showIndicators?: boolean }) {
   const { slug } = useConstituency();
   const results2024 = deriveResults(slug);
@@ -311,18 +331,18 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
                 <thead>
                   <tr className="text-zinc-500 uppercase tracking-wider text-[0.5rem]">
                     <th className="text-left font-medium py-1">Indicator</th>
-                    <th className="text-right font-medium py-1">Seat</th>
-                    <th className="text-right font-medium py-1">{indicators.areaName}</th>
-                    <th className="text-right font-medium py-1">All GB</th>
+                    <th className="text-center font-medium py-1">Seat</th>
+                    <th className="text-center font-medium py-1">{indicators.areaName}</th>
+                    <th className="text-center font-medium py-1">All GB</th>
                   </tr>
                 </thead>
                 <tbody>
                   {indicators.rows.map((row) => (
                     <tr key={row.name} className="border-t border-border/40">
-                      <td className="py-1 text-zinc-400">{row.name}</td>
-                      <td className="py-1 text-right text-foreground font-medium">{row.seat}</td>
-                      <td className="py-1 text-right text-zinc-500">{row.area}</td>
-                      <td className="py-1 text-right text-zinc-500">{row.gb}</td>
+                      <td className="py-1 pr-2 text-zinc-400">{row.name}</td>
+                      <IndicatorCell value={row.seat} cls={row.seatClass} emphasis />
+                      <IndicatorCell value={row.area} cls={row.areaClass} />
+                      <IndicatorCell value={row.gb} cls={row.gbClass} />
                     </tr>
                   ))}
                 </tbody>

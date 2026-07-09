@@ -195,3 +195,41 @@ html:not(.dark) .text-zinc-400 {
 .vjs-gg-skin .vjs-seek-to-live-control {
   color: #f87171; /* red-400 — matches the LIVE badge */
 }
+
+/* ── Party colours (canonical — keep in sync with src/lib/palette.ts) ──── */
+:root {
+  --party-labour: #E4003B;
+  --party-conservative: #0087DC;
+  --party-libdem: #FF6400;
+  --party-reform: #1EB8D0;
+  --party-loony: #FFF000; /* Count Binface / Monster Raving Loony Party */
+  --party-snp: #FDF38E;
+  --party-green: #6AB023;
+  --party-other: #999999;
+
+  /* EC indicator scale colours, lifted from electoralcalculus.co.uk CSS.
+     economic/census/leaveshare are 5-step scales; cluster_* are Tribes. */
+  --ec-economic1: #FF3300;
+  --ec-economic2: #FF8585;
+  --ec-economic3: #FFFFBF;
+  --ec-economic4: #93CDDD;
+  --ec-economic5: #0070C0;
+  --ec-census1: #FF3300;
+  --ec-census2: #FF8585;
+  --ec-census3: #FFFFBF;
+  --ec-census4: #A7FFA7;
+  --ec-census5: #00DA00;
+  --ec-leaveshare1: #FFFF00;
+  --ec-leaveshare2: #DBFF8B;
+  --ec-leaveshare3: #D7E4BC;
+  --ec-leaveshare4: #93CDDD;
+  --ec-leaveshare5: #0070C0;
+  --ec-cluster-left: #FF0000;
+  --ec-cluster-right: #00B0F0;
+  --ec-cluster-cent: #FFFF00;
+  --ec-cluster-trad: #FFA3A3;
+  --ec-cluster-prog: #FFC000;
+  --ec-cluster-kcap: #C0D494;
+  --ec-cluster-kyc: #B7DEE8;
+  --ec-cluster-nat: #703090;
+}

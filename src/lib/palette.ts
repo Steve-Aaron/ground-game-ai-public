@@ -26,18 +26,28 @@ export type PartyKey =
   | "Labour"
   | "Reform UK"
   | "Liberal Democrats"
-  | "Liberal Democrat";
+  | "Liberal Democrat"
+  | "SNP"
+  | "NAT"
+  | "Count Binface"
+  | "Monster Raving Loony Party";
 
+// Canonical hexes — mirrored as CSS variables (--party-*) in globals.css.
+// Kept as hex here because maplibre paint expressions can't resolve CSS vars.
 const PARTY_COLORS: Record<PartyKey, string> = {
   CON: "#0087DC",
   Conservative: "#0087DC",
-  LAB: "#DC241f",
-  Labour: "#DC241f",
-  LIB: "#FAA61A",
-  "Liberal Democrats": "#FAA61A",
-  "Liberal Democrat": "#FAA61A",
-  Reform: "#12B6CF",
-  "Reform UK": "#12B6CF",
+  LAB: "#E4003B",
+  Labour: "#E4003B",
+  LIB: "#FF6400",
+  "Liberal Democrats": "#FF6400",
+  "Liberal Democrat": "#FF6400",
+  Reform: "#1EB8D0",
+  "Reform UK": "#1EB8D0",
+  SNP: "#FDF38E",
+  NAT: "#FDF38E",
+  "Count Binface": "#FFF000",
+  "Monster Raving Loony Party": "#FFF000",
   Green: "#6AB023",
   OTH: "#999999",
 };
@@ -130,3 +140,71 @@ export function sourceStyle(source: string | null | undefined): SourceStyle {
   if (!source) return SOURCE_DEFAULT;
   return (SOURCE_STYLES as Record<string, SourceStyle>)[source] ?? SOURCE_DEFAULT;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Electoral Calculus indicator cells
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Map an EC indicator cell class (party, 5-step scale, or Tribe cluster) to
+ * cell styling. Colours are CSS variables defined in globals.css so they can
+ * be themed in one place. Returns null for unstyled cells.
+ */
+export function ecIndicatorStyle(
+  cls: string
+): { backgroundColor: string; color: string } | null {
+  if (!cls) return null;
+  const key = cls.toLowerCase();
+
+  // Party cells (winner rows) — user-specified variable colours first,
+  // anything else falls back to the canonical party palette.
+  const partyVars: Record<string, string> = {
+    lab: "var(--party-labour)",
+    con: "var(--party-conservative)",
+    lib: "var(--party-libdem)",
+    reform: "var(--party-reform)",
+    nat: "var(--party-snp)",
+    loony: "var(--party-loony)",
+    binface: "var(--party-loony)",
+    green: "var(--party-green)",
+    oth: "var(--party-other)",
+    min: "var(--party-other)",
+  };
+  if (partyVars[key]) {
+    return { backgroundColor: partyVars[key], color: WHITE_TEXT_CLASSES.has(key) ? "#fff" : "#111" };
+  }
+
+  // 5-step scales: economic1-5, census1-5, leaveshare1-5.
+  const scaleMatch = key.match(/^(economic|census|leaveshare)([1-5])$/);
+  if (scaleMatch) {
+    return {
+      backgroundColor: `var(--ec-${scaleMatch[1]}${scaleMatch[2]})`,
+      color: WHITE_TEXT_CLASSES.has(key) ? "#fff" : "#111",
+    };
+  }
+
+  // Tribe clusters — EC aliases some pairs to shared colours.
+  const clusterAlias: Record<string, string> = {
+    cluster_left: "left", cluster_right: "right", cluster_cent: "cent",
+    cluster_trad: "trad", cluster_prog: "prog", cluster_hoff: "prog",
+    cluster_kcap: "kcap", cluster_kyc: "kyc", cluster_pat: "kyc",
+    cluster_nat: "nat", cluster_some: "nat",
+  };
+  if (clusterAlias[key]) {
+    return {
+      backgroundColor: `var(--ec-cluster-${clusterAlias[key]})`,
+      color: WHITE_TEXT_CLASSES.has(key) ? "#fff" : "#111",
+    };
+  }
+
+  return null;
+}
+
+// Saturated/dark backgrounds that need white text; everything else gets dark.
+const WHITE_TEXT_CLASSES = new Set([
+  "lab", "con", "lib",
+  "economic1", "economic5",
+  "census1",
+  "leaveshare5",
+  "cluster_left", "cluster_nat", "cluster_some",
+]);

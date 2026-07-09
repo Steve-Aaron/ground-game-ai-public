@@ -46,6 +46,11 @@ interface IndicatorRow {
   seat: string;
   area: string;
   gb: string;
+  /** EC cell CSS classes (party or scale, e.g. "reform", "economic5",
+   * "census3", "leaveshare5", "cluster_right") — drive cell colouring. */
+  seatClass: string;
+  areaClass: string;
+  gbClass: string;
 }
 
 interface NationalProjection {
@@ -527,9 +532,27 @@ function extractIndicators(
       if (ths.length >= 4 && ths[2]) areaName = ths[2];
       continue;
     }
-    const cells = row.split(/<TD[^>]*>/i).slice(1).map((c) => strip(c.replace(/<\/TR>[\s\S]*/i, "")));
-    if (cells.length >= 4 && cells[0]) {
-      rows.push({ name: cells[0], seat: cells[1], area: cells[2], gb: cells[3] });
+    // Keep each cell's opening-tag attrs so the EC colour class survives.
+    const parts = row.split(/<TD/i).slice(1);
+    const cells = parts.map((part) => {
+      const gt = part.indexOf(">");
+      const attrs = gt === -1 ? "" : part.slice(0, gt);
+      const content = gt === -1 ? part : part.slice(gt + 1);
+      return {
+        cls: attrs.match(/class\s*=\s*["']?([\w_]+)/i)?.[1]?.toLowerCase() ?? "",
+        text: strip(content.replace(/<\/TR>[\s\S]*/i, "")),
+      };
+    });
+    if (cells.length >= 4 && cells[0].text) {
+      rows.push({
+        name: cells[0].text,
+        seat: cells[1].text,
+        area: cells[2].text,
+        gb: cells[3].text,
+        seatClass: cells[1].cls,
+        areaClass: cells[2].cls,
+        gbClass: cells[3].cls,
+      });
     }
     if (rows.length >= 30) break;
   }

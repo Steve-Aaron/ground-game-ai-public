@@ -32,16 +32,7 @@ interface Channel {
 //    CORS-open HLS exists — YouTube embed is the reliable official source
 //  - Radio 5 Live: BBC pool URLs rotate, resolved live via /api/radio-stream
 const CHANNELS: Channel[] = [
-  {
-    name: "Sky News",
-    shortName: "SKY",
-    kind: "youtube",
-    youtubeVideoId: "11Bog8oUYFk",
-    directUrl: "https://news.sky.com/watch-live",
-    color: "bg-sky-600/20",
-    textColor: "text-sky-400",
-    description: "Official YouTube live stream",
-  },
+  // GB News first — the default viewer.
   {
     name: "GB News",
     shortName: "GB",
@@ -52,6 +43,17 @@ const CHANNELS: Channel[] = [
     color: "bg-red-600/20",
     textColor: "text-red-400",
     description: "Live IPTV stream",
+  },
+  {
+    name: "Sky News",
+    shortName: "SKY",
+    kind: "youtube",
+    // Live ids rotate — resolved server-side from youtube.com/@SkyNews/live.
+    resolveUrl: "/api/sky-live",
+    directUrl: "https://news.sky.com/watch-live",
+    color: "bg-sky-600/20",
+    textColor: "text-sky-400",
+    description: "Official YouTube live stream",
   },
   {
     name: "BBC News",
@@ -111,11 +113,31 @@ function RadioPlayer({ channel, onFatalError }: { channel: Channel; onFatalError
   return <VideoPlayer src={url} kind="radio" title={channel.name} onFatalError={onFatalError} />;
 }
 
-function YouTubeEmbed({ channel }: { channel: Channel }) {
+function YouTubeEmbed({ channel, onFatalError }: { channel: Channel; onFatalError: () => void }) {
+  const [videoId, setVideoId] = useState<string | null>(channel.youtubeVideoId ?? null);
+
+  useEffect(() => {
+    if (videoId || !channel.resolveUrl) return;
+    let cancelled = false;
+    fetch(channel.resolveUrl)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { videoId: string }) => {
+        if (!cancelled) setVideoId(d.videoId);
+      })
+      .catch(() => {
+        if (!cancelled) onFatalError();
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel.resolveUrl]);
+
+  if (!videoId) return <PanelSkeleton variant="chart" rows={1} />;
   return (
     <div data-component="youtubeEmbed" className="relative w-full" style={{ paddingBottom: "56.25%" }}>
       <iframe
-        src={`https://www.youtube.com/embed/${channel.youtubeVideoId}?autoplay=1&mute=1&modestbranding=1&rel=0`}
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&modestbranding=1&rel=0`}
         className="absolute inset-0 w-full h-full bg-black"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
@@ -186,7 +208,7 @@ export default function LiveFeeds() {
         {streamFailed[channel.name] ? (
           <ChannelFallback channel={channel} />
         ) : channel.kind === "youtube" ? (
-          <YouTubeEmbed key={channel.name} channel={channel} />
+          <YouTubeEmbed key={channel.name} channel={channel} onFatalError={markFailed(channel.name)} />
         ) : channel.kind === "radio" ? (
           <RadioPlayer key={channel.name} channel={channel} onFatalError={markFailed(channel.name)} />
         ) : (
