@@ -20,8 +20,8 @@ interface LayerDef {
 
 const LAYER_DEFS: LayerDef[] = [
   { id: "boundary", label: "Boundary", description: "Constituency outline", default: true },
-  { id: "wards-vote", label: "2024 Ward Winner", description: "Ward-level 2024 winning party", default: true },
-  { id: "wards-prediction", label: "MRP Prediction", description: "EC predicted winner per ward", default: false },
+  { id: "wards-prediction", label: "MRP Forecast", description: "EC predicted winner per ward", default: true },
+  { id: "wards-vote", label: "2024 Election Result", description: "Ward-level 2024 winning party", default: false },
   { id: "wards-deprivation", label: "Deprivation", description: "Ward deprivation levels", default: false },
   { id: "police", label: "Police Areas", description: "Force tint + local policing team outlines", default: false },
   { id: "crime", label: "Crime Reports", description: "Recent crime data (Police API)", default: false },
@@ -329,12 +329,14 @@ export default function ConstituencyMap() {
             "fill-color": partyColourBy("winner2024"),
             "fill-opacity": 0.5,
           },
+          layout: { visibility: "none" },
         });
         m.addLayer({
           id: "wards-vote-outline",
           type: "line",
           source: "wards",
           paint: { "line-color": "#e2e8f0", "line-width": 1, "line-opacity": 0.5 },
+          layout: { visibility: "none" },
         });
 
         // === LAYER: MRP Prediction ===
@@ -343,14 +345,12 @@ export default function ConstituencyMap() {
           type: "fill",
           source: "wards",
           paint: { "fill-color": predColorExpr, "fill-opacity": 0.6 },
-          layout: { visibility: "none" },
         });
         m.addLayer({
           id: "wards-prediction-outline",
           type: "line",
           source: "wards",
           paint: { "line-color": "#ffffff", "line-width": 1.5, "line-opacity": 0.6 },
-          layout: { visibility: "none" },
         });
 
         // === LAYER: Deprivation ===
@@ -1327,7 +1327,7 @@ export default function ConstituencyMap() {
           {(activeChoropleth === "vote" || activeChoropleth === "prediction") && (
             <>
               <div className="text-xs text-foreground mb-2 font-medium">
-                {activeChoropleth === "vote" ? "2024 Ward Winner" : "MRP Predicted Winner"}
+                {activeChoropleth === "vote" ? "2024 Election Result" : "MRP Forecast"}
               </div>
               <div className="space-y-1">
                 {PARTY_LEGEND.map((p) => (

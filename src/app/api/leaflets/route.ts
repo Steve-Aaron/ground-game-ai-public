@@ -51,7 +51,12 @@ interface LeafletDoc {
   /** Manual summary of what the content contains/claims. */
   summary: string;
   notes: string;
+  /** User-entered date (YYYY-MM-DD) they saw the material. Editable. */
+  seenAt: string;
+  /** Uploader email — locked, used for delete permission checks. */
   uploadedBy: string;
+  /** Uploader platform display name — locked, for display. */
+  uploadedByName: string;
   storagePath: string;
   contentType: string;
   createdAt: string;
@@ -97,6 +102,8 @@ export async function GET(request: Request) {
         category: data.category ?? "Other",
         summary: data.summary ?? "",
         notes: data.notes,
+        seenAt: data.seenAt ?? data.createdAt?.slice(0, 10) ?? "",
+        uploadedByName: data.uploadedByName || data.uploadedBy,
         uploadedBy: data.uploadedBy,
         contentType: data.contentType,
         createdAt: data.createdAt,
@@ -149,6 +156,18 @@ export async function POST(request: Request) {
   const summary = String(form.get("summary") ?? "").slice(0, 1000);
   const notes = String(form.get("notes") ?? "").slice(0, 500);
 
+  // "Seen at" — user-editable, date only. Server-validated; anything invalid
+  // or in the future falls back to today. createdAt and the uploader fields
+  // below are locked: always server-set, never taken from the form.
+  const today = new Date().toISOString().slice(0, 10);
+  const seenAtRaw = String(form.get("seenAt") ?? "");
+  const seenAt =
+    /^\d{4}-\d{2}-\d{2}$/.test(seenAtRaw) &&
+    !Number.isNaN(Date.parse(seenAtRaw)) &&
+    seenAtRaw <= today
+      ? seenAtRaw
+      : today;
+
   const id = randomUUID();
   const storagePath = `leaflets/${slug}/${id}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -166,7 +185,9 @@ export async function POST(request: Request) {
     category,
     summary,
     notes,
+    seenAt,
     uploadedBy: session.email,
+    uploadedByName: session.displayName,
     storagePath,
     contentType: file.type,
     createdAt: new Date().toISOString(),

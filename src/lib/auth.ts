@@ -25,6 +25,8 @@ export interface UserRecord {
 export interface AuthContext {
   uid: string;
   email: string;
+  /** Platform display name (set at invite), falls back to email. */
+  displayName: string;
   role: UserRole;
   allowedConstituencies: string[];
 }
@@ -53,6 +55,7 @@ export async function verifySession(
     return {
       uid: decoded.uid,
       email: data.email,
+      displayName: data.displayName || data.email,
       role: data.role,
       allowedConstituencies: data.allowedConstituencies ?? [],
     };

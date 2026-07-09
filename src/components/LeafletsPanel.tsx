@@ -8,7 +8,7 @@ import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
 import PanelError from "@/components/ui/PanelError";
-import { formatTimeAgo } from "@/lib/format";
+import { formatGbDate, formatTimeAgo } from "@/lib/format";
 
 // Mirrors LeafletItem in src/app/api/leaflets/route.ts.
 interface LeafletItem {
@@ -18,7 +18,11 @@ interface LeafletItem {
   category: string;
   summary: string;
   notes: string;
+  /** Date the user saw the material (YYYY-MM-DD). */
+  seenAt: string;
   uploadedBy: string;
+  /** Platform display name of the uploader. */
+  uploadedByName: string;
   contentType: string;
   createdAt: string;
   imageUrl: string;
@@ -67,6 +71,7 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState("");
+  const [seenAt, setSeenAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +82,7 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
     setPreviewUrl(null);
     setSummary("");
     setNotes("");
+    setSeenAt(new Date().toISOString().slice(0, 10));
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -100,6 +106,7 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
       body.append("category", category);
       body.append("summary", summary);
       body.append("notes", notes);
+      body.append("seenAt", seenAt);
       const res = await fetch(withConstituency("/api/leaflets", slug), {
         method: "POST",
         body,
@@ -172,6 +179,19 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
           className="max-h-40 rounded border border-border object-contain"
         />
       ) : null}
+
+      <label className="block">
+        <span className="block text-[0.5rem] uppercase tracking-wider text-zinc-500 mb-1">
+          Seen at
+        </span>
+        <input
+          type="date"
+          value={seenAt}
+          max={new Date().toISOString().slice(0, 10)}
+          onChange={(e) => setSeenAt(e.target.value)}
+          className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 [color-scheme:dark]"
+        />
+      </label>
 
       <div className="grid grid-cols-2 gap-2">
         <select
@@ -278,7 +298,7 @@ function LeafletCard({
           src={item.imageUrl}
           alt={`${KIND_LABELS[item.kind]} — ${item.party}`}
           loading="lazy"
-          className="w-full h-36 object-cover hover:opacity-90 transition-opacity"
+          className="w-full h-auto hover:opacity-90 transition-opacity"
         />
       </a>
       <figcaption className="px-2.5 py-2 space-y-1">
@@ -297,8 +317,16 @@ function LeafletCard({
         {item.notes ? (
           <p className="text-[0.611rem] text-zinc-500 line-clamp-2">{item.notes}</p>
         ) : null}
-        <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
-          {item.uploadedBy} · {formatTimeAgo(item.createdAt)}
+        {item.seenAt ? (
+          <p className="text-[0.611rem] text-zinc-400">
+            Seen {formatGbDate(item.seenAt)}
+          </p>
+        ) : null}
+        <p
+          className="text-[0.5rem] text-zinc-600 uppercase tracking-wider"
+          title={`Uploaded ${new Date(item.createdAt).toLocaleString("en-GB")}`}
+        >
+          {item.uploadedByName} · {formatTimeAgo(item.createdAt)}
         </p>
       </figcaption>
     </figure>
@@ -339,7 +367,7 @@ export default function LeafletsPanel() {
           description="Photos of leaflets, posters and social media posts seen locally will appear here."
         />
       ) : (
-        <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="p-4 grid grid-cols-3 gap-4">
           {items.map((item) => (
             <LeafletCard
               key={item.id}
