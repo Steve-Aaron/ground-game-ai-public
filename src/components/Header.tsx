@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Menu, Shield, X } from "lucide-react";
+import { LogOut, Menu, RefreshCw, Shield, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useMe } from "@/hooks/useMe";
 import type { ConstituencyOption, ConstituencySlug } from "@/hooks/useConstituency";
@@ -27,6 +27,28 @@ interface HeaderProps {
   onConstituencyChange: (slug: ConstituencySlug) => void;
   /** Allowed constituencies for the signed-in user. */
   options: ConstituencyOption[];
+}
+
+
+/** Reloads the page so every panel refetches — the simple, reliable way to
+ * pull the latest data across the board. Server-side caches still apply
+ * their own TTLs (and the Apify budget caps stay enforced). */
+function RefreshButton() {
+  const [spinning, setSpinning] = useState(false);
+  return (
+    <button
+      data-component="pageRefresh"
+      onClick={() => {
+        setSpinning(true);
+        window.location.reload();
+      }}
+      title="Refresh data"
+      aria-label="Refresh data"
+      className="text-zinc-400 hover:text-emerald-400 transition-colors"
+    >
+      <RefreshCw className={`h-4 w-4 ${spinning ? "animate-spin" : ""}`} />
+    </button>
+  );
 }
 
 export default function Header({
@@ -108,6 +130,7 @@ export default function Header({
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[0.556rem] text-zinc-500 uppercase tracking-wider">Live</span>
             </div>
+            <RefreshButton />
             <ThemeToggle />
             <button
               className="text-zinc-400 hover:text-foreground transition-colors"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AtSign,
   BadgeCheck,
@@ -8,12 +8,9 @@ import {
   ExternalLink,
   Heart,
   MessageCircle,
-  Plus,
   Repeat2,
   Play,
-  X,
 } from "lucide-react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
@@ -49,113 +46,27 @@ interface FeedResponse {
   limitReached?: boolean;
   limits?: { runsToday: number; maxRunsPerDay: number; runsThisMonth: number; maxRunsPerMonth: number } | null;
 }
-interface TrackedAccount {
-  handle: string;
-  addedBy: string;
-  addedAt: string;
-}
-
 const engagement = (t: Tweet) => t.likes + t.retweets * 2 + t.replies;
 
-/** Manage the tracked-handle list (max enforced server-side). */
-function AccountManager({ onChanged }: { onChanged: () => void }) {
-  const { slug } = useConstituency();
-  const [accounts, setAccounts] = useState<TrackedAccount[]>([]);
-  const [max, setMax] = useState(5);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!slug) return;
-    fetch(withConstituency("/api/social-accounts", slug))
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d: { accounts: TrackedAccount[]; max: number }) => {
-        setAccounts(d.accounts);
-        setMax(d.max);
-      })
-      .catch(() => {});
-  }, [slug]);
-
-  async function mutate(method: "POST" | "DELETE", handle: string) {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const path =
-        method === "DELETE"
-          ? `/api/social-accounts?handle=${encodeURIComponent(handle)}`
-          : "/api/social-accounts";
-      const res = await fetch(withConstituency(path, slug), {
-        method,
-        ...(method === "POST"
-          ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ handle }) }
-          : {}),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { accounts?: TrackedAccount[]; error?: string }
-        | null;
-      if (!res.ok) throw new Error(data?.error ?? `Request failed (${res.status})`);
-      setAccounts(data?.accounts ?? []);
-      setInput("");
-      onChanged();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
+/** Read-only view of the shared watch-list. The list itself (max 5 people,
+ * shared with the Opposition Tracker) is managed by admins there. */
+function WatchListStrip({ profiles }: { profiles: SocialProfile[] }) {
   return (
-    <div data-component="socialAccountManager" className="px-4 py-2.5 border-b border-border/50 space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500 mr-1">
-          Tracked ({accounts.length}/{max})
+    <div data-component="socialWatchListStrip" className="px-4 py-2.5 border-b border-border/50 flex flex-wrap items-center gap-1.5">
+      <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500 mr-1">
+        Watch-list ({profiles.length}/5)
+      </span>
+      {profiles.map((p) => (
+        <span
+          key={p.handle}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/50 border border-border text-[0.611rem] text-foreground"
+        >
+          @{p.handle}
         </span>
-        {accounts.map((a) => (
-          <span
-            key={a.handle}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/50 border border-border text-[0.611rem] text-foreground"
-          >
-            @{a.handle}
-            <button
-              onClick={() => mutate("DELETE", a.handle)}
-              aria-label={`Stop tracking @${a.handle}`}
-              className="text-zinc-500 hover:text-red-400"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        {accounts.length < max ? (
-          <form
-            className="inline-flex items-center gap-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (input.trim()) mutate("POST", input);
-            }}
-          >
-            <span className="relative">
-              <AtSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-600" />
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="username"
-                className="w-32 rounded-full bg-muted/40 border border-border text-[0.611rem] text-foreground pl-6 pr-2 py-1 placeholder:text-zinc-600"
-              />
-            </span>
-            <button
-              type="submit"
-              disabled={busy || !input.trim()}
-              aria-label="Track account"
-              className="p-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-          </form>
-        ) : null}
-      </div>
-      {error ? <p className="text-[0.611rem] text-red-400">{error}</p> : null}
+      ))}
+      <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider ml-auto">
+        Managed in Opposition Tracker
+      </span>
     </div>
   );
 }
@@ -407,7 +318,7 @@ export default function SocialTrackerPanel() {
 
   return (
     <div data-component="socialTrackerPanel">
-      <AccountManager onChanged={refetch} />
+      <WatchListStrip profiles={profiles} />
 
       {loading ? (
         <PanelSkeleton variant="avatarList" rows={4} />
@@ -417,7 +328,7 @@ export default function SocialTrackerPanel() {
         <PanelEmpty
           icon={AtSign}
           title="No accounts tracked"
-          description="Track up to 5 X accounts to see their latest posts here."
+          description="Add people with X handles to the Opposition Tracker watch-list (admins) to see their posts here."
         />
       ) : (
         <>

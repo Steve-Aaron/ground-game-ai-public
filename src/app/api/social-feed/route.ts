@@ -22,13 +22,14 @@ export const maxDuration = 60;
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // min gap between refreshes: 4h
 const POSTS_PER_ACCOUNT = 20;
 
-const TRACKING_COLLECTION = "social_tracking";
+// Single shared watch-list: the admin-managed opposition_people collection
+// drives BOTH the Opposition Tracker and the Social Media Tracker (max 5).
+const TRACKING_COLLECTION = "opposition_people";
 const CACHE_COLLECTION = "social_feed_cache";
 
-interface TrackedAccount {
+interface TrackedPerson {
   handle: string;
-  addedBy: string;
-  addedAt: string;
+  name: string;
 }
 
 // Post/profile shapes come from the shared client (src/lib/apify-twitter).
@@ -47,7 +48,10 @@ export async function GET(request: Request) {
   try {
     const db = adminDb();
     const trackingSnap = await db.collection(TRACKING_COLLECTION).doc(slug).get();
-    const accounts = ((trackingSnap.data() as { accounts?: TrackedAccount[] } | undefined)?.accounts ?? []);
+    // Only people with an X handle can be monitored here.
+    const accounts = (
+      (trackingSnap.data() as { people?: TrackedPerson[] } | undefined)?.people ?? []
+    ).filter((p) => p.handle);
     if (accounts.length === 0) {
       return NextResponse.json({ profiles: [], updatedAt: null, limits: null });
     }
