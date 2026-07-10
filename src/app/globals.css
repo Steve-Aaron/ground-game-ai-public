@@ -288,7 +288,7 @@ html:not(.dark) .text-zinc-400 {
 @keyframes loginFadeInUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -296,7 +296,7 @@ html:not(.dark) .text-zinc-400 {
   }
 }
 .login-fade {
-  animation: loginFadeInUp 0.55s ease-out both;
+  animation: loginFadeInUp 0.45s ease-out both;
 }
 .login-fade-1 { animation-delay: 0.05s; }
 .login-fade-2 { animation-delay: 0.15s; }

@@ -8,15 +8,15 @@ function LoginSkeleton() {
   return (
     <div
       data-component="loginSkeleton"
-      className="min-h-screen grid grid-cols-12 bg-[#111318]"
+      className="min-h-screen grid grid-cols-12 bg-background"
     >
       <div className="hidden lg:block col-span-7 bg-[#0a0a0a]" />
       <div className="col-span-12 lg:col-span-5 flex items-center justify-center px-6">
-        <div className="w-full max-w-sm space-y-4">
-          <div className="h-6 w-52 mx-auto bg-zinc-800 rounded animate-pulse" />
-          <div className="h-10 w-full bg-zinc-800/60 rounded-full animate-pulse" />
-          <div className="h-10 w-full bg-zinc-800/40 rounded-full animate-pulse" />
-          <div className="h-10 w-full bg-zinc-800/60 rounded-full animate-pulse" />
+        <div className="w-full max-w-xs space-y-3">
+          <div className="h-5 w-44 bg-muted rounded animate-pulse" />
+          <div className="h-8 w-full bg-muted/60 animate-pulse" />
+          <div className="h-8 w-full bg-muted/40 animate-pulse" />
+          <div className="h-8 w-full bg-muted/60 animate-pulse" />
         </div>
       </div>
     </div>

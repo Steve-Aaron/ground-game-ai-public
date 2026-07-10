@@ -17,6 +17,7 @@ import {
 import { app } from "@/lib/firebase";
 import { GoogleIcon } from "./BrandIcons";
 import ThemeToggle from "@/components/ThemeToggle";
+import { ActionButton } from "@/components/ui/ActionButton";
 
 const EMAIL_FOR_SIGNIN_KEY = "ggi.emailForSignIn";
 
@@ -36,7 +37,7 @@ type Mode =
 type EmailMethod = "link" | "password";
 
 const FIELD_CLASS =
-  "w-full rounded-full bg-transparent border border-border focus:border-emerald-500 outline-none pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-zinc-500 transition-colors";
+  "w-full bg-muted/20 border border-border focus:border-emerald-500/60 outline-none pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-zinc-600 transition-colors";
 
 export default function LoginPanel() {
   const router = useRouter();
@@ -148,26 +149,27 @@ export default function LoginPanel() {
 
   return (
     <div data-component="loginPortal" className="min-h-screen grid grid-cols-12 bg-background">
-      {/* ── Brand panel: repeating black texture + centred election artwork ── */}
+      {/* ── Brand panel: repeating black texture + quiet centred mark ── */}
       <div
         data-component="loginBrandPanel"
         className="hidden lg:flex col-span-7 flex-col items-center justify-center relative"
         style={{ backgroundColor: "#0a0a0a", backgroundImage: "url(/login-texture.svg)" }}
       >
-        <div className="text-center mb-10 login-fade login-fade-1">
-          <p className="text-2xl font-bold text-white tracking-tight">Welcome to</p>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-400 mt-1">
-            Ground Game <span className="text-white">Intel</span>
-          </p>
+        <div className="flex items-center gap-2 mb-12 login-fade login-fade-1">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="text-sm font-bold text-white tracking-tight uppercase">
+            Ground Game <span className="text-emerald-500">Intel</span>
+          </span>
         </div>
         <div
           data-component="loginArtwork"
-          className="h-[22rem] w-[22rem] rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_120px_rgba(16,185,129,0.25)] login-fade login-fade-2"
+          className="h-40 w-40 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center login-fade login-fade-2"
         >
+          {/* Icon is black line-art — inverted to read as white on the dark disc */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/election.svg" alt="" className="h-[11rem] w-[11rem]" />
+          <img src="/election.svg" alt="" className="h-20 w-20 opacity-80" style={{ filter: "invert(1)" }} />
         </div>
-        <p className="mt-10 text-[0.611rem] uppercase tracking-widest text-zinc-600 login-fade login-fade-3">
+        <p className="mt-12 text-[0.611rem] uppercase tracking-widest text-zinc-600 login-fade login-fade-3">
           Constituency Intelligence Platform
         </p>
       </div>
@@ -180,29 +182,29 @@ export default function LoginPanel() {
         <div className="absolute top-4 right-4 login-fade login-fade-1">
           <ThemeToggle />
         </div>
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-xs">
           <div className="login-fade login-fade-2">
-            <h1 className="text-2xl font-bold text-foreground text-center tracking-tight">
+            <h1 className="text-lg font-semibold text-foreground tracking-tight">
               Log in to your account
             </h1>
-            <p className="text-xs text-zinc-500 text-center mt-1.5 mb-8">
+            <p className="text-[0.611rem] uppercase tracking-wider text-zinc-500 mt-1 mb-7">
               Please enter your details
             </p>
           </div>
 
           {mode === "link-sent" ? (
-            <div data-component="magicLinkSent" className="text-center space-y-3">
-              <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                <Mail className="h-5 w-5 text-emerald-400" />
-              </div>
-              <p className="text-sm text-foreground">Check your inbox</p>
-              <p className="text-xs text-zinc-500">
+            <div data-component="magicLinkSent" className="space-y-2 login-fade">
+              <p className="text-xs text-foreground flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-emerald-400" />
+                Check your inbox
+              </p>
+              <p className="text-[0.667rem] text-zinc-500 leading-relaxed">
                 We sent a magic sign-in link to <span className="text-foreground">{email}</span>.
                 Open it on this device to log in.
               </p>
               <button
                 onClick={() => setMode("idle")}
-                className="text-xs text-emerald-400 hover:text-emerald-300"
+                className="text-[0.667rem] text-emerald-500/80 hover:text-emerald-400"
               >
                 Use a different method
               </button>
@@ -214,30 +216,30 @@ export default function LoginPanel() {
                 data-component="googleSignIn"
                 onClick={onGoogle}
                 disabled={busy}
-                className="w-full rounded-full bg-white text-zinc-900 border border-zinc-300 dark:border-transparent text-sm font-semibold py-2.5 flex items-center justify-center gap-2 hover:bg-zinc-200 transition-colors disabled:opacity-50 login-fade login-fade-3"
+                className="w-full border border-border bg-transparent hover:bg-muted/40 text-xs font-medium text-foreground py-2 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 login-fade login-fade-3"
               >
-                {mode === "google-loading" || (mode === "exchanging-cookie" && !email) ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {mode === "google-loading" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <GoogleIcon className="h-4 w-4" />
+                  <GoogleIcon className="h-3.5 w-3.5" />
                 )}
                 Continue with Google
               </button>
 
-              <div className="flex items-center gap-3 my-6 login-fade login-fade-4">
-                <span className="flex-1 h-px bg-border" />
-                <span className="text-[0.611rem] uppercase tracking-wider text-zinc-600">or</span>
-                <span className="flex-1 h-px bg-border" />
+              <div className="flex items-center gap-3 my-5 login-fade login-fade-4">
+                <span className="flex-1 h-px bg-border/60" />
+                <span className="text-[0.5rem] uppercase tracking-widest text-zinc-600">or</span>
+                <span className="flex-1 h-px bg-border/60" />
               </div>
 
               {/* Email — magic link (default) or password */}
               <form
                 data-component="emailSignInForm"
                 onSubmit={emailMethod === "link" ? onSendMagicLink : onPasswordSignIn}
-                className="space-y-3 login-fade login-fade-5"
+                className="space-y-2.5 login-fade login-fade-5"
               >
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
                   <input
                     type="email"
                     value={email}
@@ -250,7 +252,7 @@ export default function LoginPanel() {
 
                 {emailMethod === "password" ? (
                   <div className="relative">
-                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
                     <input
                       type="password"
                       value={password}
@@ -267,35 +269,31 @@ export default function LoginPanel() {
                     <button
                       type="button"
                       onClick={onForgotPassword}
-                      className="text-[0.667rem] text-zinc-500 hover:text-emerald-400"
+                      className="text-[0.611rem] text-zinc-500 hover:text-emerald-400"
                     >
                       Forgot password?
                     </button>
                   </div>
                 ) : null}
 
-                <button
+                <ActionButton
                   data-component="emailSignInSubmit"
                   type="submit"
                   disabled={busy || !email || (emailMethod === "password" && !password)}
-                  className="w-full rounded-full bg-emerald-500 text-black text-sm font-bold py-2.5 flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                  icon={busy && mode !== "google-loading" ? Loader2 : emailMethod === "link" ? Wand2 : undefined}
+                  className={`w-full ${busy && mode !== "google-loading" ? "[&>svg]:animate-spin" : ""}`}
                 >
-                  {busy && mode !== "google-loading" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : emailMethod === "link" ? (
-                    <Wand2 className="h-4 w-4" />
-                  ) : null}
                   {emailMethod === "link" ? "Email me a magic link" : "Log in"}
-                </button>
+                </ActionButton>
               </form>
 
-              <p className="text-center text-xs text-zinc-500 mt-6">
+              <p className="text-[0.611rem] text-zinc-500 mt-5 login-fade login-fade-5">
                 {emailMethod === "link" ? (
                   <>
                     Have a password?{" "}
                     <button
                       onClick={() => setEmailMethod("password")}
-                      className="text-emerald-400 hover:text-emerald-300 font-medium"
+                      className="text-emerald-500/80 hover:text-emerald-400"
                     >
                       Log in with password
                     </button>
@@ -305,7 +303,7 @@ export default function LoginPanel() {
                     Prefer no password?{" "}
                     <button
                       onClick={() => setEmailMethod("link")}
-                      className="text-emerald-400 hover:text-emerald-300 font-medium"
+                      className="text-emerald-500/80 hover:text-emerald-400"
                     >
                       Use a magic link
                     </button>
@@ -314,7 +312,7 @@ export default function LoginPanel() {
               </p>
 
               {mode === "reset-sent" ? (
-                <p className="text-center text-xs text-emerald-400 mt-3">
+                <p className="text-[0.611rem] text-emerald-400 mt-2">
                   Password reset email sent to {resetEmailFor}.
                 </p>
               ) : null}
@@ -322,13 +320,13 @@ export default function LoginPanel() {
           )}
 
           {error ? (
-            <p data-component="loginError" className="text-center text-xs text-red-400 mt-4">
+            <p data-component="loginError" className="text-[0.611rem] text-red-400 mt-4">
               {error}
             </p>
           ) : null}
 
-          <p className="text-center text-[0.611rem] text-zinc-600 mt-8">
-            Access is invite-only. Contact your administrator if you need an account.
+          <p className="text-[0.5rem] uppercase tracking-widest text-zinc-600 mt-8">
+            Access is invite-only &middot; contact your administrator
           </p>
         </div>
       </div>
