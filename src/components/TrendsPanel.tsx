@@ -12,6 +12,9 @@ interface TrendingSearch {
   traffic: string;
   articleCount: number;
   relatedQueries: string[];
+  newsTitle?: string;
+  newsUrl?: string;
+  newsSource?: string;
 }
 
 interface InterestOverTimePoint {
@@ -37,6 +40,8 @@ interface FreshnessReport {
 
 interface TrendsV2Data {
   trendingSearches: TrendingSearch[];
+  regionalTrending?: TrendingSearch[];
+  regionTrendingName?: string;
   interestOverTime: InterestOverTimePoint[];
   regionalVsNational: RegionalComparison[];
   fetched_at?: string;
@@ -261,6 +266,51 @@ function UnavailableSection({ height = "py-4" }: { height?: string }) {
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
+/** Trending list section — used for both the UK and regional feeds. Each
+ * trend links to its top news story when the feed provides one. */
+function TrendingSection({ title, items }: { title: string; items?: TrendingSearch[] }) {
+  return (
+    <div data-component="trendingSection">
+      <div className="flex items-center gap-2 mb-2 px-3">
+        <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{title}</span>
+      </div>
+
+      {items && items.length > 0 ? (
+        <div className="bg-muted/30 rounded-lg mx-2 border border-border/40 divide-y divide-zinc-800/40">
+          {items.slice(0, 6).map((t) => (
+            <div key={t.title} className="px-3 py-2 hover:bg-muted/20 transition-colors">
+              <div className="flex justify-between items-center">
+                <span className="text-[0.667rem] text-zinc-300 capitalize">{t.title}</span>
+                {t.traffic && (
+                  <span className="text-[0.611rem] font-semibold text-emerald-400 tabular-nums">
+                    {t.traffic}
+                  </span>
+                )}
+              </div>
+              {t.newsUrl && t.newsTitle ? (
+                <a
+                  href={t.newsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-[0.556rem] text-zinc-600 hover:text-emerald-400 truncate transition-colors"
+                >
+                  {t.newsTitle}
+                  {t.newsSource ? ` — ${t.newsSource}` : ""}
+                </a>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mx-2">
+          <UnavailableSection />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TrendsPanel() {
   const { data, loading, error: errorMsg } = useConstituencyResource<TrendsV2Data>(
     "/api/trends-v2"
@@ -386,36 +436,13 @@ export default function TrendsPanel() {
       </div>
 
       {/* Section: Trending in the UK */}
-      <div>
-        <div className="flex items-center gap-2 mb-2 px-3">
-          <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-            Trending in the UK
-          </span>
-        </div>
+      <TrendingSection title="Trending in the UK" items={trendingOk ? data?.trendingSearches : undefined} />
 
-        {trendingOk && data?.trendingSearches ? (
-          <div className="bg-muted/30 rounded-lg mx-2 border border-border/40 divide-y divide-zinc-800/40">
-            {data.trendingSearches.slice(0, 6).map((t) => (
-              <div
-                key={t.title}
-                className="flex justify-between items-center px-3 py-2 hover:bg-muted/20 transition-colors"
-              >
-                <span className="text-[0.667rem] text-zinc-300">{t.title}</span>
-                {t.traffic && (
-                  <span className="text-[0.611rem] font-semibold text-emerald-400 tabular-nums">
-                    {t.traffic}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mx-2">
-            <UnavailableSection />
-          </div>
-        )}
-      </div>
+      {/* Section: Trending in the constituency's nation */}
+      <TrendingSection
+        title={`Trending in ${data?.regionTrendingName || "the region"}`}
+        items={(data?.regionalTrending?.length ?? 0) > 0 ? data?.regionalTrending : undefined}
+      />
 
       {/* Footer */}
       <div className="px-3 text-[0.556rem] text-zinc-700 text-center pb-1">

@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  ecPrediction as fallbackEcPrediction,
-  wardElectoralCalc as fallbackWardElectoralCalc,
-} from "@/data/braintree";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { getFullData } from "@/data";
+import PanelSkeleton from "@/components/ui/PanelSkeleton";
+import PanelError from "@/components/ui/PanelError";
 import { ecIndicatorStyle, partyColor, partyLabel } from "@/lib/palette";
 import type { ConstituencyPrediction as ECConstituencyData } from "@/app/api/electoral-calculus/route";
 
@@ -154,28 +152,43 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
   const results2024 = deriveResults(slug);
   const [view, setView] = useState<View>("prediction");
   const [indicators, setIndicators] = useState<ECConstituencyData["indicators"]>(null);
+  // No default/fallback prediction data — starts empty; failures surface as
+  // an error message, never as another constituency's numbers.
   const [ecPrediction, setEcPrediction] = useState<{
     prediction: string;
     predicted: Record<string, number>;
     winningChances: Record<string, number>;
     lastUpdated: string;
-  }>(fallbackEcPrediction);
+  } | null>(null);
   const [wardElectoralCalc, setWardElectoralCalc] = useState<
     Record<string, { electorate: number; winner2024: string; predictedWinner: string }>
-  >(fallbackWardElectoralCalc);
-  const [dataSource, setDataSource] = useState<"fallback" | "live">("fallback");
+  >({});
+  const [ecLoading, setEcLoading] = useState(true);
+  const [ecError, setEcError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return; // auth still loading — effect re-runs when slug resolves
     async function fetchLiveEC() {
+      setEcLoading(true);
+      setEcError(null);
+      setEcPrediction(null);
+      setWardElectoralCalc({});
+      setIndicators(null);
       try {
         const res = await fetch(withConstituency("/api/electoral-calculus?type=seat", slug));
-        if (!res.ok) return;
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as
+            | { message?: string; error?: string; detail?: string }
+            | null;
+          setEcError(body?.message ?? body?.detail ?? body?.error ?? `Request failed (${res.status})`);
+          return;
+        }
         const data: ECConstituencyData = await res.json();
         if (data.prediction && Object.keys(data.predicted).length > 0) {
           setEcPrediction(toLiveEcPrediction(data));
           setIndicators(data.indicators ?? null);
-          setDataSource("live");
+        } else {
+          setEcError("Electoral Calculus returned no prediction for this seat.");
         }
         if (data.wards && data.wards.length > 0) {
           const liveWards = toLiveWardData(data.wards);
@@ -183,8 +196,10 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
             setWardElectoralCalc(liveWards);
           }
         }
-      } catch {
-        // Keep fallback data
+      } catch (err) {
+        setEcError((err as Error).message || "Unable to reach Electoral Calculus");
+      } finally {
+        setEcLoading(false);
       }
     }
     fetchLiveEC();
@@ -266,7 +281,11 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
       )}
 
       {/* MRP Prediction */}
-      {view === "prediction" && (
+      {view === "prediction" && ecLoading && <PanelSkeleton variant="list" rows={3} />}
+      {view === "prediction" && !ecLoading && !ecPrediction && (
+        <PanelError message={ecError ?? "Electoral Calculus prediction unavailable."} />
+      )}
+      {view === "prediction" && !ecLoading && ecPrediction && (
         <div className="p-4 space-y-3">
           <div className="bg-muted/30 rounded-lg p-3 text-center">
             <div className="text-[11px] text-zinc-500 mb-1">Constituency Prediction</div>
@@ -335,14 +354,17 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
           ) : null}
 
           <div className="text-[0.556rem] text-zinc-700 text-center">
-            Source: Electoral Calculus MRP
-            {dataSource === "live" && <span className="text-emerald-600 ml-1">(live)</span>}
+            Source: Electoral Calculus MRP <span className="text-emerald-600 ml-1">(live)</span>
           </div>
         </div>
       )}
 
       {/* Ward breakdown */}
-      {view === "wards" && (
+      {view === "wards" && !ecLoading && wards.length === 0 && (
+        <PanelError message={ecError ?? "No ward-level Electoral Calculus data for this seat."} />
+      )}
+      {view === "wards" && ecLoading && <PanelSkeleton variant="list" rows={4} />}
+      {view === "wards" && !ecLoading && wards.length > 0 && (
         <div className="p-3 space-y-3">
           {/* Ward summary */}
           <div className="flex gap-2">
@@ -392,8 +414,7 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
           </div>
 
           <div className="text-[0.556rem] text-zinc-700 text-center">
-            Source: Electoral Calculus MRP
-            {dataSource === "live" && <span className="text-emerald-600 ml-1">(live)</span>}
+            Source: Electoral Calculus MRP <span className="text-emerald-600 ml-1">(live)</span>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getFullData } from "@/data";
 import googleTrends from "google-trends-api";
+import Parser from "rss-parser";
 import { requireUser } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,10 @@ interface TrendingSearch {
   traffic: string;
   articleCount: number;
   relatedQueries: string[];
+  /** Top linked news story for the trend (from the RSS feed). */
+  newsTitle?: string;
+  newsUrl?: string;
+  newsSource?: string;
 }
 
 interface InterestOverTimePoint {
@@ -55,12 +60,16 @@ type SectionStatus = "ok" | "failed";
 
 interface FreshnessReport {
   trendingSearches: SectionStatus;
+  regionalTrending: SectionStatus;
   interestOverTime: SectionStatus;
   regionalVsNational: SectionStatus;
 }
 
 interface TrendsData {
   trendingSearches: TrendingSearch[];
+  /** Trending in the constituency's UK nation (England/Scotland/Wales/NI). */
+  regionalTrending: TrendingSearch[];
+  regionTrendingName: string;
   interestOverTime: InterestOverTimePoint[];
   regionalVsNational: RegionalComparison[];
   fetched_at: string;
@@ -73,30 +82,62 @@ interface TrendsData {
   constituencyName: string;
 }
 
-async function safeDailyTrends(): Promise<TrendingSearch[]> {
-  try {
-    const raw = await googleTrends.dailyTrends({ geo: GEO_GB });
-    const parsed = JSON.parse(raw);
-    const days = parsed?.default?.trendingSearchesDays ?? [];
-    if (!days.length) return [];
+// Google killed the private dailyTrends API that google-trends-api used —
+// the public Trending Now RSS feed is the supported replacement and carries
+// linked news stories per trend. Verified July 2026 for GB and GB-ENG.
+const rssParser = new Parser({
+  customFields: {
+    item: [
+      ["ht:approx_traffic", "traffic"],
+      ["ht:news_item", "newsItems", { keepArray: true }],
+    ],
+  },
+});
 
-    const today = days[0]?.trendingSearches ?? [];
-    return today
+interface RssNewsItem {
+  "ht:news_item_title"?: string;
+  "ht:news_item_url"?: string;
+  "ht:news_item_source"?: string;
+}
+
+async function fetchTrendingRss(geo: string): Promise<TrendingSearch[]> {
+  try {
+    const res = await fetch(`https://trends.google.com/trending/rss?geo=${encodeURIComponent(geo)}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      next: { revalidate: 1800 },
+    });
+    if (!res.ok) throw new Error(`Trends RSS returned ${res.status} for ${geo}`);
+    const feed = await rssParser.parseString(await res.text());
+    return (feed.items ?? [])
       .slice(0, 20)
-      .map((item: Record<string, unknown>) => {
-        const title = (item?.title as { query?: string })?.query ?? "";
-        const traffic = (item?.formattedTraffic as string) ?? "";
-        const articles = (item?.articles as unknown[]) ?? [];
-        const relatedQueries = ((item?.relatedQueries as Array<{ query?: string }>) ?? [])
-          .map((q) => q?.query ?? "")
-          .filter(Boolean);
-        return { title, traffic, articleCount: articles.length, relatedQueries };
+      .map((item) => {
+        const typed = item as typeof item & { traffic?: string; newsItems?: RssNewsItem[] };
+        const news = typed.newsItems ?? [];
+        const top = news[0];
+        return {
+          title: item.title ?? "",
+          traffic: typed.traffic ?? "",
+          articleCount: news.length,
+          relatedQueries: [],
+          newsTitle: top?.["ht:news_item_title"] ?? "",
+          newsUrl: top?.["ht:news_item_url"] ?? "",
+          newsSource: top?.["ht:news_item_source"] ?? "",
+        };
       })
-      .filter((t: TrendingSearch) => t.title);
+      .filter((t) => t.title);
   } catch (err) {
-    console.error("Trends: dailyTrends failed:", err);
+    console.error(`Trends: RSS fetch failed for ${geo}:`, err);
     return [];
   }
+}
+
+// The Trending RSS supports UK nations, not English regions — map the
+// constituency's region string to the closest nation feed.
+function regionTrendingGeo(region: string): { geo: string; label: string } {
+  if (/scotland/i.test(region)) return { geo: "GB-SCT", label: "Scotland" };
+  if (/wales/i.test(region)) return { geo: "GB-WLS", label: "Wales" };
+  if (/northern ireland/i.test(region)) return { geo: "GB-NIR", label: "Northern Ireland" };
+  return { geo: GEO_ENGLAND, label: "England" };
 }
 
 async function safeInterestOverTime(
@@ -202,24 +243,29 @@ async function generateFreshData(
   region: string,
   keywords: string[]
 ): Promise<TrendsData | null> {
-  const [trending, interest, regional] = await Promise.all([
-    safeDailyTrends(),
+  const regionFeed = regionTrendingGeo(region);
+  const [trending, regionalTrending, interest, regional] = await Promise.all([
+    fetchTrendingRss(GEO_GB),
+    fetchTrendingRss(regionFeed.geo),
     safeInterestOverTime(mpName, constituencyName),
     safeInterestByRegion(keywords, region),
   ]);
 
-  if (!trending.length && !interest.length && !regional.length) return null;
+  if (!trending.length && !regionalTrending.length && !interest.length && !regional.length) return null;
 
   return {
     trendingSearches: trending,
+    regionalTrending,
+    regionTrendingName: regionFeed.label,
     interestOverTime: interest,
     regionalVsNational: regional,
     fetched_at: new Date().toISOString(),
-    source: "Google Trends (via google-trends-api, last published 2020-12-28)",
+    source: "Google Trends (Trending Now RSS + google-trends-api for interest data)",
     sourceUrl: "https://trends.google.com",
     note: "Data may be stale if upstream scrape fails. Check fetched_at and the freshness object to see which sections succeeded on the most recent fetch.",
     freshness: {
       trendingSearches: trending.length ? "ok" : "failed",
+      regionalTrending: regionalTrending.length ? "ok" : "failed",
       interestOverTime: interest.length ? "ok" : "failed",
       regionalVsNational: regional.length ? "ok" : "failed",
     },
