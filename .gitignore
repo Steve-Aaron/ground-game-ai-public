@@ -39,3 +39,6 @@ next-env.d.ts
 
 # claude code (local IDE config — should not be committed)
 .claude/
+
+# internal documentation (never ships to the public repo)
+/docs/internal/
