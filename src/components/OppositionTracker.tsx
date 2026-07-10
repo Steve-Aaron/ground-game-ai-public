@@ -1,43 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ExternalLink, Plus, UserX, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Users, UserX } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import { useMe } from "@/hooks/useMe";
 import PanelEmpty from "./ui/PanelEmpty";
 import PanelError from "./ui/PanelError";
 import PanelSkeleton from "./ui/PanelSkeleton";
-import { FormError, Select, TextInput } from "./ui/FormField";
+import { Select, TextInput, FormError } from "./ui/FormField";
 import { ActionButton, TextButton } from "./ui/ActionButton";
 import { UpdatedFooter } from "./ui/PanelFooter";
-import { formatTimeAgo } from "@/lib/format";
+import { Avatar, TweetCard, tweetEngagement } from "./ui/TweetCard";
+import { formatCompactNumber, formatTimeAgo } from "@/lib/format";
 import { PARTY_OPTIONS } from "@/lib/palette";
+import type { Tweet, TwitterProfile } from "@/lib/apify-twitter";
+import type { Opponent } from "@/app/api/opposition/route";
 
-interface OpponentPost {
-  text: string;
-  date: string;
-  likes: number;
-  retweets: number;
-  url: string;
-}
-
-interface Opponent {
-  party: string;
-  candidate: string;
-  handle: string;
-  role: string;
-  recentPosts: OpponentPost[];
-  activityLevel: "high" | "medium" | "low" | "unknown";
-  color: string;
-}
+// The ONE tracker: watch-list people (admin-managed, max 5) with their
+// X activity rendered in the shared X-style TweetCard treatment. Posts come
+// from /api/social-feed (single Apify pipeline, budget-capped).
 
 interface OppositionData {
   opponents: Opponent[];
   configured: boolean;
   lastUpdated: string;
-  source: "apify" | "cache" | "people_only" | "unconfigured";
+}
+
+interface FeedResponse {
+  profiles: TwitterProfile[];
+  updatedAt: string | null;
   limitReached?: boolean;
+  limits?: { runsToday: number; maxRunsPerDay: number; runsThisMonth: number; maxRunsPerMonth: number } | null;
 }
 
 // Mirrors src/app/api/opposition-people/route.ts.
@@ -49,92 +43,13 @@ interface OppositionPerson {
   role: string;
 }
 
+const POSTS_SHOWN = 5;
 
-
-const ACTIVITY_INDICATORS: Record<string, { dot: string; label: string }> = {
-  high: { dot: "🔴", label: "High" },
-  medium: { dot: "🟡", label: "Medium" },
-  low: { dot: "🟢", label: "Low" },
-  unknown: { dot: "⚪", label: "Not monitored" },
-};
-
-export default function OppositionTracker() {
-  const { me } = useMe();
-  const isAdmin = me?.role === "admin";
-  const { data, loading, error, refetch } = useConstituencyResource<OppositionData>(
-    "/api/opposition",
-    { errorMessage: "Unable to load opposition data" }
-  );
-  const [expandedParty, setExpandedParty] = useState<string | null>(null);
-  const [managing, setManaging] = useState(false);
-
-  if (loading) return <PanelSkeleton variant="cards" rows={4} />;
-  if (error && !data) return <PanelError message={error} onRetry={refetch} />;
-  if (!data) return null;
-
-  const blank = data.opponents.length === 0;
-
-  return (
-    <div data-component="oppositionTrackerContainer">
-      {isAdmin ? (
-        <div className="px-4 py-2 border-b border-border/30 flex items-center justify-between">
-          <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500">
-            Watch-list ({data.opponents.length}/5)
-          </span>
-          <TextButton
-            type="button"
-            onClick={() => setManaging((v) => !v)}
-            icon={Users}
-            className="text-[0.611rem] uppercase tracking-wider text-emerald-500/80"
-          >
-            {managing ? "Done" : "Manage"}
-          </TextButton>
-        </div>
-      ) : null}
-
-      {managing && isAdmin ? <PeopleManager onChanged={refetch} /> : null}
-
-      {blank ? (
-        <PanelEmpty
-          icon={Users}
-          title="No opposition people defined"
-          description={
-            isAdmin
-              ? "Use Manage to add up to 5 people to watch for this constituency."
-              : "An admin can define up to 5 people to watch for this constituency."
-          }
-        />
-      ) : (
-        <div className="divide-y divide-border/50">
-          {data.opponents.map((opponent) => (
-            <OpponentRow
-              key={opponent.candidate}
-              opponent={opponent}
-              expanded={expandedParty === opponent.candidate}
-              onToggle={() =>
-                setExpandedParty(expandedParty === opponent.candidate ? null : opponent.candidate)
-              }
-              emptyPostsMessage={
-                opponent.handle
-                  ? "No recent posts found"
-                  : "No X handle set — add one to enable monitoring"
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      <UpdatedFooter
-        label={
-          <>
-            Updated {formatTimeAgo(data.lastUpdated)}
-            {data.limitReached ? " · refresh budget reached" : ""}
-          </>
-        }
-        onRefresh={refetch}
-      />
-    </div>
-  );
+function activityFor(posts: Tweet[] | undefined): { dot: string; label: string } {
+  if (!posts) return { dot: "⚪", label: "Not monitored" };
+  if (posts.length > 10) return { dot: "🔴", label: "High" };
+  if (posts.length > 3) return { dot: "🟡", label: "Medium" };
+  return { dot: "🟢", label: "Low" };
 }
 
 /** Admin-only CRUD for the watch-list (writes are re-checked server-side). */
@@ -215,33 +130,15 @@ function PeopleManager({ onChanged }: { onChanged: () => void }) {
 
       {people.length < 5 ? (
         <form onSubmit={add} className="grid grid-cols-2 gap-2 pt-1">
-          <TextInput
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name (required)"
-          />
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (required)" />
           <Select value={party} onChange={(e) => setParty(e.target.value)} aria-label="Party">
             {PARTY_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </Select>
-          <TextInput
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            placeholder="X handle (optional)"
-          />
-          <TextInput
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="Role, e.g. PPC (optional)"
-          />
-          <ActionButton
-            type="submit"
-            disabled={busy || !name.trim()}
-            icon={Plus}
-            size="sm"
-            className="col-span-2 py-1.5"
-          >
+          <TextInput value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="X handle (optional)" />
+          <TextInput value={role} onChange={(e) => setRole(e.target.value)} placeholder="Role, e.g. PPC (optional)" />
+          <ActionButton type="submit" disabled={busy || !name.trim()} icon={Plus} size="sm" className="col-span-2 py-1.5">
             Add person
           </ActionButton>
         </form>
@@ -254,15 +151,29 @@ function PeopleManager({ onChanged }: { onChanged: () => void }) {
   );
 }
 
-interface OpponentRowProps {
+/** Watch-list person row; expands into their X-style feed. */
+function OpponentRow({
+  opponent,
+  profile,
+  expanded,
+  onToggle,
+}: {
   opponent: Opponent;
+  profile: TwitterProfile | undefined;
   expanded: boolean;
   onToggle: () => void;
-  emptyPostsMessage: string;
-}
+}) {
+  const activity = activityFor(profile?.posts);
+  const { maxEngagement, avgEngagement } = useMemo(() => {
+    const posts = profile?.posts ?? [];
+    if (posts.length === 0) return { maxEngagement: 0, avgEngagement: 0 };
+    const scores = posts.map(tweetEngagement);
+    return {
+      maxEngagement: Math.max(...scores),
+      avgEngagement: scores.reduce((a, b) => a + b, 0) / scores.length,
+    };
+  }, [profile]);
 
-function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: OpponentRowProps) {
-  const activity = ACTIVITY_INDICATORS[opponent.activityLevel];
   return (
     <div data-component="opponentRow">
       <button
@@ -271,16 +182,16 @@ function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: Oppone
         className="w-full px-4 py-3 hover:bg-muted/40 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
-          <div
-            className="h-8 w-8 rounded-full flex items-center justify-center text-[0.611rem] font-bold text-white shrink-0"
-            style={{ backgroundColor: opponent.color }}
-          >
-            {opponent.party
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .slice(0, 2)}
-          </div>
+          {profile?.avatar ? (
+            <Avatar profile={profile} size="h-8 w-8 shrink-0" />
+          ) : (
+            <div
+              className="h-8 w-8 rounded-full flex items-center justify-center text-[0.611rem] font-bold text-white shrink-0"
+              style={{ backgroundColor: opponent.color }}
+            >
+              {opponent.party.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+            </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -290,11 +201,17 @@ function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: Oppone
               </span>
             </div>
             <div className="flex items-center gap-2 text-[0.611rem] text-zinc-500">
-              <span>{opponent.party}</span>
+              <span style={{ color: opponent.color }}>{opponent.party}</span>
               {opponent.handle ? (
                 <>
                   <span>&middot;</span>
                   <span className="text-emerald-500/70">@{opponent.handle}</span>
+                </>
+              ) : null}
+              {profile?.followers != null ? (
+                <>
+                  <span>&middot;</span>
+                  <span>{formatCompactNumber(profile.followers)} followers</span>
                 </>
               ) : null}
               {opponent.role ? (
@@ -307,9 +224,7 @@ function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: Oppone
           </div>
 
           <svg
-            className={`h-4 w-4 text-zinc-600 transition-transform ${
-              expanded ? "rotate-180" : ""
-            }`}
+            className={`h-4 w-4 text-zinc-600 transition-transform ${expanded ? "rotate-180" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -319,45 +234,129 @@ function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: Oppone
         </div>
       </button>
 
-      {expanded && opponent.recentPosts.length > 0 && (
-        <div className="px-4 pb-3 space-y-2">
-          {opponent.recentPosts.map((post, i) => (
-            <PostCard key={i} post={post} />
-          ))}
-        </div>
-      )}
-
-      {expanded && opponent.recentPosts.length === 0 && (
-        <div className="ml-11 px-4 pb-3">
-          <p className="text-xs text-zinc-600 italic">{emptyPostsMessage}</p>
-        </div>
-      )}
+      {expanded ? (
+        profile && profile.posts.length > 0 ? (
+          <div data-component="opponentFeed" className="divide-y divide-border/40 border-t border-border/40">
+            {profile.posts.slice(0, POSTS_SHOWN).map((tweet) => (
+              <TweetCard
+                key={tweet.id || tweet.url}
+                tweet={tweet}
+                profile={profile}
+                maxEngagement={maxEngagement}
+                avgEngagement={avgEngagement}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="ml-11 px-4 pb-3">
+            <p className="text-xs text-zinc-600 italic">
+              {opponent.handle
+                ? "No recent posts found"
+                : "No X handle set — add one to enable monitoring"}
+            </p>
+          </div>
+        )
+      ) : null}
     </div>
   );
 }
 
-function PostCard({ post }: { post: OpponentPost }) {
+export default function OppositionTracker() {
+  const { me } = useMe();
+  const isAdmin = me?.role === "admin";
+  const { data, loading, error, refetch } = useConstituencyResource<OppositionData>(
+    "/api/opposition",
+    { errorMessage: "Unable to load opposition data" }
+  );
+  const feed = useConstituencyResource<FeedResponse>("/api/social-feed");
+  const [expandedName, setExpandedName] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
+
+  const profileByHandle = useMemo(() => {
+    const map = new Map<string, TwitterProfile>();
+    for (const p of feed.data?.profiles ?? []) {
+      map.set(p.handle.toLowerCase(), {
+        ...p,
+        posts: (p.posts ?? []).map((t) => ({
+          ...t,
+          id: t.id ?? "",
+          replies: t.replies ?? 0,
+          views: t.views ?? null,
+          media: t.media ?? [],
+        })),
+      });
+    }
+    return map;
+  }, [feed.data]);
+
+  function refetchAll() {
+    refetch();
+    feed.refetch();
+  }
+
+  if (loading) return <PanelSkeleton variant="avatarList" rows={4} />;
+  if (error && !data) return <PanelError message={error} onRetry={refetchAll} />;
+  if (!data) return null;
+
+  const blank = data.opponents.length === 0;
+
   return (
-    <div
-      data-component="opponentPostCard"
-      className="ml-11 p-2.5 bg-muted/40 rounded-md border border-border/60"
-    >
-      <p className="text-xs text-zinc-300 leading-relaxed line-clamp-3">{post.text}</p>
-      <div className="flex items-center gap-3 mt-1.5 text-[0.611rem] text-zinc-600">
-        <span>{formatTimeAgo(post.date)}</span>
-        <span>{post.likes} likes</span>
-        <span>{post.retweets} RTs</span>
-        {post.url && post.url !== "#" && (
-          <a
-            href={post.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-emerald-500/70 hover:text-emerald-400 flex items-center gap-0.5"
+    <div data-component="oppositionTrackerContainer">
+      {isAdmin ? (
+        <div data-component="oppositionManageStrip" className="px-4 py-2 border-b border-border/30 flex items-center justify-between">
+          <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500">
+            Watch-list ({data.opponents.length}/5)
+          </span>
+          <TextButton
+            onClick={() => setManaging((v) => !v)}
+            icon={Users}
+            className="text-[0.611rem] uppercase tracking-wider text-emerald-500/80"
           >
-            <ExternalLink className="h-2.5 w-2.5" /> View
-          </a>
-        )}
-      </div>
+            {managing ? "Done" : "Manage"}
+          </TextButton>
+        </div>
+      ) : null}
+
+      {managing && isAdmin ? <PeopleManager onChanged={refetchAll} /> : null}
+
+      {blank ? (
+        <PanelEmpty
+          icon={Users}
+          title="No opposition people defined"
+          description={
+            isAdmin
+              ? "Use Manage to add up to 5 people to watch for this constituency."
+              : "An admin can define up to 5 people to watch for this constituency."
+          }
+        />
+      ) : (
+        <div className="divide-y divide-border/50">
+          {data.opponents.map((opponent) => (
+            <OpponentRow
+              key={opponent.candidate}
+              opponent={opponent}
+              profile={opponent.handle ? profileByHandle.get(opponent.handle.toLowerCase()) : undefined}
+              expanded={expandedName === opponent.candidate}
+              onToggle={() =>
+                setExpandedName(expandedName === opponent.candidate ? null : opponent.candidate)
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      <UpdatedFooter
+        label={
+          <>
+            Updated {formatTimeAgo(feed.data?.updatedAt ?? data.lastUpdated)}
+            {feed.data?.limitReached ? " · refresh budget reached — showing cached" : ""}
+            {feed.data?.limits
+              ? ` · ${feed.data.limits.runsToday}/${feed.data.limits.maxRunsPerDay} runs today`
+              : ""}
+          </>
+        }
+        onRefresh={refetchAll}
+      />
     </div>
   );
 }
