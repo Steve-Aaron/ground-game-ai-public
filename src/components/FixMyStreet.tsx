@@ -68,7 +68,7 @@ export default function FixMyStreet() {
           </button>
         ))}
       </div>
-      <div className="divide-y divide-zinc-800/50">
+      <div className="divide-y divide-border/50">
         {filtered.slice(0, 10).map((issue) => (
           <a
             key={issue.id}

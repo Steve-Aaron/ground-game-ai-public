@@ -12,17 +12,17 @@ interface Props {
 export default function UsersTable({ users, currentUid, onEdit }: Props) {
   if (users.length === 0) {
     return (
-      <div className="border border-[#2a2a2a] bg-[#141414] p-[1.333rem] text-center text-[0.833rem] text-zinc-600">
+      <div className="border border-border bg-card p-[1.333rem] text-center text-[0.833rem] text-zinc-600">
         No users yet. Invite the first one to get started.
       </div>
     );
   }
 
   return (
-    <div data-component="UsersTable" className="border border-[#2a2a2a] bg-[#141414] overflow-x-auto">
+    <div data-component="UsersTable" className="border border-border bg-card overflow-x-auto">
       <table className="w-full text-[0.889rem]">
         <thead>
-          <tr className="text-left text-[0.722rem] uppercase tracking-widest text-zinc-500 border-b border-[#2a2a2a]">
+          <tr className="text-left text-[0.722rem] uppercase tracking-widest text-zinc-500 border-b border-border">
             <th className="px-[1.111rem] py-[0.889rem] font-medium">Email</th>
             <th className="px-[1.111rem] py-[0.889rem] font-medium">Role</th>
             <th className="px-[1.111rem] py-[0.889rem] font-medium">Constituencies</th>
@@ -32,7 +32,7 @@ export default function UsersTable({ users, currentUid, onEdit }: Props) {
         <tbody>
           {users.map((u) => (
             <tr key={u.uid} className="border-b border-[#1f1f1f] last:border-0 hover:bg-[#1a1a1a]">
-              <td className="px-[1.111rem] py-[0.889rem] text-zinc-200">
+              <td className="px-[1.111rem] py-[0.889rem] text-foreground">
                 {u.email}
                 {u.uid === currentUid ? (
                   <span className="ml-[0.556rem] text-[0.611rem] uppercase tracking-widest text-emerald-500">

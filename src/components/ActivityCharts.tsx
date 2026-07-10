@@ -51,7 +51,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
         <p key={i} className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-zinc-500 capitalize">{entry.name}:</span>
-          <span className="text-zinc-200 font-medium">{entry.value}</span>
+          <span className="text-foreground font-medium">{entry.value}</span>
         </p>
       ))}
     </div>
@@ -355,7 +355,7 @@ export default function ActivityCharts() {
 function StatBox({ label, value, negative }: { label: string; value: number | string; negative?: boolean }) {
   return (
     <div className="bg-muted/50 border border-border/50 px-3 py-2 text-center">
-      <p className={`text-base font-bold ${negative ? "text-red-400" : "text-zinc-100"}`}>
+      <p className={`text-base font-bold ${negative ? "text-red-400" : "text-foreground"}`}>
         {value}
       </p>
       <p className="text-[0.556rem] text-zinc-600 uppercase tracking-wider mt-0.5">{label}</p>

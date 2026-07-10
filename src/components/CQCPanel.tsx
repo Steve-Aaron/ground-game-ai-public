@@ -167,7 +167,7 @@ export default function CQCPanel() {
                 className="bg-muted rounded-xl px-3 py-2 flex items-center justify-between gap-2"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs text-zinc-200 truncate">
+                  <div className="text-xs text-foreground truncate">
                     {loc.cqcUrl ? (
                       <a
                         href={loc.cqcUrl}

@@ -34,7 +34,7 @@ export default function NewsFeed() {
           {error} — showing sample data
         </div>
       )}
-      <div className="divide-y divide-zinc-800/50">
+      <div className="divide-y divide-border/50">
         {items.map((item, i) => (
           <FeedItem
             key={i}

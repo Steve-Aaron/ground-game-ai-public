@@ -90,7 +90,7 @@ function ProgressBar({
       {label ? (
         <span className="text-[0.611rem] text-zinc-400 w-14 shrink-0">{label}</span>
       ) : null}
-      <div className={cn("flex-1 bg-zinc-800 rounded-full overflow-hidden", height)}>
+      <div className={cn("flex-1 bg-muted rounded-full overflow-hidden", height)}>
         <div
           className={cn(
             "h-full rounded-full transition-all",
@@ -163,7 +163,7 @@ function BarRow({
   return (
     <div className="flex items-center gap-2">
       <span className="text-[0.556rem] text-zinc-500 w-14 shrink-0">{label}</span>
-      <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div
           className={cn("h-full rounded-full", color)}
           style={{ width: `${Math.min(pct, 100)}%` }}
@@ -187,7 +187,7 @@ function StackedBar({
 }: StackedBarProps & { className?: string }) {
   return (
     <div data-component="barStacked" className={cn("space-y-2", className)}>
-      <div className={cn("flex bg-zinc-800 rounded-full overflow-hidden", height)}>
+      <div className={cn("flex bg-muted rounded-full overflow-hidden", height)}>
         {segments.map((seg, i) => (
           <div
             key={i}

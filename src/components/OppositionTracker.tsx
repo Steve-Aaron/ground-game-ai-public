@@ -105,7 +105,7 @@ export default function OppositionTracker() {
           }
         />
       ) : (
-        <div className="divide-y divide-zinc-800/50">
+        <div className="divide-y divide-border/50">
           {data.opponents.map((opponent) => (
             <OpponentRow
               key={opponent.candidate}
@@ -268,7 +268,7 @@ function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: Oppone
       <button
         type="button"
         onClick={onToggle}
-        className="w-full px-4 py-3 hover:bg-zinc-800/30 transition-colors text-left"
+        className="w-full px-4 py-3 hover:bg-muted/40 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           <div
@@ -284,7 +284,7 @@ function OpponentRow({ opponent, expanded, onToggle, emptyPostsMessage }: Oppone
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-zinc-200">{opponent.candidate}</span>
+              <span className="text-sm font-medium text-foreground">{opponent.candidate}</span>
               <span className="text-[0.611rem]" title={`Activity: ${activity.label}`}>
                 {activity.dot}
               </span>
@@ -340,7 +340,7 @@ function PostCard({ post }: { post: OpponentPost }) {
   return (
     <div
       data-component="opponentPostCard"
-      className="ml-11 p-2.5 bg-zinc-800/40 rounded-md border border-zinc-800/60"
+      className="ml-11 p-2.5 bg-muted/40 rounded-md border border-border/60"
     >
       <p className="text-xs text-zinc-300 leading-relaxed line-clamp-3">{post.text}</p>
       <div className="flex items-center gap-3 mt-1.5 text-[0.611rem] text-zinc-600">

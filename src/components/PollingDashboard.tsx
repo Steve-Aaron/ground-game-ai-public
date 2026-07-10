@@ -153,7 +153,7 @@ function CustomTooltip({
           <span className="text-zinc-500">
             {PARTY_NAMES[entry.dataKey || entry.name] || entry.name}:
           </span>
-          <span className="text-zinc-200 font-bold">{entry.value}%</span>
+          <span className="text-foreground font-bold">{entry.value}%</span>
         </p>
       ))}
     </div>
@@ -174,7 +174,7 @@ function TrackerTooltip({
     <div className="bg-card border border-border px-3 py-2 text-xs shadow-lg">
       <p className="text-zinc-400 mb-1">{label}</p>
       {payload.map((entry, i) => (
-        <p key={i} className="text-zinc-200 font-bold">
+        <p key={i} className="text-foreground font-bold">
           {entry.value > 0 ? "+" : ""}
           {entry.value}%
         </p>
@@ -369,7 +369,7 @@ export default function PollingDashboard() {
                         <td className="py-1.5 px-2 text-zinc-300 font-medium">{poll.pollster}</td>
                         <td className="py-1.5 px-2 text-center text-zinc-300">{poll.con}</td>
                         <td className="py-1.5 px-2 text-center text-zinc-300">{poll.lab}</td>
-                        <td className="py-1.5 px-2 text-center text-zinc-200 font-bold">{poll.reform}</td>
+                        <td className="py-1.5 px-2 text-center text-foreground font-bold">{poll.reform}</td>
                         <td className="py-1.5 px-2 text-center text-zinc-400">{poll.ld}</td>
                         <td className="py-1.5 px-2 text-center text-zinc-400">{poll.green}</td>
                         <td className="py-1.5 px-2 text-right font-bold text-emerald-400">{poll.lead}</td>
@@ -425,7 +425,7 @@ export default function PollingDashboard() {
                   <div key={leader.name} className="bg-muted/50 border border-border/50 px-4 py-3">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <span className="text-sm text-zinc-200 font-medium">{leader.name}</span>
+                        <span className="text-sm text-foreground font-medium">{leader.name}</span>
                         <span
                           className="ml-2 text-[0.556rem] px-1.5 py-0.5 rounded font-semibold"
                           style={{ backgroundColor: leader.color + "30", color: leader.color }}
@@ -551,7 +551,7 @@ export default function PollingDashboard() {
                 >
                   <span className="text-[0.611rem] text-zinc-300">{issue.issue}</span>
                   <span className="flex items-center gap-1 text-[0.556rem]">
-                    <span className="font-bold text-zinc-200">{issue.pct}%</span>
+                    <span className="font-bold text-foreground">{issue.pct}%</span>
                     {issue.change && issue.change !== 0 && (
                       <span className={issue.change > 0 ? "text-emerald-500" : "text-red-400"}>
                         {issue.change > 0 ? (
@@ -1010,19 +1010,19 @@ function LocalSection({ averages, ecConstituency, constituencyName, results2024,
       {/* Key stats */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-muted/30 border border-border/50 px-3 py-2 text-center">
-          <p className="text-base font-bold text-zinc-100">
+          <p className="text-base font-bold text-foreground">
             {(useEC && ecConstituency!.electorate > 0 ? ecConstituency!.electorate : electorate).toLocaleString()}
           </p>
           <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">Electorate</p>
         </div>
         <div className="bg-muted/30 border border-border/50 px-3 py-2 text-center">
-          <p className="text-base font-bold text-zinc-100">
+          <p className="text-base font-bold text-foreground">
             {(useEC && ecConstituency!.turnout > 0 ? ecConstituency!.turnout : results2024.turnoutPct)}%
           </p>
           <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">2024 Turnout</p>
         </div>
         <div className="bg-muted/30 border border-border/50 px-3 py-2 text-center">
-          <p className="text-base font-bold text-zinc-100">{results2024.majority.toLocaleString()}</p>
+          <p className="text-base font-bold text-foreground">{results2024.majority.toLocaleString()}</p>
           <p className="text-[9px] text-zinc-600 uppercase tracking-wider">2024 Majority</p>
         </div>
       </div>

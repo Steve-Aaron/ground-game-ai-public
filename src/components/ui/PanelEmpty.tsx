@@ -31,7 +31,7 @@ export default function PanelEmpty({
       className={cn("p-6 text-center", className)}
     >
       {Icon ? (
-        <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-zinc-800/60 mb-3">
+        <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-muted mb-3">
           <Icon className="h-5 w-5 text-zinc-500" />
         </div>
       ) : null}

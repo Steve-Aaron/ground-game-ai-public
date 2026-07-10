@@ -225,7 +225,7 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
                           <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
                           <span className="text-[0.667rem] text-zinc-300">{r.party}</span>
                         </div>
-                        <span className="text-[0.667rem] font-medium text-zinc-200">{r.percentage}%</span>
+                        <span className="text-[0.667rem] font-medium text-foreground">{r.percentage}%</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${r.percentage}%`, backgroundColor: r.color }} />

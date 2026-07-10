@@ -19,7 +19,7 @@ export default function MarkdownLite({
           return (
             <h3
               key={i}
-              className="text-sm font-bold text-zinc-100 mt-[0.667rem] mb-[0.444rem] first:mt-0"
+              className="text-sm font-bold text-foreground mt-[0.667rem] mb-[0.444rem] first:mt-0"
             >
               {line.replace(/^# /, "")}
             </h3>
@@ -101,7 +101,7 @@ function formatInline(text: string): string {
   const safe = bolds % 2 === 0 ? text : text.replace(/\*\*(?!.*\*\*)/, "");
 
   return safe
-    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-zinc-200">$1</strong>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-foreground">$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code class="text-emerald-400 bg-muted/50 px-1 rounded text-[10px]">$1</code>');
 }

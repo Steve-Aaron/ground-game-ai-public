@@ -58,12 +58,12 @@ export default function InviteUserForm({ allConstituencies, onClose, onInvited }
       />
       <aside
         data-component="InviteUserForm"
-        className="fixed inset-y-0 right-0 w-full sm:w-[32rem] bg-[#141414] border-l border-[#2a2a2a] z-[70] flex flex-col"
+        className="fixed inset-y-0 right-0 w-full sm:w-[32rem] bg-card border-l border-border z-[70] flex flex-col"
       >
-        <div className="flex items-center justify-between px-[1.333rem] py-[0.889rem] border-b border-[#2a2a2a]">
+        <div className="flex items-center justify-between px-[1.333rem] py-[0.889rem] border-b border-border">
           <div>
             <p className="text-[0.722rem] uppercase tracking-wider text-zinc-500">Invite</p>
-            <p className="text-[0.944rem] text-zinc-200">New user</p>
+            <p className="text-[0.944rem] text-foreground">New user</p>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-zinc-400 hover:text-white">
             <X className="h-[1rem] w-[1rem]" />
@@ -75,12 +75,12 @@ export default function InviteUserForm({ allConstituencies, onClose, onInvited }
             <div className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 text-[0.833rem] p-[0.889rem] mb-[1.111rem]">
               User created. Send them this sign-in link:
             </div>
-            <div className="bg-[#0a0a0a] border border-[#2a2a2a] p-[0.889rem] text-[0.722rem] text-zinc-400 break-all mb-[0.889rem] font-mono">
+            <div className="bg-background border border-border p-[0.889rem] text-[0.722rem] text-zinc-400 break-all mb-[0.889rem] font-mono">
               {inviteLink}
             </div>
             <button
               onClick={copyLink}
-              className="w-full border border-[#2a2a2a] hover:border-emerald-500 text-zinc-200 text-[0.833rem] uppercase tracking-wider py-[0.611rem] flex items-center justify-center gap-[0.556rem]"
+              className="w-full border border-border hover:border-emerald-500 text-foreground text-[0.833rem] uppercase tracking-wider py-[0.611rem] flex items-center justify-center gap-[0.556rem]"
             >
               {copied ? (
                 <>
@@ -117,7 +117,7 @@ export default function InviteUserForm({ allConstituencies, onClose, onInvited }
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="user@example.com"
-                className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-zinc-100"
+                className="w-full bg-background border border-border focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-foreground"
               />
             </div>
 
@@ -129,7 +129,7 @@ export default function InviteUserForm({ allConstituencies, onClose, onInvited }
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-zinc-100"
+                className="w-full bg-background border border-border focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-foreground"
               />
             </div>
 
@@ -140,7 +140,7 @@ export default function InviteUserForm({ allConstituencies, onClose, onInvited }
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-zinc-100"
+                className="w-full bg-background border border-border focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-foreground"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -163,7 +163,7 @@ export default function InviteUserForm({ allConstituencies, onClose, onInvited }
               <button
                 type="button"
                 onClick={onClose}
-                className="border border-[#2a2a2a] text-zinc-300 hover:border-zinc-500 text-[0.833rem] uppercase tracking-wider px-[1.111rem] py-[0.611rem]"
+                className="border border-border text-zinc-300 hover:border-zinc-500 text-[0.833rem] uppercase tracking-wider px-[1.111rem] py-[0.611rem]"
               >
                 Cancel
               </button>

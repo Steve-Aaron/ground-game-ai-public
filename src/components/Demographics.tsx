@@ -144,7 +144,7 @@ function MetricRow({ row }: { row: SectionRow }) {
           {row.Measure}
         </span>
         <div className="flex items-baseline gap-1.5 shrink-0">
-          <span className="text-[13px] font-semibold text-zinc-100 tabular-nums leading-none">
+          <span className="text-[13px] font-semibold text-foreground tabular-nums leading-none">
             {row.Value}
           </span>
           {hasEngland && (

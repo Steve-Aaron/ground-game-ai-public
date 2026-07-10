@@ -129,7 +129,7 @@ export default function PetitionsPanel() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-zinc-200 line-clamp-2">
+                    <div className="text-xs text-foreground line-clamp-2">
                       {heat && <span className="mr-1">{heat}</span>}
                       {p.title}
                     </div>

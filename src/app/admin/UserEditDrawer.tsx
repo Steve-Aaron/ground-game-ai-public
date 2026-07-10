@@ -76,12 +76,12 @@ export default function UserEditDrawer({
       />
       <aside
         data-component="UserEditDrawer"
-        className="fixed inset-y-0 right-0 w-full sm:w-[32rem] bg-[#141414] border-l border-[#2a2a2a] z-[70] flex flex-col"
+        className="fixed inset-y-0 right-0 w-full sm:w-[32rem] bg-card border-l border-border z-[70] flex flex-col"
       >
-        <div className="flex items-center justify-between px-[1.333rem] py-[0.889rem] border-b border-[#2a2a2a]">
+        <div className="flex items-center justify-between px-[1.333rem] py-[0.889rem] border-b border-border">
           <div>
             <p className="text-[0.722rem] uppercase tracking-wider text-zinc-500">Editing</p>
-            <p className="text-[0.944rem] text-zinc-200 truncate">{user.email}</p>
+            <p className="text-[0.944rem] text-foreground truncate">{user.email}</p>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-zinc-400 hover:text-white">
             <X className="h-[1rem] w-[1rem]" />
@@ -97,7 +97,7 @@ export default function UserEditDrawer({
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-zinc-100"
+              className="w-full bg-background border border-border focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-foreground"
             />
           </div>
 
@@ -109,7 +109,7 @@ export default function UserEditDrawer({
               value={role}
               onChange={(e) => setRole(e.target.value as UserRole)}
               disabled={isSelf}
-              className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-zinc-100 disabled:opacity-50"
+              className="w-full bg-background border border-border focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-foreground disabled:opacity-50"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -134,7 +134,7 @@ export default function UserEditDrawer({
           ) : null}
         </div>
 
-        <div className="border-t border-[#2a2a2a] p-[1.111rem] flex items-center justify-between gap-[0.556rem]">
+        <div className="border-t border-border p-[1.111rem] flex items-center justify-between gap-[0.556rem]">
           <button
             onClick={onDelete}
             disabled={saving || isSelf}
@@ -145,7 +145,7 @@ export default function UserEditDrawer({
           <div className="flex gap-[0.556rem]">
             <button
               onClick={onClose}
-              className="border border-[#2a2a2a] text-zinc-300 hover:border-zinc-500 text-[0.833rem] uppercase tracking-wider px-[1.111rem] py-[0.611rem]"
+              className="border border-border text-zinc-300 hover:border-zinc-500 text-[0.833rem] uppercase tracking-wider px-[1.111rem] py-[0.611rem]"
             >
               Cancel
             </button>

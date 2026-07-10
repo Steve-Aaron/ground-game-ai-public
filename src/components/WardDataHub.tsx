@@ -189,7 +189,7 @@ export default function WardDataHub() {
       label: "Ward",
       sort: "string",
       render: (w) => (
-        <span className="text-zinc-200 font-medium whitespace-nowrap">
+        <span className="text-foreground font-medium whitespace-nowrap">
           {w.name}
           {w.swing && (
             <span className="ml-1 text-[0.444rem] text-amber-400" title="Predicted to swing">
@@ -216,7 +216,7 @@ export default function WardDataHub() {
       render: (w) => (
         <span
           className={`inline-block px-1.5 py-0.5 rounded text-[0.5rem] font-medium ${
-            depBg[w.deprivation] ?? "bg-zinc-800 text-zinc-400"
+            depBg[w.deprivation] ?? "bg-muted text-zinc-400"
           }`}
         >
           {w.deprivation}
@@ -256,7 +256,7 @@ export default function WardDataHub() {
           {/* header */}
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-100">{detail.name}</h3>
+              <h3 className="text-sm font-semibold text-foreground">{detail.name}</h3>
               <div className="flex items-center gap-3 mt-1 text-[0.556rem] text-zinc-500">
                 <span>Pop {detail.population.toLocaleString()}</span>
                 <span>Electorate {detail.electorate.toLocaleString()}</span>

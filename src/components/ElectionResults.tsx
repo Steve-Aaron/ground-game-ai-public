@@ -69,7 +69,7 @@ export default function ElectionResults() {
                 />
                 <span className="text-sm text-zinc-300">{PARTY_NAMES[p.key]}</span>
               </div>
-              <span className="text-sm font-medium text-zinc-200">{p.share}%</span>
+              <span className="text-sm font-medium text-foreground">{p.share}%</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div

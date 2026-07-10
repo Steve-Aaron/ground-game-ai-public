@@ -51,7 +51,25 @@ export function DateInput({
         type="date"
         data-component="formField"
         data-field-kind="date"
-        className={cn("w-full [color-scheme:dark]", FIELD_BASE, className)}
+        className={cn("w-full", FIELD_BASE, className)}
+        {...rest}
+      />
+    </Labelled>
+  );
+}
+
+export function TimeInput({
+  label,
+  className,
+  ...rest
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & WithLabel) {
+  return (
+    <Labelled label={label}>
+      <input
+        type="time"
+        data-component="formField"
+        data-field-kind="time"
+        className={cn("w-full", FIELD_BASE, className)}
         {...rest}
       />
     </Labelled>

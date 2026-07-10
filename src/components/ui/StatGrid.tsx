@@ -38,13 +38,13 @@ export function StatTile({
   return (
     <div
       data-component="statTile"
-      className={cn("bg-zinc-900 rounded-xl p-3", className)}
+      className={cn("bg-muted/50 rounded-xl p-3", className)}
     >
       <SectionLabel>{label}</SectionLabel>
       <div
         className={cn(
           "font-bold mt-0.5",
-          valueClassName ?? "text-xl text-zinc-100"
+          valueClassName ?? "text-xl text-foreground"
         )}
         style={color ? { color } : undefined}
       >

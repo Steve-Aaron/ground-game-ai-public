@@ -224,7 +224,7 @@ export default function Header({
                   className={`w-full text-left px-4 py-2.5 text-xs transition-colors border-l-2 ${
                     isActive
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500 font-medium"
-                      : "text-zinc-400 border-transparent hover:bg-muted/50 hover:text-zinc-200"
+                      : "text-zinc-400 border-transparent hover:bg-muted/50 hover:text-foreground"
                   }`}
                 >
                   {c.name}

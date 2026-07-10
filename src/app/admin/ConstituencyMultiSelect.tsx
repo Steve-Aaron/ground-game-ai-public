@@ -80,7 +80,7 @@ export default function ConstituencyMultiSelect({ options, selected, onChange }:
       </div>
 
       {selectedOptions.length > 0 ? (
-        <div className="border border-[#2a2a2a] bg-[#0a0a0a] p-[0.556rem] mb-[0.556rem] max-h-[8rem] overflow-y-auto">
+        <div className="border border-border bg-background p-[0.556rem] mb-[0.556rem] max-h-[8rem] overflow-y-auto">
           <div className="flex flex-wrap gap-[0.333rem]">
             {selectedOptions.map((o) => (
               <span
@@ -107,11 +107,11 @@ export default function ConstituencyMultiSelect({ options, selected, onChange }:
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Type to search 650 constituencies…"
-        className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-zinc-100"
+        className="w-full bg-background border border-border focus:border-emerald-500 outline-none px-[0.833rem] py-[0.611rem] text-[0.833rem] text-foreground"
       />
 
       {matches.length > 0 ? (
-        <div className="border border-t-0 border-[#2a2a2a] bg-[#141414] max-h-[15rem] overflow-y-auto">
+        <div className="border border-t-0 border-border bg-card max-h-[15rem] overflow-y-auto">
           {matches.map((o) => (
             <button
               key={o.slug}

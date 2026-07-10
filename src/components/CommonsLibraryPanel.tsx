@@ -65,7 +65,7 @@ function Donut({
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold text-zinc-100">{value}%</span>
+          <span className="text-sm font-bold text-foreground">{value}%</span>
         </div>
       </div>
       <span className="text-[0.556rem] text-zinc-400 text-center leading-tight max-w-[5rem]">{label}</span>
@@ -96,7 +96,7 @@ function MiniBar({ label, value, max = 100, color = "#34d399" }: { label: string
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
-      <span className="text-[0.611rem] font-semibold text-zinc-200 w-14 text-right shrink-0">{value}%</span>
+      <span className="text-[0.611rem] font-semibold text-foreground w-14 text-right shrink-0">{value}%</span>
     </div>
   );
 }
@@ -280,7 +280,7 @@ export default function CommonsLibraryPanel() {
             <Delta local={`${unempRate}%`} national={unempRateEng} invert />
           </div>
           <div className="bg-muted/50 rounded-lg p-2 text-center">
-            <div className="text-lg font-bold text-zinc-200">{medianPay}</div>
+            <div className="text-lg font-bold text-foreground">{medianPay}</div>
             <div className="text-[0.5rem] text-zinc-500">Median Weekly Pay</div>
             <Delta local={medianPay} national={medianPayEng} />
           </div>

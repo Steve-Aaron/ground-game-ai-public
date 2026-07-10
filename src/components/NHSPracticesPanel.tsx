@@ -56,13 +56,13 @@ export default function NHSPracticesPanel() {
                     type="button"
                     data-component="nhsPracticeTypeChip"
                     onClick={() => setActiveType(t)}
-                    className={`text-left border ${meta.ring} ${active ? "bg-zinc-800/60" : "bg-transparent"} px-2 py-1.5 hover:bg-zinc-800/40 transition`}
+                    className={`text-left border ${meta.ring} ${active ? "bg-muted/60" : "bg-transparent"} px-2 py-1.5 hover:bg-muted/40 transition`}
                   >
                     <div className="flex items-center gap-1.5 text-zinc-300">
                       {meta.icon}
                       <span className="text-[0.6rem] uppercase tracking-wider">{meta.label}</span>
                     </div>
-                    <div className="text-base font-semibold text-zinc-100 mt-0.5">
+                    <div className="text-base font-semibold text-foreground mt-0.5">
                       {data.counts[t]}
                     </div>
                   </button>
@@ -70,14 +70,14 @@ export default function NHSPracticesPanel() {
               })}
             </div>
 
-            <ul data-component="nhsPracticesList" className="divide-y divide-[#2a2a2a] border border-[#2a2a2a]">
+            <ul data-component="nhsPracticesList" className="divide-y divide-border border border-border">
               {visible.length === 0 && (
                 <li className="px-2 py-1.5 text-[0.65rem] text-zinc-500">None recorded</li>
               )}
               {visible.map((p) => (
                 <li key={p.odsCode} className="px-2 py-1.5 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-[0.72rem] text-zinc-200 truncate">{p.name}</div>
+                    <div className="text-[0.72rem] text-foreground truncate">{p.name}</div>
                     <div className="text-[0.6rem] text-zinc-500">
                       {p.postcode} {"·"} {p.odsCode}
                     </div>
@@ -86,7 +86,7 @@ export default function NHSPracticesPanel() {
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.name} ${p.postcode}`)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-zinc-500 hover:text-zinc-200"
+                    className="text-zinc-500 hover:text-foreground"
                     aria-label="Open in Google Maps"
                   >
                     <ExternalLink className="w-3 h-3" />

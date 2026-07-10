@@ -64,7 +64,7 @@ export default function FeedItem({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "block hover:bg-zinc-800/30 transition-colors group",
+        "block hover:bg-muted/40 transition-colors group",
         compact ? "px-3 py-2.5" : "px-4 py-2.5",
         className
       )}
@@ -95,7 +95,7 @@ export default function FeedItem({
           )}
           <h3
             className={cn(
-              "text-zinc-200 font-medium leading-snug group-hover:text-emerald-400 transition-colors line-clamp-2",
+              "text-foreground font-medium leading-snug group-hover:text-emerald-400 transition-colors line-clamp-2",
               compact ? "text-[0.667rem]" : "text-sm"
             )}
           >

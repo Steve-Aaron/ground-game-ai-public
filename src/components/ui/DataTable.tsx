@@ -135,8 +135,8 @@ export default function DataTable<Row>({
         <thead>
           <tr
             className={cn(
-              "text-zinc-500 border-b border-zinc-800",
-              stickyHeader && "sticky top-0 bg-[#141414]",
+              "text-zinc-500 border-b border-border",
+              stickyHeader && "sticky top-0 bg-card",
               headerRowClassName
             )}
           >
@@ -181,9 +181,9 @@ export default function DataTable<Row>({
               key={getRowId(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
-                "border-b border-zinc-800/30 transition-colors",
-                striped && i % 2 === 1 && "bg-zinc-800/10",
-                onRowClick && "cursor-pointer hover:bg-zinc-800/30",
+                "border-b border-border/30 transition-colors",
+                striped && i % 2 === 1 && "bg-muted/20",
+                onRowClick && "cursor-pointer hover:bg-muted/40",
                 rowClassName?.(row, i)
               )}
             >

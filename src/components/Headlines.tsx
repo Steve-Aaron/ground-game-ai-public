@@ -41,7 +41,7 @@ export default function Headlines() {
       <TabBar tab={tab} onChange={setTab} />
 
       {tab === "headlines" ? (
-        <div className="divide-y divide-zinc-800/50">
+        <div className="divide-y divide-border/50">
           {headlines.map((item, i) => (
             <FeedItem
               key={i}
@@ -58,7 +58,7 @@ export default function Headlines() {
           )}
         </div>
       ) : (
-        <div className="divide-y divide-zinc-800/50">
+        <div className="divide-y divide-border/50">
           {briefings.length > 0 ? (
             briefings.map((item, i) => (
               <FeedItem
@@ -94,7 +94,7 @@ interface TabBarProps {
 
 function TabBar({ tab, onChange }: TabBarProps) {
   return (
-    <div data-component="headlinesTabs" className="flex border-b border-zinc-800">
+    <div data-component="headlinesTabs" className="flex border-b border-border">
       <button
         onClick={() => onChange("headlines")}
         className={`flex-1 px-3 py-1.5 text-xs font-medium transition-colors ${

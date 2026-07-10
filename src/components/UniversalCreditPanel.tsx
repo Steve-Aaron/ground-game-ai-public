@@ -64,7 +64,7 @@ export default function UniversalCreditPanel() {
       <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
         <div>
           <SectionLabel>Claimant Count</SectionLabel>
-          <div className="text-xl font-bold text-zinc-100 mt-0.5">
+          <div className="text-xl font-bold text-foreground mt-0.5">
             {claimantCount != null && claimantCount > 0
               ? Number(claimantCount).toLocaleString()
               : "—"}
@@ -74,7 +74,7 @@ export default function UniversalCreditPanel() {
           {claimantRate != null && claimantRate > 0 && (
             <div>
               <SectionLabel>Rate</SectionLabel>
-              <div className="text-lg font-bold text-zinc-100 mt-0.5">
+              <div className="text-lg font-bold text-foreground mt-0.5">
                 {Number(claimantRate).toFixed(1)}%
               </div>
             </div>

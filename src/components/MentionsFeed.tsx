@@ -51,7 +51,7 @@ export default function MentionsFeed() {
 
   return (
     <div data-component="mentionsFeedContainer">
-      <div className="divide-y divide-zinc-800/30">
+      <div className="divide-y divide-border/30">
         {data.mentions.map((mention, i) => (
           <Mention key={i} mention={mention} />
         ))}
@@ -70,16 +70,16 @@ function Mention({ mention }: { mention: SocialMention }) {
       href={mention.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block px-3 py-3 hover:bg-zinc-800/30 transition-colors group"
+      className="block px-3 py-3 hover:bg-muted/40 transition-colors group"
     >
       <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 shrink-0 h-7 w-7 rounded-full bg-zinc-800 flex items-center justify-center text-[0.556rem] font-bold text-zinc-400">
+        <div className="mt-0.5 shrink-0 h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[0.556rem] font-bold text-zinc-400">
           {mention.author.charAt(0).toUpperCase()}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 text-[0.667rem]">
-            <span className="font-semibold text-zinc-200">{mention.author}</span>
+            <span className="font-semibold text-foreground">{mention.author}</span>
             {mention.isVerified && (
               <CheckCircle2 className="h-3 w-3 text-blue-400 shrink-0" />
             )}

@@ -132,7 +132,7 @@ function Dashboard() {
   }
   if (options.length === 0) {
     return (
-      <div data-component="dashboardNoAccess" className="min-h-screen bg-[#0a0a0a] text-zinc-200 flex flex-col">
+      <div data-component="dashboardNoAccess" className="min-h-screen bg-background text-foreground flex flex-col">
         <Header
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -141,7 +141,7 @@ function Dashboard() {
           options={options}
         />
         <main className="flex-1 flex items-center justify-center px-4">
-          <div data-component="noAccessCard" className="max-w-sm text-center border border-[#2a2a2a] bg-[#141414] p-8">
+          <div data-component="noAccessCard" className="max-w-sm text-center border border-border bg-card p-8">
             <p className="text-[0.611rem] uppercase tracking-wider text-zinc-500 mb-2">
               No access
             </p>

@@ -74,7 +74,7 @@ export default function SchoolsPanel() {
       <div className="px-3 py-2.5 border-b border-border/50">
         <div className="grid grid-cols-3 gap-2 mb-2.5">
           <div className="text-center">
-            <div className="text-lg font-bold text-zinc-200">{summary.total}</div>
+            <div className="text-lg font-bold text-foreground">{summary.total}</div>
             <div className="text-[0.556rem] text-zinc-500">Total Schools</div>
           </div>
           <div className="text-center">
@@ -154,7 +154,7 @@ export default function SchoolsPanel() {
       </div>
 
       {/* Schools grouped by type */}
-      <div className="divide-y divide-zinc-800/30">
+      <div className="divide-y divide-border/30">
         {TYPE_GROUPS.map((group) => {
           const groupSchools = schools
             .filter((s) => s.type === group.key)
@@ -203,7 +203,7 @@ export default function SchoolsPanel() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-[0.667rem] text-zinc-300 leading-snug group-hover:text-zinc-100 truncate flex-1">
+                              <p className="text-[0.667rem] text-zinc-300 leading-snug group-hover:text-foreground truncate flex-1">
                                 {school.name}
                               </p>
                               <ExternalLink className="h-2.5 w-2.5 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0" />

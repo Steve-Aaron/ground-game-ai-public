@@ -213,7 +213,7 @@ function TweetCard({
 
           {/* Body */}
           <a href={tweet.url} target="_blank" rel="noopener noreferrer" className="block group">
-            <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-line mt-0.5 group-hover:text-foreground">
+            <p className="text-xs text-foreground leading-relaxed whitespace-pre-line mt-0.5 group-hover:text-foreground">
               {tweet.text}
             </p>
           </a>

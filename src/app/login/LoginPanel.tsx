@@ -187,7 +187,7 @@ export default function LoginPanel() {
     <div
       data-component="LoginPanel"
       data-mode={mode}
-      className={`min-h-screen bg-[#0a0a0a] text-zinc-200 flex items-center justify-center px-4 py-10 ${
+      className={`min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10 ${
         mode === "success" ? "animate-login-success-fade" : ""
       }`}
     >
@@ -209,7 +209,7 @@ export default function LoginPanel() {
           className="flex items-center gap-2 mb-4"
         >
           <div className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span className="text-sm font-bold text-zinc-100 tracking-tight uppercase">
+          <span className="text-sm font-bold text-foreground tracking-tight uppercase">
             Ground Game <span className="text-emerald-500">Intel</span>
           </span>
         </div>
@@ -382,7 +382,7 @@ export default function LoginPanel() {
                 onClick={onGoogle}
                 disabled={busy}
                 aria-label="Continue with Google"
-                className="h-11 w-11 border border-[#2a2a2a] hover:border-zinc-500 bg-[#141414] text-zinc-100 flex items-center justify-center transition-colors disabled:opacity-50"
+                className="h-11 w-11 border border-border hover:border-zinc-500 bg-card text-foreground flex items-center justify-center transition-colors disabled:opacity-50"
               >
                 {mode === "google-loading" ? (
                   <LoadingSpinner size={14} />
@@ -396,7 +396,7 @@ export default function LoginPanel() {
                 onClick={onGitHub}
                 disabled={busy}
                 aria-label="Continue with GitHub"
-                className="h-11 w-11 border border-[#2a2a2a] hover:border-zinc-500 bg-[#141414] text-zinc-100 flex items-center justify-center transition-colors disabled:opacity-50"
+                className="h-11 w-11 border border-border hover:border-zinc-500 bg-card text-foreground flex items-center justify-center transition-colors disabled:opacity-50"
               >
                 {mode === "github-loading" ? (
                   <LoadingSpinner size={14} />

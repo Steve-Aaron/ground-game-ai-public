@@ -1276,7 +1276,7 @@ export default function ConstituencyMap() {
 
       {/* Police areas legend */}
       {layers["police"] && policeForces.length > 0 && (
-        <div className="absolute bottom-3 left-3 bg-zinc-900/95 backdrop-blur rounded-lg p-2 border border-zinc-700 z-10">
+        <div className="absolute bottom-3 left-3 bg-card/95 backdrop-blur rounded-lg p-2 border border-border z-10">
           <div className="text-[0.611rem] text-zinc-400 mb-1 font-medium">Police Forces</div>
           <div className="flex flex-col gap-[0.222rem] mb-1">
             {policeForces.map((f) => (

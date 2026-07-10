@@ -44,7 +44,7 @@ export default function ConstituencyProfile() {
               {s.icon}
               <span className="text-[0.611rem] uppercase tracking-wide">{s.label}</span>
             </div>
-            <div className="text-sm font-medium text-zinc-200">{s.value}</div>
+            <div className="text-sm font-medium text-foreground">{s.value}</div>
           </div>
         ))}
       </div>

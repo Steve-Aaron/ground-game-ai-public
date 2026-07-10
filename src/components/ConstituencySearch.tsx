@@ -128,7 +128,7 @@ export default function ConstituencySearch({
           }}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="w-full bg-[#0a0a0a] border border-[#2a2a2a] focus:border-emerald-500 outline-none pl-[2rem] pr-[2rem] py-[0.5rem] text-[0.778rem] text-zinc-100 placeholder:text-zinc-600"
+          className="w-full bg-background border border-border focus:border-emerald-500 outline-none pl-[2rem] pr-[2rem] py-[0.5rem] text-[0.778rem] text-foreground placeholder:text-zinc-600"
         />
         {query ? (
           <button
@@ -139,7 +139,7 @@ export default function ConstituencySearch({
               inputRef.current?.focus();
             }}
             aria-label="Clear search"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-foreground"
           >
             <X className="h-[0.778rem] w-[0.778rem]" />
           </button>
@@ -151,7 +151,7 @@ export default function ConstituencySearch({
           id="constituency-search-listbox"
           role="listbox"
           data-component="ConstituencySearchDropdown"
-          className="absolute left-0 right-0 mt-[0.222rem] bg-[#141414] border border-[#2a2a2a] max-h-[18rem] overflow-y-auto z-[80] shadow-[0_0.444rem_1.333rem_rgba(0,0,0,0.6)]"
+          className="absolute left-0 right-0 mt-[0.222rem] bg-card border border-border max-h-[18rem] overflow-y-auto z-[80] shadow-[0_0.444rem_1.333rem_rgba(0,0,0,0.6)]"
         >
           {matches.length === 0 ? (
             <div className="px-[0.778rem] py-[0.667rem] text-[0.722rem] text-zinc-600">
@@ -178,7 +178,7 @@ export default function ConstituencySearch({
                       ? "bg-emerald-500/10 text-emerald-300"
                       : isSelected
                       ? "text-emerald-400"
-                      : "text-zinc-300 hover:bg-zinc-800/50"
+                      : "text-zinc-300 hover:bg-muted/50"
                   }`}
                 >
                   <span>{m.name}</span>

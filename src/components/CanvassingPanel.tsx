@@ -13,7 +13,7 @@ import { SESSION_TYPES, SESSION_TYPE_COLORS, type SessionType } from "@/lib/canv
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
 import PanelError from "@/components/ui/PanelError";
-import { DateInput, FileInput, FormError, Select, TextArea, TextInput } from "@/components/ui/FormField";
+import { DateInput, FileInput, FormError, Select, TextArea, TextInput, TimeInput } from "@/components/ui/FormField";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Chip } from "@/components/ui/Chip";
 import { formatGbDate } from "@/lib/format";
@@ -149,7 +149,8 @@ function SessionForm({
   const { slug } = useConstituency();
   const [name, setName] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [durationMins, setDurationMins] = useState(120);
+  // Duration entered as hh:mm; converted to minutes for the API.
+  const [duration, setDuration] = useState("02:00");
   const [type, setType] = useState<SessionType>(SESSION_TYPES[0]);
   const [notes, setNotes] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -171,6 +172,11 @@ function SessionForm({
       body.append("date", date);
       body.append("lat", String(draftPin.lat));
       body.append("lng", String(draftPin.lng));
+      const [h, m] = duration.split(":").map(Number);
+      const durationMins = (h || 0) * 60 + (m || 0);
+      if (durationMins <= 0) {
+        throw new Error("Set a duration (hh:mm).");
+      }
       body.append("durationMins", String(durationMins));
       body.append("type", type);
       body.append("notes", notes);
@@ -203,18 +209,19 @@ function SessionForm({
         <TextInput
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Session name (required)"
+          placeholder="Event name (required)"
           className="col-span-2"
         />
-        <DateInput label="Date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <TextInput
-          label="Duration (minutes)"
-          type="number"
-          min={15}
-          max={1440}
-          step={15}
-          value={durationMins}
-          onChange={(e) => setDurationMins(Number(e.target.value))}
+        <DateInput
+          label="Date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <TimeInput
+          label="Duration (hh:mm)"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          step={900}
         />
         <div className="col-span-2">
           <Select

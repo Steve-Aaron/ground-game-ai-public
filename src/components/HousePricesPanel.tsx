@@ -97,7 +97,7 @@ export default function HousePricesPanel() {
     <div data-component="housePricesPanel" className="bg-background border border-border rounded-2xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-200">House Prices</h3>
+        <h3 className="text-sm font-semibold text-foreground">House Prices</h3>
         <a
           href={data.sourceUrl}
           target="_blank"
@@ -113,7 +113,7 @@ export default function HousePricesPanel() {
         <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
           <div>
             <SectionLabel>Average Price</SectionLabel>
-            <div className="text-xl font-bold text-zinc-100 mt-0.5">
+            <div className="text-xl font-bold text-foreground mt-0.5">
               {latest.averagePrice != null
                 ? `£${Number(latest.averagePrice).toLocaleString()}`
                 : "—"}
@@ -152,11 +152,11 @@ export default function HousePricesPanel() {
             {typeEntries.map(([label, stats]) => (
               <div key={label} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-zinc-200 font-medium">{label}</span>
+                  <span className="text-foreground font-medium">{label}</span>
                   <span className="text-zinc-600">({stats.count})</span>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-zinc-100 font-semibold">
+                  <span className="text-foreground font-semibold">
                     {formatPrice(Math.round(stats.totalPrice / stats.count))}
                   </span>
                   <span className="text-zinc-600 text-[0.556rem] ml-1.5">
@@ -173,13 +173,13 @@ export default function HousePricesPanel() {
         <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
           <div>
             <SectionLabel>Price Range</SectionLabel>
-            <div className="text-xs text-zinc-200 mt-0.5">
+            <div className="text-xs text-foreground mt-0.5">
               {formatPrice(priceMin)} &mdash; {formatPrice(priceMax)}
             </div>
           </div>
           <div className="text-right">
             <SectionLabel>Sales</SectionLabel>
-            <div className="text-xs text-zinc-200 mt-0.5">{allPrices.length}</div>
+            <div className="text-xs text-foreground mt-0.5">{allPrices.length}</div>
           </div>
         </div>
       )}
@@ -199,7 +199,7 @@ export default function HousePricesPanel() {
                   className="bg-muted rounded-xl px-3 py-2 flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-zinc-200 truncate">
+                    <div className="text-xs text-foreground truncate">
                       {sale.address || "Address unavailable"}
                     </div>
                     <div className="text-[0.556rem] text-zinc-500 flex items-center gap-2 mt-0.5">
@@ -218,7 +218,7 @@ export default function HousePricesPanel() {
                       )}
                     </div>
                   </div>
-                  <div className="text-sm font-semibold text-zinc-100 shrink-0">
+                  <div className="text-sm font-semibold text-foreground shrink-0">
                     {formatPrice(sale.price)}
                   </div>
                 </div>

@@ -104,7 +104,7 @@ export default function EmploymentPanel() {
     <div data-component="employmentPanel" className="bg-background border border-border rounded-2xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-200">Employment &amp; Economy</h3>
+        <h3 className="text-sm font-semibold text-foreground">Employment &amp; Economy</h3>
         <a
           href={data.sourceUrl}
           target="_blank"
@@ -120,7 +120,7 @@ export default function EmploymentPanel() {
         <div className="bg-muted rounded-xl p-3 flex items-center justify-between">
           <div>
             <SectionLabel>Claimant Count</SectionLabel>
-            <div className="text-xl font-bold text-zinc-100 mt-0.5">
+            <div className="text-xl font-bold text-foreground mt-0.5">
               {Number(data.claimantCount.rate).toFixed(1)}%
               <TrendArrow trend={data.claimantCount.trend} />
             </div>
@@ -165,7 +165,7 @@ export default function EmploymentPanel() {
               : null;
           const valueColor =
             isBetter === null
-              ? "text-zinc-100"
+              ? "text-foreground"
               : isBetter
               ? "text-emerald-400"
               : "text-red-400";

@@ -71,7 +71,7 @@ export default function HansardFeed() {
       </div>
 
       {tab === "speeches" && (
-        <div className="divide-y divide-zinc-800/50">
+        <div className="divide-y divide-border/50">
           {speeches.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-zinc-600">
               No recent Hansard contributions found
@@ -85,7 +85,7 @@ export default function HansardFeed() {
       )}
 
       {tab === "questions" && (
-        <div className="divide-y divide-zinc-800/50">
+        <div className="divide-y divide-border/50">
           {questions.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-zinc-600">
               No written questions found
@@ -144,7 +144,7 @@ function SpeechRow({ speech }: { speech: Speech }) {
       href={speech.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block px-3 py-2.5 hover:bg-zinc-800/20 transition-colors group"
+      className="block px-3 py-2.5 hover:bg-muted/30 transition-colors group"
     >
       <div className="flex items-start gap-2">
         <div className={`mt-0.5 p-1 rounded ${isDivision ? "bg-blue-400/10" : "bg-amber-400/10"}`}>
@@ -155,7 +155,7 @@ function SpeechRow({ speech }: { speech: Speech }) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[0.667rem] text-zinc-300 leading-snug font-medium group-hover:text-zinc-100">
+          <p className="text-[0.667rem] text-zinc-300 leading-snug font-medium group-hover:text-foreground">
             {speech.title}
             <ExternalLink className="inline h-2.5 w-2.5 ml-1 text-zinc-600 group-hover:text-zinc-400" />
           </p>
@@ -182,14 +182,14 @@ function QuestionRow({ question }: { question: Question }) {
       href={question.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block px-3 py-2.5 hover:bg-zinc-800/20 transition-colors group"
+      className="block px-3 py-2.5 hover:bg-muted/30 transition-colors group"
     >
       <div className="flex items-start gap-2">
         <div className="mt-0.5 p-1 rounded bg-purple-400/10">
           <HelpCircle className="h-3 w-3 text-purple-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[0.667rem] text-zinc-300 leading-snug font-medium group-hover:text-zinc-100">
+          <p className="text-[0.667rem] text-zinc-300 leading-snug font-medium group-hover:text-foreground">
             {question.title}
             <ExternalLink className="inline h-2.5 w-2.5 ml-1 text-zinc-600 group-hover:text-zinc-400" />
           </p>

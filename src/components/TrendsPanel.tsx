@@ -278,7 +278,7 @@ function TrendingSection({ title, items }: { title: string; items?: TrendingSear
       </div>
 
       {items && items.length > 0 ? (
-        <div className="bg-muted/30 rounded-lg mx-2 border border-border/40 divide-y divide-zinc-800/40">
+        <div className="bg-muted/30 rounded-lg mx-2 border border-border/40 divide-y divide-border/40">
           {items.slice(0, 6).map((t) => (
             <div key={t.title} className="px-3 py-2 hover:bg-muted/20 transition-colors">
               <div className="flex justify-between items-center">
@@ -411,7 +411,7 @@ export default function TrendsPanel() {
         </div>
 
         {regionalOk && data?.regionalVsNational ? (
-          <div className="bg-muted/40 rounded-lg border border-border/50 divide-y divide-zinc-800/40">
+          <div className="bg-muted/40 rounded-lg border border-border/50 divide-y divide-border/40">
             {data.regionalVsNational.map((r) => {
               const regionVal = r.regionValue ?? r.eastOfEnglandValue ?? null;
               return (

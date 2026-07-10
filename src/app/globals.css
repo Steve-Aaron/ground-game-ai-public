@@ -18,6 +18,15 @@ html {
   font-size: 18px;
 }
 
+/* Native form controls (date/time pickers, scrollbars) follow the theme —
+   previously date inputs forced dark rendering on light mode. */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #0a0a0a;

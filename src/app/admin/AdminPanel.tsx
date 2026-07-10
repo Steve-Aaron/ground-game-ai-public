@@ -46,13 +46,13 @@ export default function AdminPanel({ currentUid }: Props) {
   }, [refresh]);
 
   return (
-    <div data-component="AdminPanel" className="min-h-screen bg-[#0a0a0a] text-zinc-200">
-      <header className="bg-[#141414] border-b border-[#2a2a2a] sticky top-0 z-40">
+    <div data-component="AdminPanel" className="min-h-screen bg-background text-foreground">
+      <header className="bg-card border-b border-border sticky top-0 z-40">
         <div className="flex items-center justify-between px-[1.333rem] py-[0.889rem]">
           <div className="flex items-center gap-[1.333rem]">
             <Link
               href="/"
-              className="text-zinc-500 hover:text-zinc-200 flex items-center gap-[0.333rem] text-[0.778rem] uppercase tracking-wider"
+              className="text-zinc-500 hover:text-foreground flex items-center gap-[0.333rem] text-[0.778rem] uppercase tracking-wider"
             >
               <ArrowLeft className="h-[0.889rem] w-[0.889rem]" />
               Dashboard
@@ -60,7 +60,7 @@ export default function AdminPanel({ currentUid }: Props) {
             <div className="h-[1rem] w-px bg-[#2a2a2a]" />
             <div className="flex items-center gap-[0.444rem]">
               <div className="h-[0.444rem] w-[0.444rem] rounded-full bg-emerald-500" />
-              <span className="text-[1rem] font-bold text-zinc-100 tracking-tight uppercase">
+              <span className="text-[1rem] font-bold text-foreground tracking-tight uppercase">
                 Admin <span className="text-emerald-500">Panel</span>
               </span>
             </div>
@@ -81,7 +81,7 @@ export default function AdminPanel({ currentUid }: Props) {
           </h2>
           <button
             onClick={refresh}
-            className="text-[0.722rem] uppercase tracking-wider text-zinc-500 hover:text-zinc-200"
+            className="text-[0.722rem] uppercase tracking-wider text-zinc-500 hover:text-foreground"
           >
             Refresh
           </button>
