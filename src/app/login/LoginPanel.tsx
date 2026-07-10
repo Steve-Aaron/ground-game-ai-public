@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { KeyRound, Loader2, Mail, Wand2 } from "lucide-react";
 import {
   getAuth,
-  GithubAuthProvider,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   sendPasswordResetEmail,
@@ -16,8 +15,7 @@ import {
   type User,
 } from "firebase/auth";
 import { app } from "@/lib/firebase";
-import PadlockGraphic from "./PadlockGraphic";
-import { GitHubIcon, GoogleIcon } from "./BrandIcons";
+import { GoogleIcon } from "./BrandIcons";
 
 const EMAIL_FOR_SIGNIN_KEY = "ggi.emailForSignIn";
 
@@ -27,32 +25,17 @@ type Mode =
   | "link-sent"
   | "completing-link"
   | "google-loading"
-  | "github-loading"
   | "password-loading"
   | "sending-reset"
   | "reset-sent"
   | "exchanging-cookie"
   | "success";
 
-// Which form sits inside the padlock body. Magic link is the default
-// (single field) because it matches the reference image's one-input layout.
+// Magic link is the default single-field flow; password is the fallback.
 type EmailMethod = "link" | "password";
 
-function padlockState(mode: Mode): "locked" | "loading" | "unlocking" {
-  if (mode === "success") return "unlocking";
-  if (
-    mode === "google-loading" ||
-    mode === "github-loading" ||
-    mode === "password-loading" ||
-    mode === "completing-link" ||
-    mode === "exchanging-cookie" ||
-    mode === "sending-link" ||
-    mode === "sending-reset"
-  ) {
-    return "loading";
-  }
-  return "locked";
-}
+const FIELD_CLASS =
+  "w-full rounded-full bg-transparent border border-zinc-700 focus:border-emerald-500 outline-none pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 transition-colors";
 
 export default function LoginPanel() {
   const router = useRouter();
@@ -92,13 +75,11 @@ export default function LoginPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function onPasswordSignIn(e: React.FormEvent) {
-    e.preventDefault();
+  async function onGoogle() {
     setError(null);
-    if (!email || !password) return;
-    setMode("password-loading");
+    setMode("google-loading");
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       await exchangeCookie(cred.user, router, nextPath, setError, setMode);
     } catch (e) {
       setMode("idle");
@@ -118,16 +99,30 @@ export default function LoginPanel() {
       });
       window.localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email);
       setMode("link-sent");
-    } catch (e) {
+    } catch (err) {
       setMode("idle");
-      setError(humaniseFirebaseError(e));
+      setError(humaniseFirebaseError(err));
+    }
+  }
+
+  async function onPasswordSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!email || !password) return;
+    setMode("password-loading");
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      await exchangeCookie(cred.user, router, nextPath, setError, setMode);
+    } catch (err) {
+      setMode("idle");
+      setError(humaniseFirebaseError(err));
     }
   }
 
   async function onForgotPassword() {
     setError(null);
     if (!email) {
-      setError("Enter your email above first, then click 'Forgot password?'.");
+      setError("Enter your email first, then tap 'Forgot password?'.");
       return;
     }
     setMode("sending-reset");
@@ -135,343 +130,203 @@ export default function LoginPanel() {
       await sendPasswordResetEmail(auth, email);
       setResetEmailFor(email);
       setMode("reset-sent");
-    } catch (e) {
+    } catch (err) {
       setMode("idle");
-      setError(humaniseFirebaseError(e));
-    }
-  }
-
-  async function onGoogle() {
-    setError(null);
-    setMode("google-loading");
-    try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
-      await exchangeCookie(cred.user, router, nextPath, setError, setMode);
-    } catch (e) {
-      setMode("idle");
-      setError(humaniseFirebaseError(e));
-    }
-  }
-
-  async function onGitHub() {
-    setError(null);
-    setMode("github-loading");
-    try {
-      // Request `user:email` so Firebase receives the user's verified primary
-      // email even with GitHub's 'Keep email private' setting enabled.
-      const provider = new GithubAuthProvider();
-      provider.addScope("user:email");
-      const cred = await signInWithPopup(auth, provider);
-      await exchangeCookie(cred.user, router, nextPath, setError, setMode);
-    } catch (e) {
-      setMode("idle");
-      setError(humaniseFirebaseError(e));
+      setError(humaniseFirebaseError(err));
     }
   }
 
   const busy =
     mode === "google-loading" ||
-    mode === "github-loading" ||
     mode === "password-loading" ||
     mode === "sending-link" ||
     mode === "sending-reset" ||
-    mode === "exchanging-cookie" ||
     mode === "completing-link" ||
+    mode === "exchanging-cookie" ||
     mode === "success";
 
-  const lockState = padlockState(mode);
-  const inflight =
-    mode === "completing-link" || mode === "exchanging-cookie" || mode === "success";
-
   return (
-    <div
-      data-component="LoginPanel"
-      data-mode={mode}
-      className={`min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10 ${
-        mode === "success" ? "animate-login-success-fade" : ""
-      }`}
-    >
-      {/* Subtle background grid */}
+    <div data-component="loginPortal" className="min-h-screen grid grid-cols-12 bg-[#111318]">
+      {/* ── Brand panel: repeating black texture + centred election artwork ── */}
       <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(#e4e4e7 1px, transparent 1px), linear-gradient(90deg, #e4e4e7 1px, transparent 1px)",
-          backgroundSize: "2px 2px",
-        }}
-      />
-
-      <div className="relative z-10 w-full max-w-[26.667rem] flex flex-col items-center">
-        {/* Brand chip above the lock */}
-        <div
-          data-component="LoginBrandChip"
-          className="flex items-center gap-2 mb-4"
-        >
-          <div className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span className="text-sm font-bold text-foreground tracking-tight uppercase">
-            Ground Game <span className="text-emerald-500">Intel</span>
-          </span>
+        data-component="loginBrandPanel"
+        className="hidden lg:flex col-span-7 flex-col items-center justify-center relative"
+        style={{ backgroundColor: "#0a0a0a", backgroundImage: "url(/login-texture.svg)" }}
+      >
+        <div className="text-center mb-10">
+          <p className="text-2xl font-bold text-white tracking-tight">Welcome to</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-emerald-400 mt-1">
+            Ground Game <span className="text-white">Intel</span>
+          </p>
         </div>
+        <div
+          data-component="loginArtwork"
+          className="h-[22rem] w-[22rem] rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_120px_rgba(16,185,129,0.25)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/election.svg" alt="" className="h-[16rem] w-[16rem]" />
+        </div>
+        <p className="mt-10 text-[0.611rem] uppercase tracking-widest text-zinc-600">
+          Constituency Intelligence Platform
+        </p>
+      </div>
 
-        <PadlockGraphic state={lockState}>
-          {inflight ? (
-            // ── Loading / success state ────────────────────────────────
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <p className="text-[0.556rem] uppercase tracking-[0.3em] text-zinc-600 mb-3">
-                {mode === "success" ? "Access granted" : "Verifying"}
-              </p>
-              <p className="text-[2.222rem] leading-tight font-bold uppercase tracking-tight text-[#0a0a0a]">
-                {mode === "success" ? "Welcome back" : "Signing you in"}
-              </p>
-              {mode !== "success" ? (
-                <div className="mt-4">
-                  <LoadingSpinner size={20} darkOnLight />
-                </div>
-              ) : null}
-            </div>
-          ) : mode === "link-sent" ? (
-            // ── Magic link sent ────────────────────────────────────────
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <p className="text-[0.556rem] uppercase tracking-[0.3em] text-zinc-600 mb-3">
-                Link sent
-              </p>
-              <p className="text-[0.778rem] leading-snug text-[#0a0a0a] mb-2">
-                Check{" "}
-                <span className="font-bold break-all">{email}</span>
-              </p>
-              <p className="text-[0.611rem] text-zinc-600 mb-4">
-                Open the link on this device to finish signing in.
+      {/* ── Form panel ── */}
+      <div
+        data-component="loginFormPanel"
+        className="col-span-12 lg:col-span-5 flex items-center justify-center px-6 py-12"
+      >
+        <div className="w-full max-w-sm">
+          <h1 className="text-2xl font-bold text-white text-center tracking-tight">
+            Log in to your account
+          </h1>
+          <p className="text-xs text-zinc-500 text-center mt-1.5 mb-8">
+            Please enter your details
+          </p>
+
+          {mode === "link-sent" ? (
+            <div data-component="magicLinkSent" className="text-center space-y-3">
+              <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-emerald-400" />
+              </div>
+              <p className="text-sm text-zinc-200">Check your inbox</p>
+              <p className="text-xs text-zinc-500">
+                We sent a magic sign-in link to <span className="text-zinc-300">{email}</span>.
+                Open it on this device to log in.
               </p>
               <button
-                type="button"
                 onClick={() => setMode("idle")}
-                className="text-[0.556rem] uppercase tracking-wider text-zinc-700 hover:text-[#0a0a0a]"
+                className="text-xs text-emerald-400 hover:text-emerald-300"
               >
-                ← Back
-              </button>
-            </div>
-          ) : mode === "reset-sent" ? (
-            // ── Password reset sent ────────────────────────────────────
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <p className="text-[0.556rem] uppercase tracking-[0.3em] text-zinc-600 mb-3">
-                Reset link sent
-              </p>
-              <p className="text-[0.778rem] leading-snug text-[#0a0a0a] mb-2">
-                Check{" "}
-                <span className="font-bold break-all">{resetEmailFor}</span>
-              </p>
-              <p className="text-[0.611rem] text-zinc-600 mb-4">
-                Set a password, then come back here.
-              </p>
-              <button
-                type="button"
-                onClick={() => setMode("idle")}
-                className="text-[0.556rem] uppercase tracking-wider text-zinc-700 hover:text-[#0a0a0a]"
-              >
-                ← Back
+                Use a different method
               </button>
             </div>
           ) : (
-            // ── Default: title block + auth form ───────────────────────
-            <div className="flex flex-col h-full">
-              {/* Manifesto block — echoes the reference image's text stack */}
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
-                <p className="text-[0.556rem] uppercase tracking-[0.3em] text-zinc-600 mb-2">
-                  Restricted
-                </p>
-                <div
-                  data-component="LockManifesto"
-                  className="text-[#0a0a0a] font-bold uppercase tracking-tight leading-[1.05] text-[1.778rem]"
-                >
-                  <p>Constituency intel</p>
-                  <p>Daily briefings</p>
-                  <p>Live data feeds</p>
-                  <p className="text-emerald-700 mt-1">Invitation only</p>
-                </div>
+            <>
+              {/* Google */}
+              <button
+                data-component="googleSignIn"
+                onClick={onGoogle}
+                disabled={busy}
+                className="w-full rounded-full bg-white text-zinc-900 text-sm font-semibold py-2.5 flex items-center justify-center gap-2 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              >
+                {mode === "google-loading" || (mode === "exchanging-cookie" && !email) ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <GoogleIcon className="h-4 w-4" />
+                )}
+                Continue with Google
+              </button>
+
+              <div className="flex items-center gap-3 my-6">
+                <span className="flex-1 h-px bg-zinc-800" />
+                <span className="text-[0.611rem] uppercase tracking-wider text-zinc-600">or</span>
+                <span className="flex-1 h-px bg-zinc-800" />
               </div>
 
-              {/* Inline form — single input + circular submit button */}
-              {emailMethod === "link" ? (
-                <form
-                  data-component="MagicLinkForm"
-                  onSubmit={onSendMagicLink}
-                  className="mt-3"
-                >
-                  <div className="relative">
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      autoComplete="email"
-                      disabled={busy}
-                      className="w-full rounded-full bg-white border border-zinc-300 focus:border-emerald-500 outline-none pl-5 pr-12 py-2.5 text-[0.722rem] text-[#0a0a0a] placeholder:text-zinc-400 disabled:opacity-50"
-                    />
-                    <button
-                      type="submit"
-                      disabled={busy || !email}
-                      aria-label="Send sign-in link"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center transition-colors disabled:opacity-50"
-                    >
-                      {mode === "sending-link" ? (
-                        <LoadingSpinner size={14} dark />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <form
-                  data-component="PasswordSignInForm"
-                  onSubmit={onPasswordSignIn}
-                  className="mt-3 space-y-2"
-                >
+              {/* Email — magic link (default) or password */}
+              <form
+                data-component="emailSignInForm"
+                onSubmit={emailMethod === "link" ? onSendMagicLink : onPasswordSignIn}
+                className="space-y-3"
+              >
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                   <input
                     type="email"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email"
                     autoComplete="email"
-                    disabled={busy}
-                    className="w-full rounded-full bg-white border border-zinc-300 focus:border-emerald-500 outline-none px-5 py-2.5 text-[0.722rem] text-[#0a0a0a] placeholder:text-zinc-400 disabled:opacity-50"
+                    className={FIELD_CLASS}
                   />
+                </div>
+
+                {emailMethod === "password" ? (
                   <div className="relative">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <input
                       type="password"
-                      required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
                       autoComplete="current-password"
-                      disabled={busy}
-                      className="w-full rounded-full bg-white border border-zinc-300 focus:border-emerald-500 outline-none pl-5 pr-12 py-2.5 text-[0.722rem] text-[#0a0a0a] placeholder:text-zinc-400 disabled:opacity-50"
+                      className={FIELD_CLASS}
                     />
+                  </div>
+                ) : null}
+
+                {emailMethod === "password" ? (
+                  <div className="flex justify-end">
                     <button
-                      type="submit"
-                      disabled={busy || !email || !password}
-                      aria-label="Sign in"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center transition-colors disabled:opacity-50"
+                      type="button"
+                      onClick={onForgotPassword}
+                      className="text-[0.667rem] text-zinc-500 hover:text-emerald-400"
                     >
-                      {mode === "password-loading" ? (
-                        <LoadingSpinner size={14} dark />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
+                      Forgot password?
                     </button>
                   </div>
-                </form>
-              )}
-            </div>
-          )}
-        </PadlockGraphic>
+                ) : null}
 
-        {/* ── Below the lock: provider buttons + method switcher ───────── */}
-        {!inflight && mode !== "link-sent" && mode !== "reset-sent" ? (
-          <div
-            data-component="LoginSecondary"
-            className="mt-8 w-full flex flex-col items-center"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <button
-                data-component="GoogleSignInButton"
-                type="button"
-                onClick={onGoogle}
-                disabled={busy}
-                aria-label="Continue with Google"
-                className="h-11 w-11 border border-border hover:border-zinc-500 bg-card text-foreground flex items-center justify-center transition-colors disabled:opacity-50"
-              >
-                {mode === "google-loading" ? (
-                  <LoadingSpinner size={14} />
-                ) : (
-                  <GoogleIcon size={16} />
-                )}
-              </button>
-              <button
-                data-component="GitHubSignInButton"
-                type="button"
-                onClick={onGitHub}
-                disabled={busy}
-                aria-label="Continue with GitHub"
-                className="h-11 w-11 border border-border hover:border-zinc-500 bg-card text-foreground flex items-center justify-center transition-colors disabled:opacity-50"
-              >
-                {mode === "github-loading" ? (
-                  <LoadingSpinner size={14} />
-                ) : (
-                  <GitHubIcon size={16} />
-                )}
-              </button>
-            </div>
+                <button
+                  data-component="emailSignInSubmit"
+                  type="submit"
+                  disabled={busy || !email || (emailMethod === "password" && !password)}
+                  className="w-full rounded-full bg-emerald-500 text-black text-sm font-bold py-2.5 flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                >
+                  {busy && mode !== "google-loading" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : emailMethod === "link" ? (
+                    <Wand2 className="h-4 w-4" />
+                  ) : null}
+                  {emailMethod === "link" ? "Email me a magic link" : "Log in"}
+                </button>
+              </form>
 
-            <div className="flex items-center gap-3 text-[0.556rem] uppercase tracking-widest text-zinc-600">
-              <button
-                type="button"
-                onClick={() =>
-                  setEmailMethod((m) => (m === "link" ? "password" : "link"))
-                }
-                className="hover:text-emerald-400"
-              >
-                {emailMethod === "link"
-                  ? "Use password instead"
-                  : "Use magic link instead"}
-              </button>
-              {emailMethod === "password" ? (
-                <>
-                  <span className="text-zinc-700">·</span>
-                  <button
-                    type="button"
-                    onClick={onForgotPassword}
-                    className="hover:text-emerald-400"
-                  >
-                    {mode === "sending-reset" ? "Sending…" : "Forgot password"}
-                  </button>
-                </>
+              <p className="text-center text-xs text-zinc-500 mt-6">
+                {emailMethod === "link" ? (
+                  <>
+                    Have a password?{" "}
+                    <button
+                      onClick={() => setEmailMethod("password")}
+                      className="text-emerald-400 hover:text-emerald-300 font-medium"
+                    >
+                      Log in with password
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Prefer no password?{" "}
+                    <button
+                      onClick={() => setEmailMethod("link")}
+                      className="text-emerald-400 hover:text-emerald-300 font-medium"
+                    >
+                      Use a magic link
+                    </button>
+                  </>
+                )}
+              </p>
+
+              {mode === "reset-sent" ? (
+                <p className="text-center text-xs text-emerald-400 mt-3">
+                  Password reset email sent to {resetEmailFor}.
+                </p>
               ) : null}
-            </div>
-          </div>
-        ) : null}
+            </>
+          )}
 
-        {error ? (
-          <p
-            data-component="LoginError"
-            className="mt-5 text-[0.611rem] text-red-400 leading-relaxed text-center max-w-xs"
-          >
-            {error}
+          {error ? (
+            <p data-component="loginError" className="text-center text-xs text-red-400 mt-4">
+              {error}
+            </p>
+          ) : null}
+
+          <p className="text-center text-[0.611rem] text-zinc-600 mt-8">
+            Access is invite-only. Contact your administrator if you need an account.
           </p>
-        ) : null}
-
-        <p className="mt-6 text-[0.556rem] text-zinc-600 leading-relaxed text-center">
-          No account? Contact your administrator.
-        </p>
+        </div>
       </div>
     </div>
-  );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────
-
-interface LoadingSpinnerProps {
-  size?: number;
-  dark?: boolean;
-  darkOnLight?: boolean;
-}
-function LoadingSpinner({ size = 14, dark, darkOnLight }: LoadingSpinnerProps) {
-  return (
-    <span
-      data-component="LoadingSpinner"
-      className={`inline-block rounded-full border-2 animate-login-spinner ${
-        dark
-          ? "border-black/30 border-t-black"
-          : darkOnLight
-          ? "border-zinc-300 border-t-[#0a0a0a]"
-          : "border-zinc-600 border-t-zinc-100"
-      }`}
-      style={{ width: size, height: size }}
-      aria-hidden="true"
-    />
   );
 }
 
@@ -497,11 +352,10 @@ async function exchangeCookie(
       setError(body?.message || body?.error || "Sign-in failed.");
       return;
     }
-    // Play unlock animation, then navigate.
     setMode("success");
     setTimeout(() => {
       router.replace(nextPath);
-    }, 900);
+    }, 300);
   } catch (e) {
     setMode("idle");
     setError(humaniseFirebaseError(e));
@@ -510,8 +364,10 @@ async function exchangeCookie(
 
 function humaniseFirebaseError(e: unknown): string {
   const msg = (e as { message?: string })?.message || "Sign-in failed.";
-  return msg
-    .replace(/^Firebase:\s*/, "")
-    .replace(/\s*\([^)]+\)\.?$/, "")
-    .trim() || "Sign-in failed.";
+  return (
+    msg
+      .replace(/^Firebase:\s*/, "")
+      .replace(/\s*\([^)]+\)\.?$/, "")
+      .trim() || "Sign-in failed."
+  );
 }
