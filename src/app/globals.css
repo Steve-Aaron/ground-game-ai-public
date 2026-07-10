@@ -282,3 +282,27 @@ html:not(.dark) .text-zinc-400 {
   --ec-cluster-kyc: #B7DEE8;
   --ec-cluster-nat: #703090;
 }
+
+
+/* ── Login page entrance animation ─────────────────────────────────────── */
+@keyframes loginFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.login-fade {
+  animation: loginFadeInUp 0.55s ease-out both;
+}
+.login-fade-1 { animation-delay: 0.05s; }
+.login-fade-2 { animation-delay: 0.15s; }
+.login-fade-3 { animation-delay: 0.25s; }
+.login-fade-4 { animation-delay: 0.35s; }
+.login-fade-5 { animation-delay: 0.45s; }
+@media (prefers-reduced-motion: reduce) {
+  .login-fade { animation: none; }
+}

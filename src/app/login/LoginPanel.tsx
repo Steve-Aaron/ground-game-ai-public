@@ -16,6 +16,7 @@ import {
 } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { GoogleIcon } from "./BrandIcons";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const EMAIL_FOR_SIGNIN_KEY = "ggi.emailForSignIn";
 
@@ -35,7 +36,7 @@ type Mode =
 type EmailMethod = "link" | "password";
 
 const FIELD_CLASS =
-  "w-full rounded-full bg-transparent border border-zinc-700 focus:border-emerald-500 outline-none pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 transition-colors";
+  "w-full rounded-full bg-transparent border border-border focus:border-emerald-500 outline-none pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-zinc-500 transition-colors";
 
 export default function LoginPanel() {
   const router = useRouter();
@@ -146,14 +147,14 @@ export default function LoginPanel() {
     mode === "success";
 
   return (
-    <div data-component="loginPortal" className="min-h-screen grid grid-cols-12 bg-[#111318]">
+    <div data-component="loginPortal" className="min-h-screen grid grid-cols-12 bg-background">
       {/* ── Brand panel: repeating black texture + centred election artwork ── */}
       <div
         data-component="loginBrandPanel"
         className="hidden lg:flex col-span-7 flex-col items-center justify-center relative"
         style={{ backgroundColor: "#0a0a0a", backgroundImage: "url(/login-texture.svg)" }}
       >
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 login-fade login-fade-1">
           <p className="text-2xl font-bold text-white tracking-tight">Welcome to</p>
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-400 mt-1">
             Ground Game <span className="text-white">Intel</span>
@@ -161,12 +162,12 @@ export default function LoginPanel() {
         </div>
         <div
           data-component="loginArtwork"
-          className="h-[22rem] w-[22rem] rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_120px_rgba(16,185,129,0.25)]"
+          className="h-[22rem] w-[22rem] rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_120px_rgba(16,185,129,0.25)] login-fade login-fade-2"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/election.svg" alt="" className="h-[16rem] w-[16rem]" />
+          <img src="/election.svg" alt="" className="h-[11rem] w-[11rem]" />
         </div>
-        <p className="mt-10 text-[0.611rem] uppercase tracking-widest text-zinc-600">
+        <p className="mt-10 text-[0.611rem] uppercase tracking-widest text-zinc-600 login-fade login-fade-3">
           Constituency Intelligence Platform
         </p>
       </div>
@@ -174,24 +175,29 @@ export default function LoginPanel() {
       {/* ── Form panel ── */}
       <div
         data-component="loginFormPanel"
-        className="col-span-12 lg:col-span-5 flex items-center justify-center px-6 py-12"
+        className="col-span-12 lg:col-span-5 relative flex items-center justify-center px-6 py-12"
       >
+        <div className="absolute top-4 right-4 login-fade login-fade-1">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-bold text-white text-center tracking-tight">
-            Log in to your account
-          </h1>
-          <p className="text-xs text-zinc-500 text-center mt-1.5 mb-8">
-            Please enter your details
-          </p>
+          <div className="login-fade login-fade-2">
+            <h1 className="text-2xl font-bold text-foreground text-center tracking-tight">
+              Log in to your account
+            </h1>
+            <p className="text-xs text-zinc-500 text-center mt-1.5 mb-8">
+              Please enter your details
+            </p>
+          </div>
 
           {mode === "link-sent" ? (
             <div data-component="magicLinkSent" className="text-center space-y-3">
               <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
                 <Mail className="h-5 w-5 text-emerald-400" />
               </div>
-              <p className="text-sm text-zinc-200">Check your inbox</p>
+              <p className="text-sm text-foreground">Check your inbox</p>
               <p className="text-xs text-zinc-500">
-                We sent a magic sign-in link to <span className="text-zinc-300">{email}</span>.
+                We sent a magic sign-in link to <span className="text-foreground">{email}</span>.
                 Open it on this device to log in.
               </p>
               <button
@@ -208,7 +214,7 @@ export default function LoginPanel() {
                 data-component="googleSignIn"
                 onClick={onGoogle}
                 disabled={busy}
-                className="w-full rounded-full bg-white text-zinc-900 text-sm font-semibold py-2.5 flex items-center justify-center gap-2 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                className="w-full rounded-full bg-white text-zinc-900 border border-zinc-300 dark:border-transparent text-sm font-semibold py-2.5 flex items-center justify-center gap-2 hover:bg-zinc-200 transition-colors disabled:opacity-50 login-fade login-fade-3"
               >
                 {mode === "google-loading" || (mode === "exchanging-cookie" && !email) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -218,17 +224,17 @@ export default function LoginPanel() {
                 Continue with Google
               </button>
 
-              <div className="flex items-center gap-3 my-6">
-                <span className="flex-1 h-px bg-zinc-800" />
+              <div className="flex items-center gap-3 my-6 login-fade login-fade-4">
+                <span className="flex-1 h-px bg-border" />
                 <span className="text-[0.611rem] uppercase tracking-wider text-zinc-600">or</span>
-                <span className="flex-1 h-px bg-zinc-800" />
+                <span className="flex-1 h-px bg-border" />
               </div>
 
               {/* Email — magic link (default) or password */}
               <form
                 data-component="emailSignInForm"
                 onSubmit={emailMethod === "link" ? onSendMagicLink : onPasswordSignIn}
-                className="space-y-3"
+                className="space-y-3 login-fade login-fade-5"
               >
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
