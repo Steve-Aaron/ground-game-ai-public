@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import { PanelFooter } from "@/components/ui/PanelFooter";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 interface Issue {
@@ -102,11 +103,11 @@ export default function FixMyStreet() {
           </a>
         ))}
       </div>
-      <div className="px-4 py-2 border-t border-border/50 text-center">
+      <PanelFooter align="center" className="px-4 py-2">
         <span className="text-xs text-zinc-600">
           {filtered.length} issues &middot; Data from FixMyStreet
         </span>
-      </div>
+      </PanelFooter>
     </div>
   );
 }

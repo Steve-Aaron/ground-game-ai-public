@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GraduationCap, ExternalLink, Users, School } from "lucide-react";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import { PanelFooter } from "./ui/PanelFooter";
 import PanelSkeleton from "./ui/PanelSkeleton";
 
 interface SchoolItem {
@@ -230,11 +231,11 @@ export default function SchoolsPanel() {
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-2 border-t border-border/50 text-center">
+      <PanelFooter align="center" className="py-2">
         <span className="text-[10px] text-zinc-600">
           {summary.total} schools in constituency · DfE GIAS
         </span>
-      </div>
+      </PanelFooter>
     </div>
   );
 }

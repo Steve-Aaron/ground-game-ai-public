@@ -1,7 +1,8 @@
 "use client";
 
-import { ExternalLink, RefreshCw, AlertCircle, Heart, Repeat2, CheckCircle2 } from "lucide-react";
+import { ExternalLink, AlertCircle, Heart, Repeat2, CheckCircle2 } from "lucide-react";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import { UpdatedFooter } from "./ui/PanelFooter";
 import PanelEmpty from "./ui/PanelEmpty";
 import PanelError from "./ui/PanelError";
 import PanelSkeleton from "./ui/PanelSkeleton";
@@ -57,16 +58,7 @@ export default function MentionsFeed() {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-border/50 flex items-center justify-between text-[11px] text-zinc-600">
-        <span>{data.total} mentions</span>
-        <button
-          type="button"
-          onClick={refetch}
-          className="text-emerald-500/70 hover:text-emerald-400 flex items-center gap-1"
-        >
-          <RefreshCw className="h-3 w-3" /> Refresh
-        </button>
-      </div>
+      <UpdatedFooter label={`${data.total} mentions`} onRefresh={refetch} />
     </div>
   );
 }

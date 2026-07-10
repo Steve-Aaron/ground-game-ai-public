@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { TrendingUp, Search, BarChart3 } from "lucide-react";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "./ui/PanelSkeleton";
+import { SourceNote } from "./ui/PanelFooter";
 
 // ── Types — match /api/trends-v2 response shape ─────────────────────────────
 
@@ -122,7 +123,7 @@ function ComparisonChart({ series, dates }: { series: ComparisonSeries[]; dates:
     : null;
 
   return (
-    <div>
+    <div data-component="comparisonChart">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT + 18}`}
@@ -258,7 +259,7 @@ function ComparisonChart({ series, dates }: { series: ComparisonSeries[]; dates:
 
 function UnavailableSection({ height = "py-4" }: { height?: string }) {
   return (
-    <div className={`bg-muted/40 rounded-lg border border-border/50 px-3 ${height}`}>
+    <div data-component="trendsUnavailable" className={`bg-muted/40 rounded-lg border border-border/50 px-3 ${height}`}>
       <p className="text-xs text-zinc-500 text-center">Currently unavailable</p>
     </div>
   );
@@ -378,7 +379,7 @@ export default function TrendsPanel() {
   return (
     <div data-component="trendsPanel" className="space-y-5 p-1">
       {/* Section: 90-day time-series chart */}
-      <div className="px-3">
+      <div data-component="interestOverTimeSection" className="px-3">
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="h-3.5 w-3.5 text-emerald-400" />
           <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
@@ -401,7 +402,7 @@ export default function TrendsPanel() {
       </div>
 
       {/* Section: Regional vs national */}
-      <div className="px-3">
+      <div data-component="regionalComparisonSection" className="px-3">
         <div className="flex items-center gap-2 mb-2">
           <Search className="h-3 w-3 text-zinc-500" />
           <span className="text-xs font-medium text-zinc-500">
@@ -445,9 +446,9 @@ export default function TrendsPanel() {
       />
 
       {/* Footer */}
-      <div className="px-3 text-[0.556rem] text-zinc-700 text-center pb-1">
+      <SourceNote className="px-3 pb-1">
         {fetchedTime ? `Updated ${fetchedTime} · ` : ""}Data via Google Trends
-      </div>
+      </SourceNote>
     </div>
   );
 }

@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, Plus, RefreshCw, UserX, Users } from "lucide-react";
+import { ExternalLink, Plus, UserX, Users } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import { useMe } from "@/hooks/useMe";
 import PanelEmpty from "./ui/PanelEmpty";
 import PanelError from "./ui/PanelError";
 import PanelSkeleton from "./ui/PanelSkeleton";
+import { FormError, Select, TextInput } from "./ui/FormField";
+import { ActionButton, TextButton } from "./ui/ActionButton";
+import { UpdatedFooter } from "./ui/PanelFooter";
 import { formatTimeAgo } from "@/lib/format";
 import { PARTY_OPTIONS } from "@/lib/palette";
 
@@ -78,14 +81,14 @@ export default function OppositionTracker() {
           <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500">
             Watch-list ({data.opponents.length}/5)
           </span>
-          <button
+          <TextButton
             type="button"
             onClick={() => setManaging((v) => !v)}
-            className="text-[0.611rem] uppercase tracking-wider text-emerald-500/80 hover:text-emerald-400 flex items-center gap-1"
+            icon={Users}
+            className="text-[0.611rem] uppercase tracking-wider text-emerald-500/80"
           >
-            <Users className="h-3 w-3" />
             {managing ? "Done" : "Manage"}
-          </button>
+          </TextButton>
         </div>
       ) : null}
 
@@ -121,20 +124,15 @@ export default function OppositionTracker() {
         </div>
       )}
 
-      {/* Footer */}
-      <div className="px-4 py-2 border-t border-border/50 flex items-center justify-between text-[11px] text-zinc-600">
-        <span>
-          Updated {formatTimeAgo(data.lastUpdated)}
-          {data.limitReached ? " · refresh budget reached" : ""}
-        </span>
-        <button
-          type="button"
-          onClick={refetch}
-          className="text-emerald-500/70 hover:text-emerald-400 flex items-center gap-1"
-        >
-          <RefreshCw className="h-3 w-3" /> Refresh
-        </button>
-      </div>
+      <UpdatedFooter
+        label={
+          <>
+            Updated {formatTimeAgo(data.lastUpdated)}
+            {data.limitReached ? " · refresh budget reached" : ""}
+          </>
+        }
+        onRefresh={refetch}
+      />
     </div>
   );
 }
@@ -217,48 +215,41 @@ function PeopleManager({ onChanged }: { onChanged: () => void }) {
 
       {people.length < 5 ? (
         <form onSubmit={add} className="grid grid-cols-2 gap-2 pt-1">
-          <input
+          <TextInput
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name (required)"
-            className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
           />
-          <select
-            value={party}
-            onChange={(e) => setParty(e.target.value)}
-            aria-label="Party"
-            className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
-          >
+          <Select value={party} onChange={(e) => setParty(e.target.value)} aria-label="Party">
             {PARTY_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
-          </select>
-          <input
+          </Select>
+          <TextInput
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             placeholder="X handle (optional)"
-            className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
           />
-          <input
+          <TextInput
             value={role}
             onChange={(e) => setRole(e.target.value)}
             placeholder="Role, e.g. PPC (optional)"
-            className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
           />
-          <button
+          <ActionButton
             type="submit"
             disabled={busy || !name.trim()}
-            className="col-span-2 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
+            icon={Plus}
+            size="sm"
+            className="col-span-2 py-1.5"
           >
-            <Plus className="h-3 w-3" />
             Add person
-          </button>
+          </ActionButton>
         </form>
       ) : (
         <p className="text-[0.611rem] text-zinc-600">Limit of 5 people reached.</p>
       )}
 
-      {formError ? <p className="text-[0.611rem] text-red-400">{formError}</p> : null}
+      <FormError message={formError} />
     </div>
   );
 }

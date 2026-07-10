@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ExternalLink, MessageSquare, HelpCircle, Vote, FileText } from "lucide-react";
 import { useConstituency } from "@/hooks/useConstituency";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import { PanelFooter } from "./ui/PanelFooter";
 import PanelSkeleton from "./ui/PanelSkeleton";
 import { formatGbDate } from "@/lib/format";
 import { getFullData } from "@/data";
@@ -96,7 +97,7 @@ export default function HansardFeed() {
       )}
 
       {twfyUrl && (
-        <div className="px-3 py-2 border-t border-border/50 text-center">
+        <PanelFooter align="center" className="py-2">
           <a
             href={twfyUrl}
             target="_blank"
@@ -105,7 +106,7 @@ export default function HansardFeed() {
           >
             View full record on TheyWorkForYou ↗
           </a>
-        </div>
+        </PanelFooter>
       )}
     </div>
   );

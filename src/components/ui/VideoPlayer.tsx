@@ -76,7 +76,7 @@ export default function VideoPlayer({ src, kind, title, onFatalError }: VideoPla
   return (
     <div data-component="videoPlayer" data-kind={kind} className="relative bg-black group/player">
       {kind === "radio" ? (
-        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+        <div data-component="radioHeader" className="flex items-center gap-2 px-3 pt-3 pb-1">
           <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
           <span className="text-[0.611rem] uppercase tracking-wider text-zinc-400">
             {title ?? "Live radio"}

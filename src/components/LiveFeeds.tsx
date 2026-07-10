@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Play, Radio, Tv } from "lucide-react";
 import VideoPlayer from "@/components/ui/VideoPlayer";
+import { PanelFooter } from "@/components/ui/PanelFooter";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 
 type ChannelKind = "hls" | "radio" | "youtube";
@@ -223,7 +224,7 @@ export default function LiveFeeds() {
       </div>
 
       {/* Status bar */}
-      <div className="px-3 py-1.5 flex items-center justify-between border-t border-border/50">
+      <PanelFooter>
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
           <span className="text-[0.556rem] text-red-400 font-semibold">LIVE</span>
@@ -236,7 +237,7 @@ export default function LiveFeeds() {
         >
           Open in new tab <ExternalLink className="h-2.5 w-2.5" />
         </a>
-      </div>
+      </PanelFooter>
     </div>
   );
 }

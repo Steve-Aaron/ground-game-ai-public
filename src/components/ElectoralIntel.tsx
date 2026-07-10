@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useConstituency, withConstituency } from "@/hooks/useConstituency";
+import { useState } from "react";
+import { useConstituency } from "@/hooks/useConstituency";
+import { useElectoralCalculus } from "@/hooks/useElectoralCalculus";
 import { getFullData } from "@/data";
+import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelError from "@/components/ui/PanelError";
+import { PredictionHeadline, VoteShareBars, WinningChances } from "@/components/ui/Prediction";
 import { ecIndicatorStyle, partyColor, partyLabel } from "@/lib/palette";
-import type { ConstituencyPrediction as ECConstituencyData } from "@/app/api/electoral-calculus/route";
 
 type View = "results" | "prediction" | "wards";
 
@@ -93,38 +95,6 @@ function deriveResults(slug: string): DerivedResults | null {
 }
 
 
-// Convert live EC constituency data to the shape used by ecPrediction
-function toLiveEcPrediction(ec: ECConstituencyData) {
-  const predicted: Record<string, number> = {};
-  const keyMap: Record<string, string> = { CON: "CON", LAB: "LAB", Reform: "Reform", LIB: "LIB", Green: "Green" };
-  for (const [ecKey, ourKey] of Object.entries(keyMap)) {
-    if (ec.predicted[ecKey]?.share) {
-      predicted[ourKey] = ec.predicted[ecKey].share;
-    }
-  }
-  return {
-    prediction: ec.prediction,
-    predicted,
-    winningChances: ec.winningChances,
-    lastUpdated: new Date().toISOString().slice(0, 10),
-  };
-}
-
-// Convert live EC ward data to the shape used by wardElectoralCalc
-function toLiveWardData(wards: ECConstituencyData["wards"]): Record<string, { electorate: number; winner2024: string; predictedWinner: string }> {
-  const result: Record<string, { electorate: number; winner2024: string; predictedWinner: string }> = {};
-  for (const w of wards) {
-    if (w.ward) {
-      result[w.ward] = {
-        electorate: w.electorate,
-        winner2024: w.winner2024,
-        predictedWinner: w.predictedWinner,
-      };
-    }
-  }
-  return result;
-}
-
 /**
  * showIndicators: render EC's 'Political and Demographic indicators' table
  * in the MRP view. Enabled on the Political tab only — the map-tab instance
@@ -136,6 +106,7 @@ function IndicatorCell({ value, cls, emphasis = false }: { value: string; cls: s
   const style = value ? ecIndicatorStyle(cls) : null;
   return (
     <td
+      data-component="indicatorCell"
       data-ec-class={cls || undefined}
       className={`py-1 px-1.5 text-center ${emphasis ? "font-semibold" : ""} ${
         style ? "" : emphasis ? "text-foreground" : "text-zinc-500"
@@ -147,64 +118,58 @@ function IndicatorCell({ value, cls, emphasis = false }: { value: string; cls: s
   );
 }
 
+// Ward breakdown table — shared DataTable primitive (sorting + a11y for free).
+interface WardRow {
+  name: string;
+  winner2024: string;
+  predictedWinner: string;
+  electorate: number;
+}
+
+const wardColumns: DataTableColumn<WardRow>[] = [
+  { key: "name", label: "Ward", sort: "string" },
+  {
+    key: "winner2024",
+    label: "2024",
+    align: "center",
+    sort: "string",
+    render: (row) => <span style={{ color: partyColor(row.winner2024) }}>{row.winner2024}</span>,
+  },
+  {
+    key: "predictedWinner",
+    label: "Pred",
+    align: "center",
+    sort: "string",
+    render: (row) => (
+      <span style={{ color: partyColor(row.predictedWinner) }}>
+        {row.predictedWinner}
+        {row.winner2024 !== row.predictedWinner && " ⚡"}
+      </span>
+    ),
+  },
+  {
+    key: "electorate",
+    label: "Elect.",
+    align: "right",
+    sort: "number",
+    className: "text-zinc-500",
+    render: (row) => row.electorate.toLocaleString(),
+  },
+];
+
 export default function ElectoralIntel({ showIndicators = false }: { showIndicators?: boolean }) {
   const { slug } = useConstituency();
   const results2024 = deriveResults(slug);
   const [view, setView] = useState<View>("prediction");
-  const [indicators, setIndicators] = useState<ECConstituencyData["indicators"]>(null);
   // No default/fallback prediction data — starts empty; failures surface as
   // an error message, never as another constituency's numbers.
-  const [ecPrediction, setEcPrediction] = useState<{
-    prediction: string;
-    predicted: Record<string, number>;
-    winningChances: Record<string, number>;
-    lastUpdated: string;
-  } | null>(null);
-  const [wardElectoralCalc, setWardElectoralCalc] = useState<
-    Record<string, { electorate: number; winner2024: string; predictedWinner: string }>
-  >({});
-  const [ecLoading, setEcLoading] = useState(true);
-  const [ecError, setEcError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!slug) return; // auth still loading — effect re-runs when slug resolves
-    async function fetchLiveEC() {
-      setEcLoading(true);
-      setEcError(null);
-      setEcPrediction(null);
-      setWardElectoralCalc({});
-      setIndicators(null);
-      try {
-        const res = await fetch(withConstituency("/api/electoral-calculus?type=seat", slug));
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as
-            | { message?: string; error?: string; detail?: string }
-            | null;
-          setEcError(body?.message ?? body?.detail ?? body?.error ?? `Request failed (${res.status})`);
-          return;
-        }
-        const data: ECConstituencyData = await res.json();
-        if (data.prediction && Object.keys(data.predicted).length > 0) {
-          setEcPrediction(toLiveEcPrediction(data));
-          setIndicators(data.indicators ?? null);
-        } else {
-          setEcError("Electoral Calculus returned no prediction for this seat.");
-        }
-        if (data.wards && data.wards.length > 0) {
-          const liveWards = toLiveWardData(data.wards);
-          if (Object.keys(liveWards).length > 0) {
-            setWardElectoralCalc(liveWards);
-          }
-        }
-      } catch (err) {
-        setEcError((err as Error).message || "Unable to reach Electoral Calculus");
-      } finally {
-        setEcLoading(false);
-      }
-    }
-    fetchLiveEC();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  const {
+    prediction: ecPrediction,
+    wardData: wardElectoralCalc,
+    indicators,
+    loading: ecLoading,
+    error: ecError,
+  } = useElectoralCalculus(slug);
 
   const tabs: { key: View; label: string }[] = [
     { key: "prediction", label: "MRP Forecast" },
@@ -236,7 +201,7 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
 
       {/* 2024 Results */}
       {view === "results" && (
-        <div className="p-4 space-y-3">
+        <div data-component="electoralIntelResults" className="p-4 space-y-3">
           {!results2024 ? (
             <div className="text-[0.611rem] text-zinc-500 text-center py-8">
               2024 results not available for this constituency.
@@ -286,42 +251,20 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
         <PanelError message={ecError ?? "Electoral Calculus prediction unavailable."} />
       )}
       {view === "prediction" && !ecLoading && ecPrediction && (
-        <div className="p-4 space-y-3">
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <div className="text-[11px] text-zinc-500 mb-1">Constituency Prediction</div>
-            <div className="text-base font-bold text-cyan-400">{ecPrediction.prediction}</div>
-          </div>
+        <div data-component="electoralIntelPrediction" className="p-4 space-y-3">
+          <PredictionHeadline prediction={ecPrediction.prediction} align="center" size="sm" />
 
           {/* Winning chances */}
-          <div className="flex justify-center gap-4">
-            {Object.entries(ecPrediction.winningChances)
-              .filter(([, v]) => v > 0)
-              .sort((a, b) => b[1] - a[1])
-              .map(([party, chance]) => (
-                <div key={party} className="text-center">
-                  <div className="text-xl font-bold" style={{ color: partyColor(party) }}>
-                    {chance}%
-                  </div>
-                  <div className="text-[0.556rem] text-zinc-500">{party}</div>
-                </div>
-              ))}
-          </div>
+          <WinningChances
+            chances={ecPrediction.winningChances}
+            className="justify-center gap-4"
+            labelClassName="text-[0.556rem]"
+          />
 
           {/* Predicted shares */}
           <div className="space-y-1.5">
             <div className="text-[0.611rem] text-zinc-500 font-medium">Predicted Vote Share</div>
-            {Object.entries(ecPrediction.predicted)
-              .filter(([k]) => k !== "OTH")
-              .sort((a, b) => b[1] - a[1])
-              .map(([party, share]) => (
-                <div key={party} className="flex items-center gap-2">
-                  <span className="text-[11px] text-zinc-400 w-14">{party}</span>
-                  <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${share * 2}%`, backgroundColor: partyColor(party), opacity: 0.8 }} />
-                  </div>
-                  <span className="text-[0.611rem] text-zinc-300 font-medium w-10 text-right">{share}%</span>
-                </div>
-              ))}
+            <VoteShareBars shares={ecPrediction.predicted} barHeight="h-3" />
           </div>
 
           {/* Political & demographic indicators — political tab only */}
@@ -365,7 +308,7 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
       )}
       {view === "wards" && ecLoading && <PanelSkeleton variant="list" rows={4} />}
       {view === "wards" && !ecLoading && wards.length > 0 && (
-        <div className="p-3 space-y-3">
+        <div data-component="electoralIntelWards" className="p-3 space-y-3">
           {/* Ward summary */}
           <div className="flex gap-2">
             {Object.entries(wardCounts)
@@ -380,38 +323,14 @@ export default function ElectoralIntel({ showIndicators = false }: { showIndicat
           <div className="text-[0.556rem] text-zinc-600 text-center">{swings.length} wards predicted to change hands</div>
 
           {/* Ward table */}
-          <div className="overflow-auto max-h-[250px]">
-            <table className="w-full text-[11px]">
-              <thead className="sticky top-0 bg-muted">
-                <tr className="text-zinc-500 border-b border-border">
-                  <th className="text-left py-1 font-medium">Ward</th>
-                  <th className="text-center py-1 font-medium">2024</th>
-                  <th className="text-center py-1 font-medium">Pred</th>
-                  <th className="text-right py-1 font-medium">Elect.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {wards.map(([name, data]) => {
-                  const changed = data.winner2024 !== data.predictedWinner;
-                  return (
-                    <tr key={name} className={`border-b border-border/30 ${changed ? "bg-red-500/5" : ""}`}>
-                      <td className="py-1 text-zinc-300">{name}</td>
-                      <td className="text-center">
-                        <span style={{ color: partyColor(data.winner2024) }}>{data.winner2024}</span>
-                      </td>
-                      <td className="text-center">
-                        <span style={{ color: partyColor(data.predictedWinner) }}>
-                          {data.predictedWinner}
-                          {changed && " \u26A1"}
-                        </span>
-                      </td>
-                      <td className="text-right text-zinc-500">{data.electorate.toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            className="overflow-auto max-h-[250px]"
+            rows={wards.map(([name, data]) => ({ name, ...data }))}
+            columns={wardColumns}
+            getRowId={(r) => r.name}
+            stickyHeader
+            rowClassName={(r) => (r.winner2024 !== r.predictedWinner ? "bg-red-500/5" : undefined)}
+          />
 
           <div className="text-[0.556rem] text-zinc-700 text-center">
             Source: Electoral Calculus MRP <span className="text-emerald-600 ml-1">(live)</span>

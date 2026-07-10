@@ -13,6 +13,9 @@ import { SESSION_TYPES, SESSION_TYPE_COLORS, type SessionType } from "@/lib/canv
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
 import PanelError from "@/components/ui/PanelError";
+import { DateInput, FileInput, FormError, Select, TextArea, TextInput } from "@/components/ui/FormField";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Chip } from "@/components/ui/Chip";
 import { formatGbDate } from "@/lib/format";
 
 // Mirrors CanvassingSession in src/app/api/canvassing/route.ts.
@@ -197,45 +200,34 @@ function SessionForm({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <input
+        <TextInput
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Session name (required)"
-          className="col-span-2 bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
+          className="col-span-2"
         />
-        <label className="block">
-          <span className="block text-[0.5rem] uppercase tracking-wider text-zinc-500 mb-1">Date</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 [color-scheme:dark]"
-          />
-        </label>
-        <label className="block">
-          <span className="block text-[0.5rem] uppercase tracking-wider text-zinc-500 mb-1">Duration (minutes)</span>
-          <input
-            type="number"
-            min={15}
-            max={1440}
-            step={15}
-            value={durationMins}
-            onChange={(e) => setDurationMins(Number(e.target.value))}
-            className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
-          />
-        </label>
-        <label className="block col-span-2">
-          <span className="block text-[0.5rem] uppercase tracking-wider text-zinc-500 mb-1">Type</span>
-          <select
+        <DateInput label="Date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <TextInput
+          label="Duration (minutes)"
+          type="number"
+          min={15}
+          max={1440}
+          step={15}
+          value={durationMins}
+          onChange={(e) => setDurationMins(Number(e.target.value))}
+        />
+        <div className="col-span-2">
+          <Select
+            label="Type"
             value={type}
             onChange={(e) => setType(e.target.value as SessionType)}
-            className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 capitalize"
+            className="capitalize"
           >
             {SESSION_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </div>
       </div>
 
       <p className="text-[0.611rem] flex items-center gap-1 text-zinc-500">
@@ -245,40 +237,33 @@ function SessionForm({
           : "Click the map above to set the location"}
       </p>
 
-      <textarea
+      <TextArea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notes — meeting point, target streets, what to bring…"
         maxLength={1000}
         rows={2}
-        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
       />
 
       <label className="block">
         <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500 flex items-center gap-1 mb-1">
           <ImagePlus className="h-3 w-3" /> Photos (up to {MAX_IMAGES})
         </span>
-        <input
-          type="file"
+        <FileInput
           accept="image/jpeg,image/png,image/webp,image/heic"
           multiple
           onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, MAX_IMAGES))}
-          className="block w-full text-[0.611rem] text-zinc-400 file:mr-3 file:px-3 file:py-1.5 file:border-0 file:bg-muted file:text-foreground file:text-[0.611rem] file:uppercase file:tracking-wider hover:file:bg-muted/70"
         />
       </label>
       {files.length > 0 ? (
         <p className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">{files.length} photo{files.length > 1 ? "s" : ""} attached</p>
       ) : null}
 
-      {error ? <p className="text-[0.611rem] text-red-400">{error}</p> : null}
+      <FormError message={error} />
 
-      <button
-        type="submit"
-        disabled={busy || !name.trim() || !draftPin}
-        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      >
+      <ActionButton type="submit" disabled={busy || !name.trim() || !draftPin}>
         {busy ? "Saving…" : "Add session"}
-      </button>
+      </ActionButton>
     </form>
   );
 }
@@ -320,9 +305,7 @@ function SessionCard({
           style={{ backgroundColor: SESSION_TYPE_COLORS[session.type] ?? "#9ca3af" }}
         />
         <span className="text-xs font-medium text-foreground truncate">{session.name}</span>
-        <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500 bg-muted px-1.5 py-0.5 shrink-0 capitalize">
-          {session.type}
-        </span>
+        <Chip className="shrink-0 capitalize">{session.type}</Chip>
       </div>
 
       <p className="text-[0.611rem] text-zinc-400 flex items-center gap-3">
@@ -391,16 +374,16 @@ export default function CanvassingPanel() {
         <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500">
           {sessions.length} session{sessions.length === 1 ? "" : "s"}
         </span>
-        <button
+        <ActionButton
+          size="sm"
+          icon={MapPin}
           onClick={() => {
             setAdding((v) => !v);
             setDraftPin(null);
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-1 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
         >
-          <MapPin className="h-3 w-3" />
           {adding ? "Cancel" : "Add session"}
-        </button>
+        </ActionButton>
       </div>
 
       <SessionsMap

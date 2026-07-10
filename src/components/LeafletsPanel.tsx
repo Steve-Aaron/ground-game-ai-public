@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Camera, ImageIcon, Trash2, Upload, X } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import { useMe } from "@/hooks/useMe";
@@ -8,6 +8,9 @@ import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import PanelSkeleton from "@/components/ui/PanelSkeleton";
 import PanelEmpty from "@/components/ui/PanelEmpty";
 import PanelError from "@/components/ui/PanelError";
+import { DateInput, FileInput, FormError, Select, TextArea } from "@/components/ui/FormField";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Chip } from "@/components/ui/Chip";
 import { formatGbDate, formatTimeAgo } from "@/lib/format";
 import { LEAFLET_CATEGORIES } from "@/lib/leaflet-categories";
 import { PARTY_OPTIONS } from "@/lib/palette";
@@ -54,8 +57,9 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
   const [seenAt, setSeenAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // reset() is only ever followed by setOpen(false), so the uncontrolled file
+  // input unmounts and remounts blank — no ref clearing needed.
   function reset() {
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -64,7 +68,6 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
     setNotes("");
     setSeenAt(new Date().toISOString().slice(0, 10));
     setError(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function handleFile(f: File | null) {
@@ -108,14 +111,15 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
   if (!open) {
     return (
       <div className="px-4 py-3 border-b border-border/50">
-        <button
+        <ActionButton
           data-component="leafletUploadTrigger"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+          icon={Camera}
+          size="sm"
+          className="py-1.5"
         >
-          <Camera className="h-3.5 w-3.5" />
           Upload a photo
-        </button>
+        </ActionButton>
       </div>
     );
   }
@@ -143,12 +147,9 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
         </button>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
+      <FileInput
         accept="image/jpeg,image/png,image/webp,image/heic"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-        className="block w-full text-[0.611rem] text-zinc-400 file:mr-3 file:px-3 file:py-1.5 file:border-0 file:bg-muted file:text-foreground file:text-[0.611rem] file:uppercase file:tracking-wider hover:file:bg-muted/70"
       />
 
       {previewUrl ? (
@@ -160,87 +161,67 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
         />
       ) : null}
 
-      <label className="block">
-        <span className="block text-[0.5rem] uppercase tracking-wider text-zinc-500 mb-1">
-          Seen at
-        </span>
-        <input
-          type="date"
-          value={seenAt}
-          max={new Date().toISOString().slice(0, 10)}
-          onChange={(e) => setSeenAt(e.target.value)}
-          className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 [color-scheme:dark]"
-        />
-      </label>
+      <DateInput
+        label="Seen at"
+        value={seenAt}
+        max={new Date().toISOString().slice(0, 10)}
+        onChange={(e) => setSeenAt(e.target.value)}
+      />
 
       <div className="grid grid-cols-2 gap-2">
-        <select
+        <Select
           value={kind}
           onChange={(e) => setKind(e.target.value as LeafletItem["kind"])}
           aria-label="Material type"
-          className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
         >
           {Object.entries(KIND_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
-        <select
-          value={party}
-          onChange={(e) => setParty(e.target.value)}
-          aria-label="Party"
-          className="bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
-        >
+        </Select>
+        <Select value={party} onChange={(e) => setParty(e.target.value)} aria-label="Party">
           {PARTY_OPTIONS.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <select
+      <Select
         value={category}
         onChange={(e) => setCategory(e.target.value)}
         aria-label="Content category"
-        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5"
       >
         {LEAFLET_CATEGORIES.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
         ))}
-      </select>
+      </Select>
 
-      <textarea
+      <TextArea
         value={summary}
         onChange={(e) => setSummary(e.target.value)}
         placeholder="Summary — what does the content say or claim?"
         maxLength={1000}
         rows={3}
-        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
       />
 
-      <textarea
+      <TextArea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notes — where and when you saw it…"
         maxLength={500}
         rows={2}
-        className="w-full bg-muted/40 border border-border text-xs text-foreground px-2 py-1.5 placeholder:text-zinc-600"
       />
 
-      {error ? <p className="text-[0.611rem] text-red-400">{error}</p> : null}
+      <FormError message={error} />
 
-      <button
-        type="submit"
-        disabled={!file || submitting}
-        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-[0.611rem] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <Upload className="h-3.5 w-3.5" />
+      <ActionButton type="submit" disabled={!file || submitting} icon={Upload}>
         {submitting ? "Uploading…" : "Submit"}
-      </button>
+      </ActionButton>
     </form>
   );
 }
@@ -284,13 +265,9 @@ function LeafletCard({
       <figcaption className="px-2.5 py-2 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[0.611rem] font-medium text-foreground truncate">{item.party}</span>
-          <span className="text-[0.5rem] uppercase tracking-wider text-zinc-500 bg-muted px-1.5 py-0.5 shrink-0">
-            {KIND_LABELS[item.kind]}
-          </span>
+          <Chip className="shrink-0">{KIND_LABELS[item.kind]}</Chip>
         </div>
-        <span className="inline-block text-[0.5rem] uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5">
-          {item.category}
-        </span>
+        <Chip tone="emerald">{item.category}</Chip>
         {item.summary ? (
           <p className="text-[0.611rem] text-zinc-300 line-clamp-3">{item.summary}</p>
         ) : null}

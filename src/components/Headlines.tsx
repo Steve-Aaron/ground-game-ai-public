@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bookmark } from "lucide-react";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
 import FeedItem from "./ui/FeedItem";
+import { PanelFooter } from "./ui/PanelFooter";
 import PanelEmpty from "./ui/PanelEmpty";
 import PanelSkeleton from "./ui/PanelSkeleton";
 
@@ -79,9 +80,9 @@ export default function Headlines() {
         </div>
       )}
 
-      <div className="px-3 py-2 text-[10px] text-zinc-700 text-center border-t border-border/50">
+      <PanelFooter align="center" className="py-2 text-[10px] text-zinc-700">
         BBC, Sky, Guardian, Telegraph, GB News, Politico &middot; Updates every 10 min
-      </div>
+      </PanelFooter>
     </div>
   );
 }

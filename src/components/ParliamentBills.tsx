@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, ExternalLink, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useConstituencyResource } from "@/hooks/useConstituencyResource";
+import { PanelFooter } from "./ui/PanelFooter";
 import PanelSkeleton from "./ui/PanelSkeleton";
 import { formatGbDate } from "@/lib/format";
 
@@ -229,11 +230,11 @@ export default function ParliamentBills() {
         </div>
       )}
 
-      <div className="px-3 py-2 border-t border-border/50 text-center">
+      <PanelFooter align="center" className="py-2">
         <span className="text-[10px] text-zinc-600">
           {tab === "votes" ? "James Cleverly voting record" : "Bill stages pipeline"} · Parliament API
         </span>
-      </div>
+      </PanelFooter>
     </div>
   );
 }

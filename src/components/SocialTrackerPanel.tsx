@@ -105,9 +105,9 @@ function AccountTabs({
 function Avatar({ profile, size }: { profile: SocialProfile; size: string }) {
   return profile.avatar ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={profile.avatar} alt="" className={`${size} rounded-full object-cover`} />
+    <img data-component="avatar" src={profile.avatar} alt="" className={`${size} rounded-full object-cover`} />
   ) : (
-    <span className={`${size} rounded-full bg-muted flex items-center justify-center text-[0.611rem] font-bold text-zinc-400`}>
+    <span data-component="avatar" className={`${size} rounded-full bg-muted flex items-center justify-center text-[0.611rem] font-bold text-zinc-400`}>
       {profile.handle.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -360,7 +360,7 @@ export default function SocialTrackerPanel() {
 
       {/* Usage / freshness strip */}
       {data?.updatedAt ? (
-        <div className="px-3 py-1.5 flex items-center justify-between border-t border-border/50">
+        <div data-component="socialUsageFooter" className="px-3 py-1.5 flex items-center justify-between border-t border-border/50">
           <span className="text-[0.5rem] text-zinc-600 uppercase tracking-wider">
             Updated {formatTimeAgoShort(data.updatedAt)} ago
             {data.limitReached ? " · refresh budget reached — showing cached" : ""}
