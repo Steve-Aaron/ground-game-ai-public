@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { Download, RefreshCw, AlertTriangle } from "lucide-react";
 import { useConstituency, withConstituency } from "@/hooks/useConstituency";
 import PanelSkeleton from "./ui/PanelSkeleton";
 
 // Stream event shape, mirroring src/app/api/ai-brief/route.ts. Kept inline
 // here rather than imported so the client bundle doesn't drag in any
 // server-side modules.
+interface BriefSource {
+  label: string;
+  url: string;
+}
+
 type StreamEvent =
   | { type: "attempt"; n: number; of: number }
   | { type: "retry"; n: number; of: number; status: number; message: string; waitMs: number }
-  | { type: "result"; brief: string; generated: string; model?: string; source?: string }
+  | { type: "result"; brief: string; generated: string; model?: string; source?: string; sources?: BriefSource[] }
   | { type: "error"; message: string };
 
 interface Attempt {
@@ -31,6 +36,7 @@ export default function AIBrief() {
   const { slug } = useConstituency();
   const [brief, setBrief] = useState<string>("");
   const [generated, setGenerated] = useState<string>("");
+  const [sources, setSources] = useState<BriefSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
@@ -127,6 +133,7 @@ export default function AIBrief() {
     } else if (event.type === "result") {
       setBrief(event.brief || "");
       setGenerated(event.generated || "");
+      setSources(event.sources ?? []);
       setError(null);
       setAttempt(null);
       setRetry(null);
@@ -140,6 +147,28 @@ export default function AIBrief() {
   async function handleRefresh() {
     setRefreshing(true);
     await fetchBriefStream(true);
+  }
+
+  /** Download the brief as Markdown, with a deterministic sources section. */
+  function handleExport() {
+    if (!brief) return;
+    const sourceSection =
+      sources.length > 0
+        ? `\n\n---\n\n## Sources & Further Reading\n\n${sources
+            .map((src) => `- [${src.label}](${src.url})`)
+            .join("\n")}\n`
+        : "";
+    const generatedLine = generated
+      ? `\n\n_Exported from Ground Game Intel — generated ${new Date(generated).toLocaleString("en-GB")}_\n`
+      : "";
+    const content = `${brief}${sourceSection}${generatedLine}`;
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `daily-brief-${slug || "constituency"}-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // ── Loading state with attempt progress ────────────────────────────────
@@ -228,16 +257,28 @@ export default function AIBrief() {
             })}
           </span>
         )}
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50"
-          title="Regenerate brief"
-        >
-          <RefreshCw
-            className={`h-[0.667rem] w-[0.667rem] text-zinc-500 ${refreshing ? "animate-spin" : ""}`}
-          />
-        </button>
+        <span className="flex items-center gap-1">
+          <button
+            data-component="briefExport"
+            onClick={handleExport}
+            disabled={!brief || loading}
+            className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50"
+            title="Export brief as Markdown (includes source links)"
+          >
+            <Download className="h-[0.667rem] w-[0.667rem] text-zinc-500" />
+          </button>
+          <button
+            data-component="briefRefresh"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50"
+            title="Update brief — regenerates from the latest data"
+          >
+            <RefreshCw
+              className={`h-[0.667rem] w-[0.667rem] text-zinc-500 ${refreshing ? "animate-spin" : ""}`}
+            />
+          </button>
+        </span>
       </div>
 
       {/* Brief content rendered as markdown-like HTML — the only scroll

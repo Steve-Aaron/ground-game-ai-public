@@ -636,7 +636,7 @@ function Dashboard() {
           {activeTab === "canvassing" && (
             <div className="grid grid-cols-1 gap-2 lg:gap-3">
               <Panel
-                title="Canvassing Sessions"
+                title="Campaign Events"
                 dataComponent="canvassingSessions"
                 icon={<MapPin className="h-3.5 w-3.5" />}
                 headerAction={

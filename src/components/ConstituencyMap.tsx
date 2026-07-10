@@ -20,6 +20,7 @@ interface LayerDef {
 
 const LAYER_DEFS: LayerDef[] = [
   { id: "boundary", label: "Boundary", description: "Constituency outline", default: true },
+  { id: "wards", label: "Ward Boundaries", description: "Ward outline overlay", default: true },
   { id: "wards-vote", label: "2024 Ward Winner", description: "Ward-level 2024 winning party", default: true },
   { id: "wards-prediction", label: "MRP Prediction", description: "EC predicted winner per ward", default: false },
   { id: "wards-deprivation", label: "Deprivation", description: "Ward deprivation levels", default: false },
@@ -292,6 +293,16 @@ export default function ConstituencyMap() {
         }
 
         m.addSource("wards", { type: "geojson", data: wardsData });
+
+        // === LAYER: Ward boundary overlay ===
+        // Always-available outlines, independent of the choropleth fills —
+        // on by default so ward shapes are visible from first paint.
+        m.addLayer({
+          id: "wards-base-outline",
+          type: "line",
+          source: "wards",
+          paint: { "line-color": "#94a3b8", "line-width": 0.8, "line-opacity": 0.55 },
+        });
 
         // Party-colour expression shared between the 2024 Vote Share and MRP
         // Prediction layers. Driven by per-ward EC data attached during
@@ -695,6 +706,9 @@ export default function ConstituencyMap() {
     // Boundary
     setVis("boundary-fill", layers["boundary"]);
     setVis("boundary-outline", layers["boundary"]);
+
+    // Ward boundary overlay
+    setVis("wards-base-outline", layers["wards"]);
 
     // Vote share (mutually exclusive with prediction & deprivation)
     setVis("wards-vote-fill", layers["wards-vote"]);

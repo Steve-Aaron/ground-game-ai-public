@@ -73,6 +73,13 @@ interface BriefData {
   generated: string;
   model?: string;
   usage?: unknown;
+  /** Source links for the brief — news stories + reference pages. */
+  sources?: BriefSource[];
+}
+
+export interface BriefSource {
+  label: string;
+  url: string;
 }
 
 async function fetchLocalData(
@@ -127,8 +134,10 @@ function summariseData(data: unknown, type: string): string {
   try {
     const d = data as Record<string, unknown>;
     if (type === "news") {
-      const items = (d.items || d.articles || []) as Array<{ title?: string; source?: string }>;
-      return items.slice(0, 10).map((i) => `- ${i.title || "Untitled"} (${i.source || "unknown"})`).join("\n") || "No headlines";
+      const items = (d.items || d.articles || []) as Array<{ title?: string; source?: string; link?: string; url?: string }>;
+      return items.slice(0, 10)
+        .map((i) => `- ${i.title || "Untitled"} (${i.source || "unknown"})${i.link || i.url ? ` — ${i.link || i.url}` : ""}`)
+        .join("\n") || "No headlines";
     }
     if (type === "crime") {
       const summary = d.summary as Array<{ category?: string; count?: number }> | undefined;
@@ -214,6 +223,8 @@ Include today's date and MP name.
 
 ## Top Local Stories
 List the top 5 most relevant local news stories with relevance assessment.
+Where a story's URL is given in the DATA section, link its title using
+markdown: [Title](url).
 
 ## Community Issues Trending
 Summarise FixMyStreet themes and clusters.
@@ -327,11 +338,35 @@ async function callGeminiOnce(
 type Event =
   | { type: "attempt"; n: number; of: number }
   | { type: "retry"; n: number; of: number; status: number; message: string; waitMs: number }
-  | { type: "result"; brief: string; generated: string; model?: string; usage?: unknown; source?: string }
+  | { type: "result"; brief: string; generated: string; model?: string; usage?: unknown; source?: string; sources?: BriefSource[] }
   | { type: "error"; message: string };
 
 function ev(e: Event): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(e) + "\n");
+}
+
+// Deterministic source links appended to the brief payload (independent of
+// what Gemini chooses to cite): top news stories + reference pages.
+function buildSources(data: DataSources, slug: string): BriefSource[] {
+  const sources: BriefSource[] = [];
+  const news = (data.news as { items?: Array<{ title?: string; link?: string; url?: string }> } | null)?.items ?? [];
+  for (const item of news.slice(0, 5)) {
+    const url = item.link || item.url;
+    if (item.title && url) sources.push({ label: item.title, url });
+  }
+  const full = getFullData(slug);
+  if (full) {
+    const { memberId, name } = full.constituency;
+    if (memberId) {
+      sources.push({ label: `MP profile — UK Parliament`, url: `https://members.parliament.uk/member/${memberId}` });
+      sources.push({ label: `MP voting record — TheyWorkForYou`, url: `https://www.theyworkforyou.com/mp/${memberId}` });
+    }
+    sources.push({
+      label: `${name} — Electoral Calculus seat page`,
+      url: `https://www.electoralcalculus.co.uk/fcgi-bin/seatdetails.py?seat=${encodeURIComponent(name)}`,
+    });
+  }
+  return sources;
 }
 
 async function generateWithRetries(
@@ -353,7 +388,7 @@ async function generateWithRetries(
 
     const result = await callGeminiOnce(apiKey, prompt);
     if (result.ok) {
-      return result.data;
+      return { ...result.data, sources: buildSources(data, slug) };
     }
 
     lastError = `Gemini ${result.status || "network"}: ${result.message}`;

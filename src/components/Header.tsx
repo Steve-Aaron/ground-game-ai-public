@@ -17,7 +17,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "demographics", label: "Demographics" },
   { id: "local", label: "Local Issues" },
   { id: "material", label: "Campaign Material" },
-  { id: "canvassing", label: "Canvassing Sessions" },
+  { id: "canvassing", label: "Campaign Events" },
 ];
 
 interface HeaderProps {

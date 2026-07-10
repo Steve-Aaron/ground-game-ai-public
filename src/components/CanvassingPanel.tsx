@@ -432,8 +432,8 @@ export default function CanvassingPanel() {
       ) : sessions.length === 0 ? (
         <PanelEmpty
           icon={MapPin}
-          title="No canvassing sessions yet"
-          description="Add a session to pin it on the map for the team."
+          title="No campaign events yet"
+          description="Add an event to pin it on the map for the team."
         />
       ) : (
         <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">

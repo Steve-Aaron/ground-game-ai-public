@@ -7,6 +7,7 @@ export interface MeData {
   email: string;
   role: "user" | "admin";
   allowedConstituencies: string[];
+  themePreference?: "light" | "dark";
 }
 
 interface MeState {

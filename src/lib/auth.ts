@@ -17,6 +17,8 @@ export interface UserRecord {
   displayName: string;
   role: UserRole;
   allowedConstituencies: string[];
+  /** Preferred UI theme — applied on sign-in across devices. */
+  themePreference?: "light" | "dark";
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -29,6 +31,7 @@ export interface AuthContext {
   displayName: string;
   role: UserRole;
   allowedConstituencies: string[];
+  themePreference?: "light" | "dark";
 }
 
 /**
@@ -58,6 +61,7 @@ export async function verifySession(
       displayName: data.displayName || data.email,
       role: data.role,
       allowedConstituencies: data.allowedConstituencies ?? [],
+      themePreference: data.themePreference,
     };
   } catch {
     return null;
